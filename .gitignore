@@ -1,0 +1,7 @@
+node_modules
+.next
+*.zip
+bloom-lane-deploy.zip
+bloom-lane-source.zip
+.env.local
+.env*.local

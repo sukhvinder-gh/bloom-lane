@@ -1,0 +1,409 @@
+<h2 class="sr-only">Harvest Market product hierarchy: initiatives, features, epics, and user stories with business requirements guide</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.tabs{display:flex;gap:4px;background:var(--color-background-secondary);border-radius:20px;padding:3px;margin-bottom:20px;width:fit-content}
+.tab{padding:5px 14px;border-radius:16px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--color-text-secondary);font-family:var(--font-sans)}
+.tab.on{background:var(--color-background-primary);color:var(--color-text-primary);border:0.5px solid var(--color-border-tertiary)}
+.view{display:none}.view.on{display:block}
+.level{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.p-init{background:#EEEDFE;color:#3C3489}
+.p-feat{background:#E1F5EE;color:#085041}
+.p-epic{background:#FAEEDA;color:#633806}
+.p-story{background:#E6F1FB;color:#0C447C}
+.p-biz{background:#FCEBEB;color:#791F1F}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:12px;overflow:hidden}
+.card-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+.card-hdr:hover{background:var(--color-background-secondary)}
+.card-body{padding:0 14px 14px;display:none}
+.card-body.on{display:block}
+.ch{font-size:10px;color:var(--color-text-secondary);margin-left:auto;transition:transform .2s}
+.ch.on{transform:rotate(90deg)}
+.feat-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.feat-row:last-child{border-bottom:none}
+.feat-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px}
+.feat-txt{flex:1}
+.feat-name{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.feat-desc{font-size:12px;color:var(--color-text-secondary);margin-top:2px;line-height:1.5}
+.epics-list{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.epic-tag{font-size:11px;padding:2px 8px;border-radius:4px;background:#FAEEDA;color:#633806}
+.stories-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.story-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px}
+.story-key{font-size:10px;color:var(--color-text-secondary);font-family:var(--font-mono);margin-bottom:3px}
+.story-ttl{font-size:12px;color:var(--color-text-primary);line-height:1.4}
+.story-ac{font-size:11px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5}
+.biz-section{margin-bottom:20px}
+.biz-hdr{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:10px}
+.biz-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px;margin-bottom:8px}
+.biz-label{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:6px}
+.biz-content{font-size:13px;color:var(--color-text-primary);line-height:1.6}
+.who-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;margin-right:4px;margin-bottom:4px}
+.who-biz{background:#FCEBEB;color:#791F1F}
+.who-tech{background:#E6F1FB;color:#0C447C}
+.who-both{background:#EEEDFE;color:#3C3489}
+.template-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-size:12px;color:var(--color-text-primary);line-height:1.8;font-family:var(--font-mono);margin-top:8px}
+.template-field{color:var(--color-text-secondary)}
+.flow-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.flow-box{padding:6px 12px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;white-space:nowrap}
+.flow-arrow{color:var(--color-text-secondary);font-size:14px}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;text-align:center}
+.metric-n{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.metric-l{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+</style>
+
+<div style="padding:1rem 0">
+<div class="tabs">
+  <button class="tab on" onclick="show('hier',this)">Hierarchy</button>
+  <button class="tab" onclick="show('biz',this)">Business input guide</button>
+  <button class="tab" onclick="show('flow',this)">Requirement flow</button>
+</div>
+
+<div id="hier" class="view on">
+  <div class="summary-grid">
+    <div class="metric"><div class="metric-n" style="color:#3C3489">2</div><div class="metric-l">Initiatives</div></div>
+    <div class="metric"><div class="metric-n" style="color:#085041">8</div><div class="metric-l">Features</div></div>
+    <div class="metric"><div class="metric-n" style="color:#633806">7</div><div class="metric-l">Epics</div></div>
+    <div class="metric"><div class="metric-n" style="color:#0C447C">69</div><div class="metric-l">User stories</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr" onclick="tog('i1')">
+      <span class="pill p-init"><i class="ti ti-rocket" aria-hidden="true"></i>IN-1</span>
+      <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Harvest Market — farm-to-buyer marketplace (AU)</span>
+      <span class="ch" id="ch-i1">▶</span>
+    </div>
+    <div class="card-body" id="i1">
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.6">Enable Australian farms to sell direct to wholesale and retail buyers through a weekly market window, with automated fulfilment, GST-compliant invoicing, and automatic payouts.</p>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f1')">
+          <span class="pill p-feat"><i class="ti ti-users" aria-hidden="true"></i>FT-1</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Identity & access management</span>
+          <span class="ch" id="ch-f1">▶</span>
+        </div>
+        <div class="card-body" id="f1">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Three distinct user roles — admin, grower, buyer (B2B/B2C) — each with scoped permissions, onboarding, and dashboards.</p>
+          <div class="epics-list"><span class="epic-tag">EP-1 Auth & user management</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-1</div><div class="story-ttl">Registration with role selection</div></div>
+            <div class="story-card"><div class="story-key">HM-2</div><div class="story-ttl">Email/password login</div></div>
+            <div class="story-card"><div class="story-key">HM-3</div><div class="story-ttl">Auto-create profile trigger</div></div>
+            <div class="story-card"><div class="story-key">HM-7</div><div class="story-ttl">Admin ABN verification for B2B</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f2')">
+          <span class="pill p-feat"><i class="ti ti-shopping-cart" aria-hidden="true"></i>FT-2</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Weekly marketplace & ordering</span>
+          <span class="ch" id="ch-f2">▶</span>
+        </div>
+        <div class="card-body" id="f2">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Time-boxed market window (Wed 8am–8pm AEST). Buyers browse, add to cart, and checkout. Stock split between B2B and B2C pools. Atomic stock reservation prevents overselling.</p>
+          <div class="epics-list"><span class="epic-tag">EP-2 Marketplace</span><span class="epic-tag">EP-3 Orders & fulfilment</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-9</div><div class="story-ttl">Marketplace with category filters</div></div>
+            <div class="story-card"><div class="story-key">HM-11</div><div class="story-ttl">Add to cart with qty input</div></div>
+            <div class="story-card"><div class="story-key">HM-17</div><div class="story-ttl">Checkout with hub/delivery</div></div>
+            <div class="story-card"><div class="story-key">HM-19</div><div class="story-ttl">Atomic stock deduction</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f3')">
+          <span class="pill p-feat"><i class="ti ti-receipt-2" aria-hidden="true"></i>FT-3</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">GST-compliant pricing & invoicing</span>
+          <span class="ch" id="ch-f3">▶</span>
+        </div>
+        <div class="card-body" id="f3">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">B2B sees wholesale ex-GST with itemised GST. B2C sees retail inc-GST. Print-ready tax invoices and CSV export for BAS compliance.</p>
+          <div class="epics-list"><span class="epic-tag">EP-3 Orders</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-18</div><div class="story-ttl">GST breakdown in checkout</div></div>
+            <div class="story-card"><div class="story-key">HM-22</div><div class="story-ttl">Per-order CSV export</div></div>
+            <div class="story-card"><div class="story-key">HM-23</div><div class="story-ttl">Print-ready tax invoice</div></div>
+            <div class="story-card"><div class="story-key">HM-68</div><div class="story-ttl">GST-compliant pricing logic</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f4')">
+          <span class="pill p-feat"><i class="ti ti-truck-delivery" aria-hidden="true"></i>FT-4</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Farmer-owned fulfilment chain</span>
+          <span class="ch" id="ch-f4">▶</span>
+        </div>
+        <div class="card-body" id="f4">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Growers own the entire pick → pack → dispatch → deliver chain. PPOD photo auto-triggers delivery confirmation. Hub pickup marked manually. Admin is observer only.</p>
+          <div class="epics-list"><span class="epic-tag">EP-5 Farmer dashboard</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-42</div><div class="story-ttl">Start preparing</div></div>
+            <div class="story-card"><div class="story-key">HM-44</div><div class="story-ttl">Dispatch</div></div>
+            <div class="story-card"><div class="story-key">HM-46</div><div class="story-ttl">PPOD auto-delivers</div></div>
+            <div class="story-card"><div class="story-key">HM-45</div><div class="story-ttl">Hub pickup manual confirm</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr" onclick="tog('i2')">
+      <span class="pill p-init"><i class="ti ti-credit-card" aria-hidden="true"></i>IN-2</span>
+      <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Platform payments & grower payouts</span>
+      <span class="ch" id="ch-i2">▶</span>
+    </div>
+    <div class="card-body" id="i2">
+      <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.6">Collect payments from buyers via Stripe, retain configurable commission, and automatically transfer the net amount to each grower after the dispute window closes.</p>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f5')">
+          <span class="pill p-feat"><i class="ti ti-brand-stripe" aria-hidden="true"></i>FT-5</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Stripe Connect payments</span>
+          <span class="ch" id="ch-f5">▶</span>
+        </div>
+        <div class="card-body" id="f5">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Buyers pay via Stripe. Webhook confirms payment. Growers onboard via Stripe Express. Automatic transfer of net amount per order.</p>
+          <div class="epics-list"><span class="epic-tag">EP-4 Payments & payouts</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-27</div><div class="story-ttl">Payment intent creation</div></div>
+            <div class="story-card"><div class="story-key">HM-28</div><div class="story-ttl">Stripe webhook handler</div></div>
+            <div class="story-card"><div class="story-key">HM-29</div><div class="story-ttl">Grower Stripe onboarding</div></div>
+            <div class="story-card"><div class="story-key">HM-31</div><div class="story-ttl">Auto payout via Inngest</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f6')">
+          <span class="pill p-feat"><i class="ti ti-adjustments" aria-hidden="true"></i>FT-6</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Platform configuration & admin controls</span>
+          <span class="ch" id="ch-f6">▶</span>
+        </div>
+        <div class="card-body" id="f6">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Admin can change commission rates, B2C markup, stock split ratios, and market windows live without a deployment.</p>
+          <div class="epics-list"><span class="epic-tag">EP-6 Admin dashboard</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-53</div><div class="story-ttl">Live config editor</div></div>
+            <div class="story-card"><div class="story-key">HM-32</div><div class="story-ttl">Per-farmer commission rate</div></div>
+            <div class="story-card"><div class="story-key">HM-51</div><div class="story-ttl">Grower approval flow</div></div>
+            <div class="story-card"><div class="story-key">HM-52</div><div class="story-ttl">Buyer ABN management</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f7')">
+          <span class="pill p-feat"><i class="ti ti-plant" aria-hidden="true"></i>FT-7</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Grower inventory management</span>
+          <span class="ch" id="ch-f7">▶</span>
+        </div>
+        <div class="card-body" id="f7">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Growers list products during the listing window (Sun–Tue). Price, stock, GST status, and B2B/B2C split managed per product. Listing toggle locks outside the window.</p>
+          <div class="epics-list"><span class="epic-tag">EP-5 Farmer dashboard</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-38</div><div class="story-ttl">Inventory with price split</div></div>
+            <div class="story-card"><div class="story-key">HM-39</div><div class="story-ttl">New product form</div></div>
+            <div class="story-card"><div class="story-key">HM-40</div><div class="story-ttl">Edit product form</div></div>
+            <div class="story-card"><div class="story-key">HM-47</div><div class="story-ttl">Listing toggle window lock</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:8px">
+        <div class="card-hdr" onclick="tog('f8')">
+          <span class="pill p-feat"><i class="ti ti-server" aria-hidden="true"></i>FT-8</span>
+          <span style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Platform infrastructure & security</span>
+          <span class="ch" id="ch-f8">▶</span>
+        </div>
+        <div class="card-body" id="f8">
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">RLS on all tables, Inngest background jobs, Cloudinary media, AEST timezone utilities, and complete migration history for clean environment setup.</p>
+          <div class="epics-list"><span class="epic-tag">EP-7 Infrastructure</span></div>
+          <div class="stories-grid" style="margin-top:10px">
+            <div class="story-card"><div class="story-key">HM-58</div><div class="story-ttl">RLS all tables</div></div>
+            <div class="story-card"><div class="story-key">HM-59</div><div class="story-ttl">Fix RLS recursion</div></div>
+            <div class="story-card"><div class="story-key">HM-62</div><div class="story-ttl">Inngest jobs</div></div>
+            <div class="story-card"><div class="story-key">HM-64</div><div class="story-ttl">All migrations 001–010</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="biz" class="view">
+  <div class="biz-section">
+    <div class="biz-hdr">Who provides requirements at each level</div>
+
+    <div class="biz-card">
+      <div class="biz-label">Initiative <span class="pill p-init" style="margin-left:6px;vertical-align:middle">IN</span></div>
+      <div class="biz-content"><span class="who-badge who-biz"><i class="ti ti-building" aria-hidden="true"></i> Business</span> Business defines the initiative — what market problem are we solving, what is the measurable outcome, what is the time horizon. This is the "why" of the product.</div>
+      <div class="template-box">
+        <span class="template-field">Problem: </span>[What gap in the market are we addressing?]<br>
+        <span class="template-field">Outcome: </span>[Measurable goal, e.g. 50 farmers onboarded in 6 months]<br>
+        <span class="template-field">Audience: </span>[Who benefits? Growers, B2B buyers, B2C buyers?]<br>
+        <span class="template-field">Constraints: </span>[Budget, timeline, compliance, geography]
+      </div>
+    </div>
+
+    <div class="biz-card">
+      <div class="biz-label">Feature <span class="pill p-feat" style="margin-left:6px;vertical-align:middle">FT</span></div>
+      <div class="biz-content"><span class="who-badge who-both"><i class="ti ti-users" aria-hidden="true"></i> Business + Product</span> Business describes the capability needed (what users should be able to do). Product/tech confirms feasibility and shapes the feature boundary. This is the "what" at a high level.</div>
+      <div class="template-box">
+        <span class="template-field">Feature name: </span>[Short descriptive name]<br>
+        <span class="template-field">User need: </span>[As a [role], I need to be able to [capability]]<br>
+        <span class="template-field">Business value: </span>[Why does this matter? Revenue, retention, compliance?]<br>
+        <span class="template-field">Out of scope: </span>[What this feature does NOT include]<br>
+        <span class="template-field">Success metric: </span>[How will we know this feature is working?]
+      </div>
+    </div>
+
+    <div class="biz-card">
+      <div class="biz-label">Epic <span class="pill p-epic" style="margin-left:6px;vertical-align:middle">EP</span></div>
+      <div class="biz-content"><span class="who-badge who-both"><i class="ti ti-users" aria-hidden="true"></i> Business + Product</span> Business defines the functional area and the rules that govern it. Tech breaks it into buildable chunks. For Harvest Market, business must provide the rules — e.g. commission %, listing windows, GST treatment, dispute resolution policy.</div>
+      <div class="template-box">
+        <span class="template-field">Epic name: </span>[Functional area]<br>
+        <span class="template-field">Business rules: </span>[Any specific rates, windows, thresholds, or policies]<br>
+        <span class="template-field">Australian compliance: </span>[GST, ABN, BAS, state-specific rules]<br>
+        <span class="template-field">Roles involved: </span>[Which user types interact with this epic]<br>
+        <span class="template-field">Priority: </span>[MVL / Phase 2 / Nice to have]
+      </div>
+    </div>
+
+    <div class="biz-card">
+      <div class="biz-label">User story <span class="pill p-story" style="margin-left:6px;vertical-align:middle">HM</span></div>
+      <div class="biz-content"><span class="who-badge who-biz"><i class="ti ti-building" aria-hidden="true"></i> Business validates</span><span class="who-badge who-tech"><i class="ti ti-code" aria-hidden="true"></i> Tech writes</span> Tech writes the story and acceptance criteria. Business reviews and approves the criteria — confirming the story matches their intent before dev starts. Business should reject stories where the acceptance criteria don't match the business rule.</div>
+      <div class="template-box">
+        <span class="template-field">As a </span>[role]<span class="template-field">, I want to </span>[action]<span class="template-field"> so that </span>[outcome]<br><br>
+        <span class="template-field">Acceptance criteria:</span><br>
+        - [Specific, testable condition 1]<br>
+        - [Specific, testable condition 2]<br>
+        - [Edge case or error handling]<br><br>
+        <span class="template-field">Business rule reference: </span>[Link to confluence/doc or inline rule]
+      </div>
+    </div>
+
+    <div class="biz-card" style="border:0.5px solid var(--color-border-danger)">
+      <div class="biz-label" style="color:var(--color-text-danger)"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Where business requirements are missing right now</div>
+      <div class="biz-content" style="line-height:2">
+        <span class="who-badge who-biz">Dispute resolution policy</span> — what happens step by step when a buyer raises a dispute? Who decides? Time limits?<br>
+        <span class="who-badge who-biz">Refund policy</span> — full refund, partial refund, or credit? Who absorbs the loss — platform or farmer?<br>
+        <span class="who-badge who-biz">Grower onboarding criteria</span> — what must a grower prove to be approved? ABN only or food safety certs, insurance?<br>
+        <span class="who-badge who-biz">Delivery zones & fees</span> — which postcodes are served? Flat fee or distance-based? Minimum order for delivery?<br>
+        <span class="who-badge who-biz">Market calendar</span> — will the Wed window ever change? How far in advance? Who can change it?<br>
+        <span class="who-badge who-biz">Commission tiers</span> — is 10% flat for all farmers forever? Any volume discounts or tiered rates?<br>
+        <span class="who-badge who-biz">Buyer credit terms</span> — do B2B buyers ever get invoice terms (pay later)? 30-day accounts?<br>
+        <span class="who-badge who-biz">Product standards</span> — are there minimum quality standards? What happens to non-compliant products?
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="flow" class="view">
+  <div style="margin-bottom:20px">
+    <div class="biz-hdr" style="margin-bottom:12px">How a requirement moves through the system</div>
+
+    <div class="flow-row">
+      <div class="flow-box" style="background:#EEEDFE;color:#3C3489"><i class="ti ti-building" aria-hidden="true"></i> Business identifies problem</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#EEEDFE;color:#3C3489">Writes initiative brief</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#E1F5EE;color:#085041">Product maps to feature</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box" style="background:#E1F5EE;color:#085041">Feature refined with biz</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#FAEEDA;color:#633806">Tech breaks into epics</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#FAEEDA;color:#633806">Biz adds rules to epic</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box" style="background:#E6F1FB;color:#0C447C">Tech writes user stories</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#E6F1FB;color:#0C447C">Biz reviews AC</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#EAF3DE;color:#27500A">Approved → sprint</div>
+    </div>
+  </div>
+
+  <div class="biz-hdr" style="margin-bottom:10px">Where in Jira business adds requirements</div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div class="card-hdr" onclick="tog('jira1')">
+      <span class="pill p-init">Initiative</span>
+      <span style="font-size:13px;color:var(--color-text-primary);flex:1;margin-left:8px">Add to: Jira Goals (Premium) or Confluence page linked to epic</span>
+      <span class="ch" id="ch-jira1">▶</span>
+    </div>
+    <div class="card-body" id="jira1">
+      <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">Jira Free doesn't have an Initiative issue type. Use a <strong>Confluence page</strong> titled "Initiative: [name]" and link it to all related epics. Or create an Epic with the label <code>initiative</code> as a workaround. Business owns creating and updating this document — it's the source of truth for why work exists.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div class="card-hdr" onclick="tog('jira2')">
+      <span class="pill p-feat">Feature</span>
+      <span style="font-size:13px;color:var(--color-text-primary);flex:1;margin-left:8px">Add to: Epic description field in Jira</span>
+      <span class="ch" id="ch-jira2">▶</span>
+    </div>
+    <div class="card-body" id="jira2">
+      <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">In Jira Free, Features sit at the Epic level. Business fills in the Epic's <strong>description field</strong> with the feature template (user need, business value, out of scope, success metric). This becomes the brief that tech uses to write stories. Business should update this before the epic is pulled into a sprint.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div class="card-hdr" onclick="tog('jira3')">
+      <span class="pill p-epic">Epic</span>
+      <span style="font-size:13px;color:var(--color-text-primary);flex:1;margin-left:8px">Add to: Epic description + custom fields in Jira</span>
+      <span class="ch" id="ch-jira3">▶</span>
+    </div>
+    <div class="card-body" id="jira3">
+      <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">Business adds <strong>business rules</strong> to the epic description (rates, windows, compliance requirements). In Jira, create a custom field called "Business rules" on the Epic issue type. Tech should not start writing stories until business has filled this in. Examples for Harvest Market: commission rate, dispute window hours, listing window days/times.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div class="card-hdr" onclick="tog('jira4')">
+      <span class="pill p-story">User story</span>
+      <span style="font-size:13px;color:var(--color-text-primary);flex:1;margin-left:8px">Add to: Story description + comments in Jira</span>
+      <span class="ch" id="ch-jira4">▶</span>
+    </div>
+    <div class="card-body" id="jira4">
+      <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">Tech writes the story and acceptance criteria. Business reviews by <strong>commenting</strong> in Jira with approval or change requests. Use the Jira workflow: <code>To Do → In Review (biz) → Approved → In Progress</code>. Business should only comment on whether the acceptance criteria correctly capture the business intent — not implementation details.</p>
+    </div>
+  </div>
+
+  <div class="biz-card" style="margin-top:16px;background:var(--color-background-secondary)">
+    <div class="biz-label">Recommended Jira Free setup for Harvest Market</div>
+    <div class="biz-content" style="font-size:12px;line-height:2">
+      1. Create project <strong>Harvest Market (HM)</strong> — Scrum board<br>
+      2. Issue types: Epic, Story, Bug, Task<br>
+      3. Add custom fields: <em>Business rules</em> (paragraph) on Epic; <em>MVL</em> (yes/no) on Story<br>
+      4. Workflows: To Do → In Biz Review → Approved → In Progress → In Review → Done<br>
+      5. Labels: <code>mvl</code>, <code>post-mvl</code>, <code>compliance</code>, <code>tech-debt</code><br>
+      6. Components: Auth, Marketplace, Orders, Payments, Farmer, Admin, Infra<br>
+      7. Import the CSV from this session — all 76 rows map directly to Jira's CSV importer
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function tog(id){
+  const b=document.getElementById(id)
+  const c=document.getElementById('ch-'+id)
+  b.classList.toggle('on')
+  if(c)c.classList.toggle('on')
+}
+function show(id,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'))
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'))
+  document.getElementById(id).classList.add('on')
+  btn.classList.add('on')
+}
+</script>
