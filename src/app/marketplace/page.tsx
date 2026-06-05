@@ -1,287 +1,193 @@
-// src/app/dashboard/farmer/storefront/page.tsx
 'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useCart } from '@/hooks/useCart'
+import { formatPrice } from '@/lib/utils/pricing'
+import { isMarketOpen } from '@/lib/utils/timezone'
 
-export default function FarmerStorefrontPage() {
-  const supabase = createClient()
-  const router = useRouter()
+const CATEGORIES = [
+  { id: '', label: 'All' }, { id: 'flowers_cut', label: '✿ Cut Flowers' },
+  { id: 'flowers_dried', label: '🌾 Dried' }, { id: 'foliage', label: '🍃 Foliage' },
+  { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' },
+  { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' },
+  { id: 'honey', label: '🍯 Honey' },
+]
 
-  const [farmer, setFarmer]   = useState<any>(null)
+const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
+
+export default function MarketplacePage() {
+  const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [saved, setSaved]     = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [category, setCategory] = useState('')
+  const [isB2B, setIsB2B] = useState(true)
+  const [marketOpen] = useState(isMarketOpen())
+  const [search, setSearch] = useState('')
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const { addItem, updateQuantity, items, totalItems } = useCart()
 
-  const [form, setForm] = useState({
-    business_name: '',
-    bio: '',
-    brand_color: '#01472e',
-    suburb: '',
-    state: 'VIC',
-    postcode: '',
-    address: '',
-    abn: '',
-  })
-
-  useEffect(() => { load() }, [])
-
-  async function load() {
+  useEffect(() => {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}`)
+      .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
+  }, [category, isB2B])
 
-    const { data } = await supabase
-      .from('farmers')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (data) {
-      setFarmer(data)
-      setForm({
-        business_name: data.business_name || '',
-        bio:           data.bio || '',
-        brand_color:   data.brand_color || '#01472e',
-        suburb:        data.suburb || '',
-        state:         data.state || 'VIC',
-        postcode:      data.postcode || '',
-        address:       data.address || '',
-        abn:           data.abn || '',
-      })
-    }
-    setLoading(false)
+  function handleAdd(product: any) {
+    addItem(product, 1, isB2B)
+    setAddedIds(s => new Set([...s, product.id]))
+    setTimeout(() => setAddedIds(s => { const n = new Set(s); n.delete(product.id); return n }), 1200)
   }
 
-  async function handleCreate() {
-    setCreating(true)
-    setError(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Validate required fields
-    if (!form.business_name || !form.abn || !form.address || !form.suburb || !form.postcode) {
-      setError('Please fill in all required fields: Business Name, ABN, Address, Suburb, Postcode')
-      setCreating(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('farmers')
-      .insert({
-        user_id:       user.id,
-        business_name: form.business_name,
-        bio:           form.bio,
-        brand_color:   form.brand_color,
-        address:       form.address,
-        suburb:        form.suburb,
-        state:         form.state,
-        postcode:      form.postcode,
-        abn:           form.abn,
-        abn_verified:  false,
-        abn_verification_status: 'pending',
-        status:        'pending_approval',
-        commission_rate: 0.10,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      setError(error.message)
-      setCreating(false)
-    } else {
-      // Hard navigation — forces Server Component to re-fetch farmer record
-      // setFarmer alone won't update the /dashboard/farmer Server Component cache
-      router.push('/dashboard/farmer')
-      router.refresh()
-    }
+  function getCartQty(productId: string) {
+    return items.find(i => i.product_id === productId)?.quantity || 0
   }
 
-  async function handleSave() {
-    if (!farmer) return
-    setSaving(true)
-    setError(null)
-
-    const { error } = await supabase
-      .from('farmers')
-      .update({
-        business_name: form.business_name,
-        bio:           form.bio,
-        brand_color:   form.brand_color,
-        suburb:        form.suburb,
-        state:         form.state,
-        postcode:      form.postcode,
-        address:       form.address,
-        updated_at:    new Date().toISOString(),
-      })
-      .eq('id', farmer.id)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-    }
-    setSaving(false)
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '0.625rem 0.75rem',
-    borderRadius: '0.5rem',
-    border: '1.5px solid var(--sage)',
-    fontFamily: 'var(--font-body)',
-    fontSize: '0.9rem',
-    color: 'var(--forest)',
-    background: 'var(--cream)',
-    boxSizing: 'border-box' as const,
-  }
-
-  if (loading) return (
-    <div style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
-      Loading...
-    </div>
-  )
+  const filtered = products.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.farmers?.business_name?.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)', maxWidth: '42rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
-        {farmer ? 'Storefront' : 'Create Farmer Profile'}
-      </h1>
-      <p style={{ color: 'var(--forest)', opacity: 0.5, marginBottom: '2rem', fontSize: '0.9rem' }}>
-        {farmer
-          ? `Status: ${farmer.status === 'approved' ? '✅ Approved' : farmer.status === 'pending_approval' ? '⏳ Pending admin approval' : '🚫 ' + farmer.status}`
-          : 'Set up your farm profile to start selling on Bloom Lane'}
-      </p>
+    <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
 
-      {/* Pending approval notice */}
-      {farmer?.status === 'pending_approval' && (
-        <div style={{ background: '#fef9c3', border: '1px solid #fbbf24', borderRadius: '0.75rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.875rem', color: '#92400e' }}>
-          ⏳ Your farmer account is pending admin approval. You can update your profile details below while you wait.
+      {/* ── Top nav ── */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,247,249,0.9)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--olive)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none', flexShrink: 0 }}>
+          <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>B</div>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Bloom Lane</span>
+        </Link>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <svg style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'var(--moss)', pointerEvents: 'none' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input className="input" style={{ paddingLeft: '2.5rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }} placeholder="Search products or farms…" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+          <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
+          <Link href="/checkout" className="btn btn-forest btn-sm" style={{ position: 'relative' }}>
+            Cart
+            {totalItems() > 0 && <span style={{ position: 'absolute', top: '-0.5rem', right: '-0.5rem', width: '1.25rem', height: '1.25rem', borderRadius: '50%', background: 'var(--sage)', color: 'var(--forest)', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{totalItems()}</span>}
+          </Link>
+        </div>
+      </nav>
+
+      {/* Market status banner */}
+      {marketOpen ? (
+        <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--forest)' }}>
+          <span className="type-label" style={{ color: 'var(--sage)' }}>
+            <span className="status-dot status-live" style={{ marginRight: '0.5rem' }} />
+            Market is LIVE · Order before Wednesday 8:00 PM AEST
+          </span>
+        </div>
+      ) : (
+        <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--olive)' }}>
+          <span className="type-label" style={{ color: 'var(--forest)' }}>
+            🕐 Market closed · Opens Wednesday 8:00 AM AEST · Browse now, order Wednesday
+          </span>
         </div>
       )}
 
-      {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-          {error}
-        </div>
-      )}
+      <div style={{ display: 'flex' }}>
 
-      {/* Live preview card */}
-      <div style={{ marginBottom: '2rem', borderRadius: 'var(--r-card)', overflow: 'hidden', border: '1px solid var(--olive)' }}>
-        <div style={{ height: '4rem', background: form.brand_color }} />
-        <div style={{ padding: '1.25rem', background: 'white' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: form.brand_color }}>
-            {form.business_name || 'Your Farm Name'}
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.2rem' }}>
-            {[form.suburb, form.state, form.postcode].filter(Boolean).join(' ')}
-          </p>
-          <p style={{ fontSize: '0.875rem', color: 'var(--forest)', marginTop: '0.5rem', opacity: 0.7 }}>
-            {form.bio || 'Your farm description will appear here...'}
-          </p>
-        </div>
-      </div>
+        {/* Sidebar */}
+        <aside style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
 
-      <div style={{ background: 'white', borderRadius: 'var(--r-card)', padding: '1.75rem', border: '1px solid var(--olive)', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-
-        {/* Business Name */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-            Farm / Business Name <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <input style={inputStyle} value={form.business_name} onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))} placeholder="e.g. Green Valley Farms" />
-        </div>
-
-        {/* ABN — only shown when creating */}
-        {!farmer && (
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              ABN <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input style={inputStyle} value={form.abn} onChange={e => setForm(f => ({ ...f, abn: e.target.value }))} placeholder="e.g. 51 824 753 556" />
-            <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>
-              Your ABN will be verified with the Australian Business Register
-            </p>
+          {/* B2B/B2C toggle */}
+          <div style={{ marginBottom: '1.75rem' }}>
+            <p className="label" style={{ marginBottom: '0.75rem' }}>Buyer type</p>
+            <div className="card" style={{ padding: '0.25rem', display: 'flex', background: 'var(--olive)', borderRadius: '2rem' }}>
+              {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
+                <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
+                  className="type-label-sm"
+                  style={{ flex: 1, padding: '0.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', background: isB2B === opt.id ? 'var(--forest)' : 'transparent', color: isB2B === opt.id ? 'var(--cream)' : 'var(--moss)' }}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+            {isB2B && <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.5rem', letterSpacing: '0.15em' }}>ABN required · Ex-GST</p>}
           </div>
-        )}
 
-        {/* Bio */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Bio</label>
-          <textarea
-            value={form.bio}
-            onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-            rows={3}
-            placeholder="Tell buyers about your farm — what you grow, your story, your values"
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
-
-        {/* Brand colour */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Brand Colour</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <input type="color" value={form.brand_color} onChange={e => setForm(f => ({ ...f, brand_color: e.target.value }))}
-              style={{ width: '3rem', height: '2.5rem', border: '1.5px solid var(--sage)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.1rem' }} />
-            <span style={{ fontSize: '0.85rem', color: 'var(--forest)', opacity: 0.6 }}>{form.brand_color}</span>
+          {/* Category */}
+          <p className="label">Category</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {CATEGORIES.map(cat => (
+              <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
+                className={`nav-item ${category === cat.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
+                {cat.label}
+              </button>
+            ))}
           </div>
-        </div>
+        </aside>
 
-        {/* Address */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-            Street Address {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-          </label>
-          <input style={inputStyle} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Farm Road" />
-        </div>
+        {/* Product grid */}
+        <main style={{ flex: 1, padding: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+            <h1 className="type-subheading" style={{ color: 'var(--forest)' }}>
+              {category ? CATEGORIES.find(c => c.id === category)?.label : 'All Products'}
+            </h1>
+            <span className="type-label-sm" style={{ color: 'var(--moss)' }}>
+              {loading ? '…' : `${filtered.length} products`}
+            </span>
+          </div>
 
-        {/* Suburb / State / Postcode */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              Suburb {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-            </label>
-            <input style={inputStyle} value={form.suburb} onChange={e => setForm(f => ({ ...f, suburb: e.target.value }))} placeholder="Melbourne" />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>State</label>
-            <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} style={inputStyle}>
-              {['VIC','NSW','QLD','SA','WA','TAS','NT','ACT'].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              Postcode {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-            </label>
-            <input style={inputStyle} value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="3000" maxLength={4} />
-          </div>
-        </div>
-
-        {/* Submit */}
-        <button
-          onClick={farmer ? handleSave : handleCreate}
-          disabled={saving || creating}
-          style={{
-            marginTop: '0.25rem',
-            width: '100%',
-            padding: '0.75rem',
-            borderRadius: '0.75rem',
-            background: saved ? '#dcfce7' : 'var(--forest)',
-            color: saved ? '#166534' : 'var(--cream)',
-            border: 'none',
-            fontFamily: 'var(--font-body)',
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            cursor: (saving || creating) ? 'wait' : 'pointer',
-            transition: 'all 0.2s',
-          }}
-        >
-          {creating ? 'Creating profile...' : saving ? 'Saving...' : saved ? '✓ Saved' : farmer ? 'Save Changes' : 'Create Farmer Profile'}
-        </button>
+          {loading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(14rem, 1fr))', gap: '1.25rem' }}>
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="card" style={{ height: '17rem', background: 'var(--olive)' }} />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '6rem 0' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🌾</div>
+              <h3 className="type-subheading" style={{ color: 'var(--forest)', marginBottom: '0.75rem' }}>No products listed yet</h3>
+              <p className="type-label" style={{ color: 'var(--moss)' }}>Growers list Sunday–Tuesday · Market opens Wednesday</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(14rem, 1fr))', gap: '1.25rem' }}>
+              {filtered.map((product, i) => {
+                const available = isB2B ? product.b2b_available : product.b2c_available
+                const displayPrice = isB2B
+                  ? (product.b2b_display_price || product.wholesale_price)
+                  : (product.b2c_display_price || product.buyer_unit_price || product.wholesale_price)
+                const priceLabel = isB2B
+                  ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
+                  : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
+                return (
+                  <div key={product.id} className="card card-hover reveal" style={{ display: 'flex', flexDirection: 'column', animationDelay: `${i * 40}ms` }}>
+                    <div style={{ height: '9rem', background: 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', position: 'relative', flexShrink: 0, overflow: 'hidden', borderRadius: 'var(--r-card) var(--r-card) 0 0' }}>
+                      {product.image_url ? <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : EMOJI[product.category] || '🌿'}
+                      {product.is_gst_free && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
+                    </div>
+                    <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.25rem' }}>{product.farmers?.business_name}</p>
+                      <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>
+                      <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>per {product.unit} · {available} left</p>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 'auto' }}>
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
+                          <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                            {priceLabel}
+                            {isB2B && !product.is_gst_free && (
+                              <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST</span>
+                            )}
+                          </div>
+                        </div>
+                        {!marketOpen ? (
+                          <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Closed</span>
+                        ) : available === 0 ? (
+                          <span className="type-label-sm" style={{ color: '#b91c1c' }}>Sold out</span>
+                        ) : getCartQty(product.id) === 0 ? (
+                          <button onClick={() => handleAdd(product)} className="btn btn-forest btn-sm">Add</button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--forest)', borderRadius: '99px', padding: '0.2rem 0.25rem' }}>
+                            <button onClick={() => updateQuantity(product.id, getCartQty(product.id) - 1)}
+                              style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                            <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', minWidth: '1.25rem', textAlign: 'center' }}>{getCartQty(product.id)}</span>
+                            <button onClick={() => handleAdd(product)} disabled={getCartQty(product.id) >= available}
+                              style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: getCartQty(product.id) >= available ? 'rgba(255,247,249,0.1)' : 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: getCartQty(product.id) >= available ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </main>
       </div>
     </div>
   )
