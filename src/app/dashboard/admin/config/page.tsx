@@ -51,6 +51,14 @@ export default function AdminConfigPage() {
   const [saving, setSaving]   = useState<string | null>(null)
   const [saved, setSaved]     = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
+
+  // Team management state
+  const [admins, setAdmins]         = useState<any[]>([])
+  const [newAdminEmail, setNewAdminEmail] = useState('')
+  const [promoting, setPromoting]   = useState(false)
+  const [revoking, setRevoking]     = useState<string | null>(null)
+  const [teamMsg, setTeamMsg]       = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
   const supabase = createClient()
 
   useEffect(() => {
@@ -62,7 +70,44 @@ export default function AdminConfigPage() {
       }
       setLoading(false)
     })
+    fetch('/api/admin/team').then(r => r.json()).then(d => setAdmins(d.data || []))
   }, [])
+
+  async function promoteAdmin(e: React.FormEvent) {
+    e.preventDefault()
+    setPromoting(true); setTeamMsg(null)
+    const res = await fetch('/api/admin/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: newAdminEmail }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setTeamMsg({ type: 'err', text: data.error })
+    } else {
+      setAdmins(a => [...a, data.user])
+      setNewAdminEmail('')
+      setTeamMsg({ type: 'ok', text: `${data.user.full_name || data.user.email} is now an admin` })
+    }
+    setPromoting(false)
+  }
+
+  async function revokeAdmin(userId: string) {
+    setRevoking(userId); setTeamMsg(null)
+    const res = await fetch('/api/admin/team', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setTeamMsg({ type: 'err', text: data.error })
+    } else {
+      setAdmins(a => a.filter(admin => admin.id !== userId))
+      setTeamMsg({ type: 'ok', text: 'Admin access revoked' })
+    }
+    setRevoking(null)
+  }
 
   async function handleSave(key: string) {
     setSaving(key); setError(null)
@@ -146,6 +191,69 @@ export default function AdminConfigPage() {
 
       <div className="reveal" style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'var(--amber-soft)', border: '1px solid rgba(196,124,43,0.2)', borderRadius: '0.75rem' }}>
         <p className="type-label" style={{ color: 'var(--amber-new)' }}>⚠ Changing B2C Markup or Stock Split affects all new orders immediately. Existing orders are unaffected.</p>
+      </div>
+
+      {/* ── Platform Team ── */}
+      <div className="card reveal" style={{ overflow: 'hidden', marginTop: '2rem' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '0.625rem', background: 'var(--offwhite)' }}>
+          <span style={{ fontSize: '1.1rem' }}>👤</span>
+          <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Platform Team</h2>
+        </div>
+
+        {/* Current admins */}
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
+          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Current Admins</p>
+          {admins.length === 0 ? (
+            <p className="type-label" style={{ color: 'var(--moss)' }}>Loading…</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {admins.map(admin => (
+                <div key={admin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'var(--offwhite)', gap: '1rem' }}>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)' }}>{admin.full_name || '—'}</p>
+                    <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{admin.email}</p>
+                  </div>
+                  <button
+                    onClick={() => revokeAdmin(admin.id)}
+                    disabled={revoking === admin.id}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: 'var(--bloom)', borderColor: 'var(--bloom-mid)', flexShrink: 0 }}
+                  >
+                    {revoking === admin.id ? '…' : 'Revoke'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Promote new admin */}
+        <div style={{ padding: '1.25rem 1.5rem' }}>
+          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Promote User to Admin</p>
+          {teamMsg && (
+            <div className={`badge ${teamMsg.type === 'ok' ? 'badge-sage' : 'badge-red'}`}
+              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', marginBottom: '1rem', justifyContent: 'flex-start', fontSize: '0.8rem' }}>
+              {teamMsg.type === 'ok' ? '✓' : '⚠'} {teamMsg.text}
+            </div>
+          )}
+          <form onSubmit={promoteAdmin} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <input
+              type="email"
+              className="input"
+              placeholder="user@example.com"
+              value={newAdminEmail}
+              onChange={e => setNewAdminEmail(e.target.value)}
+              required
+              style={{ flex: 1, minWidth: '14rem' }}
+            />
+            <button type="submit" className="btn btn-forest btn-sm" disabled={promoting} style={{ flexShrink: 0 }}>
+              {promoting ? '…' : 'Promote to Admin'}
+            </button>
+          </form>
+          <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.625rem' }}>
+            The user must already have a Bloom Lane account. Their role will change to admin immediately.
+          </p>
+        </div>
       </div>
     </div>
   )
