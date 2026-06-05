@@ -107,6 +107,12 @@ body {
   text-transform: uppercase;
   color: var(--text-secondary);
 }
+.type-label {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
 .type-label-sm {
   font-family: var(--font-body);
   font-size: 0.7rem;
@@ -247,6 +253,21 @@ body {
 .badge-red  { background: #fce8ed; color: #c0394e; }
 .badge-amber { background: var(--amber-soft); color: var(--amber-new); }
 .badge-bloom { background: var(--bloom-soft); color: var(--bloom); }
+
+/* ── Table ────────────────────────────────────────────────── */
+.table-row { transition: background 0.12s ease; }
+.table-row:hover { background: var(--offwhite); }
+.th { padding: 0.875rem 1.25rem; text-align: left; }
+.td { padding: 0.875rem 1.25rem; border-top: 1px solid var(--border-light); }
+
+/* ── Status dot ───────────────────────────────────────────── */
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status-live { background: var(--sage-new); animation: pulse-dot 1.8s ease infinite; }
 
 /* ── Toggle switch ────────────────────────────────────────── */
 .toggle {
