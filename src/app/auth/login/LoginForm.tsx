@@ -8,6 +8,7 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const resetSuccess = searchParams.get('reset') === 'success'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -64,6 +65,11 @@ export default function LoginForm() {
             No account?{' '}
             <Link href="/auth/register" style={{ color: 'var(--navy)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign up free</Link>
           </p>
+          {resetSuccess && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.75rem', padding: '0.875rem 1rem', marginBottom: '1.5rem', fontSize: '0.75rem', color: '#166534', letterSpacing: '0.05em' }}>
+              ✓ Password updated — sign in with your new password
+            </div>
+          )}
           {error && (
             <div className="badge badge-red" style={{ width: '100%', padding: '0.875rem 1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', justifyContent: 'flex-start', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
               ⚠ {error}
@@ -77,6 +83,7 @@ export default function LoginForm() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <label className="label" style={{ margin: 0 }}>Password</label>
+                <Link href="/auth/forgot-password" style={{ fontSize: '0.75rem', color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Forgot password?</Link>
               </div>
               <input className="input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
