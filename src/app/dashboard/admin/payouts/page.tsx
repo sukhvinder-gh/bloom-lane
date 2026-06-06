@@ -39,7 +39,7 @@ export default async function AdminPayoutsPage() {
   ]
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 className="type-heading reveal" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Payouts</h1>
         <p className="type-label" style={{ color: 'var(--moss)' }}>Farmer earnings &amp; platform commission</p>
@@ -62,7 +62,7 @@ export default async function AdminPayoutsPage() {
           <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Payout History</h2>
           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>{list.length} records</span>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--offwhite)', borderBottom: '1px solid var(--border-light)' }}>

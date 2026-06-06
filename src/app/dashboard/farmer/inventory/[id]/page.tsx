@@ -130,13 +130,13 @@ export default function EditProductPage() {
   }
 
   if (fetching) return (
-    <div style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
       Loading product...
     </div>
   )
 
   if (notFound) return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
       <p style={{ color: 'var(--forest)', opacity: 0.6, marginBottom: '1rem' }}>Product not found.</p>
       <Link href="/dashboard/farmer/inventory" style={{ color: 'var(--forest)', fontWeight: 700 }}>
         ← Back to Inventory
@@ -145,7 +145,7 @@ export default function EditProductPage() {
   )
 
   return (
-    <div style={{ padding: '2.5rem', maxWidth: '42rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '42rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <Link href="/dashboard/farmer/inventory" className="btn btn-ghost btn-sm">← Back</Link>

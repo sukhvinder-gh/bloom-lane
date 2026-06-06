@@ -40,7 +40,7 @@ export default function NewProductPage() {
   }
 
   return (
-    <div style={{ padding: '2.5rem', maxWidth: '42rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '42rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
         <Link href="/dashboard/farmer/inventory" className="btn btn-ghost btn-sm">← Back</Link>
         <h1 className="type-heading reveal" style={{ color: 'var(--forest)' }}>Add product</h1>

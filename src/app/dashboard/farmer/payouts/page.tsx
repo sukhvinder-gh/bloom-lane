@@ -37,7 +37,7 @@ export default async function FarmerPayoutsPage() {
   }
 
   return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
         Earnings
       </h1>

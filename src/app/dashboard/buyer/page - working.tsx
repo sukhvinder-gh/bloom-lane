@@ -25,7 +25,7 @@ export default async function BuyerDashboard() {
   const activeOrders = allOrders?.filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status)).length || 0
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2.5rem', gap: '1.5rem', flexWrap: 'wrap' }}>
         <div>

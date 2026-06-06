@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import SignOutButton from './SignOutButton'
+import MobileHeader from './MobileHeader'
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -78,10 +79,20 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // (Server Actions caused redirect issues with browser extension probes)
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--cream)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--cream)' }}>
 
-      {/* ── Sidebar ── */}
-      <aside style={{
+      {/* Mobile top bar — hidden on desktop via CSS */}
+      <MobileHeader
+        links={links}
+        userName={profile?.full_name || null}
+        roleLabel={roleLabel}
+        roleStyle={badgeStyle[role] || {}}
+      />
+
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+
+      {/* ── Sidebar (desktop only) ── */}
+      <aside className="desktop-sidebar" style={{
         width: '15rem', flexShrink: 0, display: 'flex', flexDirection: 'column',
         position: 'sticky', top: 0, height: '100vh',
         background: 'white', borderRight: '1px solid var(--olive)',
@@ -138,6 +149,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
       {/* Main */}
       <main style={{ flex: 1, overflow: 'auto' }}>{children}</main>
+
+      </div>{/* end flex row */}
     </div>
   )
 }

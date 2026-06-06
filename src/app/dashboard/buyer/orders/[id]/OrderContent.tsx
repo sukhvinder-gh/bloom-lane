@@ -38,9 +38,9 @@ export default function BuyerOrderDetailPage() {
     setShowDispute(false); setDisputing(false)
   }
 
-  if (loading) return <div style={{ padding: '2.5rem' }}><div className="card" style={{ height: '20rem', background: 'var(--olive)' }} /></div>
+  if (loading) return <div className="page-pad" style={{ padding: '2.5rem' }}><div className="card" style={{ height: '20rem', background: 'var(--olive)' }} /></div>
   if (!order) return (
-    <div style={{ padding: '2.5rem', textAlign: 'center' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', textAlign: 'center' }}>
       <p style={{ color: 'var(--moss)' }}>Order not found.</p>
       <Link href="/dashboard/buyer/orders" className="btn btn-ghost btn-sm" style={{ marginTop: '1rem' }}>← Back</Link>
     </div>
@@ -50,7 +50,7 @@ export default function BuyerOrderDetailPage() {
   const disputeAllowed = canDispute(order.dispute_deadline) && order.status === 'delivered'
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
         <Link href="/dashboard/buyer/orders" className="btn btn-ghost btn-sm">← Orders</Link>
         <h1 className="type-subheading reveal" style={{ color: 'var(--forest)' }}>{order.order_number}</h1>

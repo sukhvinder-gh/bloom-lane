@@ -49,7 +49,7 @@ export default async function AdminDashboard() {
   const marketOpen = isMarketOpen()
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2.5rem', gap: '1.5rem', flexWrap: 'wrap' }}>
         <div>
@@ -107,6 +107,7 @@ export default async function AdminDashboard() {
             <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Order Command Center</h2>
             <Link href="/dashboard/admin/orders" className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>View all →</Link>
           </div>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
@@ -132,6 +133,7 @@ export default async function AdminDashboard() {
               ))}
             </tbody>
           </table>
+          </div>{/* end table-wrap */}
         </div>
 
         {/* Quick actions */}

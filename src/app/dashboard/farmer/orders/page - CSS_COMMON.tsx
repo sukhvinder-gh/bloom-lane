@@ -32,7 +32,7 @@ export default function FarmerOrdersPage() {
   }
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       <h1 className="type-heading reveal" style={{ color: 'var(--forest)', marginBottom: '2rem' }}>My Orders</h1>
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}

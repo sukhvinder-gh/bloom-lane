@@ -145,10 +145,10 @@ export default function BuyerOrdersPage() {
   const th: React.CSSProperties = { padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--forest)', opacity: 0.5, borderBottom: '1px solid var(--olive)', whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '11px 12px', borderBottom: '1px solid var(--olive)', fontSize: '0.875rem', color: 'var(--forest)', verticalAlign: 'middle' }
 
-  if (loading) return <div style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.4 }}>Loading...</div>
+  if (loading) return <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.4 }}>Loading...</div>
 
   return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>

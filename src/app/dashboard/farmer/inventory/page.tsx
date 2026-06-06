@@ -27,7 +27,7 @@ export default function FarmerInventoryPage() {
   const listedCount = products.filter(p => p.is_listed_this_week).length
 
   return (
-    <div style={{ padding: '2.5rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', gap: '1.5rem', flexWrap: 'wrap' }}>
         <div>

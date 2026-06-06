@@ -28,7 +28,7 @@ export default async function BuyerInvoicesPage() {
   const isB2B = profile?.role === 'buyer_b2b' && profile?.abn_verified
 
   return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>

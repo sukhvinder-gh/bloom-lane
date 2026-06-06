@@ -126,7 +126,7 @@ export default function AdminConfigPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2.5rem' }}>
+      <div className="page-pad" style={{ padding: '2.5rem' }}>
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ width: '12rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--offwhite)', marginBottom: '0.5rem' }} />
           <div style={{ width: '20rem', height: '1rem', borderRadius: '0.5rem', background: 'var(--offwhite)' }} />
@@ -139,7 +139,7 @@ export default function AdminConfigPage() {
   }
 
   return (
-    <div style={{ padding: '2.5rem', maxWidth: '52rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '52rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 className="type-heading reveal" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Platform Config</h1>
         <p className="type-label" style={{ color: 'var(--moss)' }}>Changes take effect immediately — no restart required</p>

@@ -66,6 +66,32 @@ export default function MarketplacePage() {
         </div>
       </nav>
 
+      {/* ── Mobile controls (hidden on desktop) ── */}
+      <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
+        {/* B2B/B2C toggle */}
+        <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
+          <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>Buyer type</span>
+          <div style={{ display: 'flex', background: 'var(--offwhite)', borderRadius: '99px', padding: '0.2rem', gap: '0.2rem' }}>
+            {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
+              <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
+                className="type-label-sm"
+                style={{ padding: '0.35rem 0.875rem', borderRadius: '99px', border: 'none', cursor: 'pointer', transition: 'all 0.18s', background: isB2B === opt.id ? 'var(--navy)' : 'transparent', color: isB2B === opt.id ? 'white' : 'var(--moss)' }}>
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Category pills */}
+        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.75rem 1rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+          {CATEGORIES.map(cat => (
+            <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
+              style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${category === cat.id ? 'var(--navy)' : 'var(--border)'}`, background: category === cat.id ? 'var(--navy)' : 'white', color: category === cat.id ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Market status banner */}
       {marketOpen ? (
         <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--forest)' }}>
@@ -82,10 +108,10 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      <div style={{ display: 'flex' }}>
+      <div className="market-layout" style={{ display: 'flex' }}>
 
-        {/* Sidebar */}
-        <aside style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
+        {/* Sidebar — hidden on mobile */}
+        <aside className="market-sidebar" style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
 
           {/* B2B/B2C toggle */}
           <div style={{ marginBottom: '1.75rem' }}>

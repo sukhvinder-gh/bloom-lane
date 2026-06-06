@@ -339,6 +339,67 @@ body {
 .reveal-d2 { animation-delay: 0.16s; }
 .reveal-d3 { animation-delay: 0.24s; }
 
+/* ── Responsive / Mobile ──────────────────────────────────── */
+
+/* Mobile top-bar: hidden on desktop, flex on mobile */
+.mobile-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 1rem;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@media (max-width: 767px) {
+  /* Show mobile-only elements */
+  .mobile-topbar { display: flex; }
+  .mobile-only   { display: flex !important; }
+
+  /* Hide desktop-only elements */
+  .desktop-only    { display: none !important; }
+  .desktop-sidebar { display: none !important; }
+
+  /* Responsive page padding */
+  .page-pad { padding: 1.25rem !important; max-width: 100% !important; }
+
+  /* Tables: horizontal scroll on small screens */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Marketplace layout: stack vertically on mobile */
+  .market-layout { flex-direction: column !important; }
+  .market-sidebar { display: none !important; }
+  .market-cats-mobile { display: flex !important; }
+
+  /* Auth card: full width with smaller padding */
+  .auth-card {
+    margin: 1rem !important;
+    padding: 1.75rem !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Hide mobile-only elements on desktop */
+  .mobile-only        { display: none !important; }
+  .market-cats-mobile { display: none !important; }
+
+  /* Restore desktop page padding */
+  .page-pad { padding: 2.5rem; }
+}
+
 /* ── Hide number input spinners ───────────────────────────── */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

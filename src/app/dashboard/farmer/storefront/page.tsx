@@ -141,13 +141,13 @@ export default function FarmerStorefrontPage() {
   }
 
   if (loading) return (
-    <div style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
       Loading...
     </div>
   )
 
   return (
-    <div style={{ padding: '2.5rem', fontFamily: 'var(--font-body)', maxWidth: '42rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)', maxWidth: '42rem' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
         {farmer ? 'Storefront' : 'Create Farmer Profile'}
       </h1>
