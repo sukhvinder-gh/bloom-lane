@@ -5,27 +5,27 @@ export default function HomePage() {
     <main style={{ fontFamily: 'var(--font-body)', background: 'var(--petal)', minHeight: '100vh' }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="home-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--navy)',
         padding: '0 2rem', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         boxShadow: '0 2px 16px rgba(30,37,53,0.18)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <span style={{ fontSize: '1.4rem' }}>🌸</span>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          <span style={{ fontSize: '1.2rem' }}>🌸</span>
+          <span className="home-nav-logo" style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
             Bloom Lane
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link href="/marketplace" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+          <Link href="/marketplace" className="home-nav-mkt" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
             Marketplace
           </Link>
-          <Link href="/auth/login" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+          <Link href="/auth/login" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
             Sign in
           </Link>
-          <Link href="/auth/register" className="btn btn-bloom btn-sm">
+          <Link href="/auth/register" className="btn btn-bloom btn-sm" style={{ whiteSpace: 'nowrap' }}>
             Get started
           </Link>
         </div>

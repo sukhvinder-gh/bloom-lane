@@ -99,7 +99,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1.75rem', alignItems: 'start' }}>
+      <div className="admin-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1.75rem', alignItems: 'start' }}>
 
         {/* Orders table */}
         <div className="card reveal" style={{ overflow: 'hidden' }}>
@@ -137,7 +137,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Quick actions */}
-        <div style={{ width: '14rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="admin-quick-actions" style={{ width: '14rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card reveal" style={{ padding: '1.75rem' }}>
             <h3 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1rem' }}>Quick Actions</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

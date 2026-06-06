@@ -389,6 +389,14 @@ body {
     width: auto !important;
     max-width: 100% !important;
   }
+
+  /* Home page nav: tighter padding, hide Marketplace link */
+  .home-nav { padding: 0 1rem !important; }
+  .home-nav-mkt { display: none !important; }
+
+  /* Admin overview: stack orders + quick-actions vertically */
+  .admin-overview-grid { grid-template-columns: 1fr !important; }
+  .admin-quick-actions { width: 100% !important; }
 }
 
 @media (min-width: 768px) {
