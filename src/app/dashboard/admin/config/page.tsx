@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { roleLabel } from '@/lib/utils/permissions'
 
 const SECTIONS = [
   {
@@ -45,6 +46,12 @@ const SECTIONS = [
   },
 ]
 
+const ROLE_BADGE: Record<string, string> = {
+  super_admin:    'badge-amber',
+  platform_admin: 'badge-sage',
+  admin:          'badge-olive',
+}
+
 export default function AdminConfigPage() {
   const [config, setConfig]   = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -52,12 +59,13 @@ export default function AdminConfigPage() {
   const [saved, setSaved]     = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
 
-  // Team management state
-  const [admins, setAdmins]         = useState<any[]>([])
+  const [myRole, setMyRole]   = useState('')
+  const [admins, setAdmins]   = useState<any[]>([])
   const [newAdminEmail, setNewAdminEmail] = useState('')
-  const [promoting, setPromoting]   = useState(false)
-  const [revoking, setRevoking]     = useState<string | null>(null)
-  const [teamMsg, setTeamMsg]       = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [newAdminRole, setNewAdminRole]   = useState<'platform_admin' | 'super_admin'>('platform_admin')
+  const [promoting, setPromoting] = useState(false)
+  const [revoking, setRevoking]   = useState<string | null>(null)
+  const [teamMsg, setTeamMsg]     = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
   const supabase = createClient()
 
@@ -71,7 +79,15 @@ export default function AdminConfigPage() {
       setLoading(false)
     })
     fetch('/api/admin/team').then(r => r.json()).then(d => setAdmins(d.data || []))
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('role').eq('id', user.id).single()
+          .then(({ data }) => setMyRole(data?.role || ''))
+      }
+    })
   }, [])
+
+  const isSuperAdmin = myRole === 'super_admin' || myRole === 'admin'
 
   async function promoteAdmin(e: React.FormEvent) {
     e.preventDefault()
@@ -79,7 +95,7 @@ export default function AdminConfigPage() {
     const res = await fetch('/api/admin/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newAdminEmail }),
+      body: JSON.stringify({ email: newAdminEmail, target_role: newAdminRole }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -87,7 +103,7 @@ export default function AdminConfigPage() {
     } else {
       setAdmins(a => [...a, data.user])
       setNewAdminEmail('')
-      setTeamMsg({ type: 'ok', text: `${data.user.full_name || data.user.email} is now an admin` })
+      setTeamMsg({ type: 'ok', text: `${data.user.full_name || data.user.email} added as ${roleLabel(data.user.role)}` })
     }
     setPromoting(false)
   }
@@ -104,7 +120,7 @@ export default function AdminConfigPage() {
       setTeamMsg({ type: 'err', text: data.error })
     } else {
       setAdmins(a => a.filter(admin => admin.id !== userId))
-      setTeamMsg({ type: 'ok', text: 'Admin access revoked' })
+      setTeamMsg({ type: 'ok', text: 'Access revoked' })
     }
     setRevoking(null)
   }
@@ -159,6 +175,7 @@ export default function AdminConfigPage() {
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '0.625rem', background: 'var(--offwhite)' }}>
               <span style={{ fontSize: '1.1rem' }}>{section.icon}</span>
               <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>{section.title}</h2>
+              <span style={{ marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.1rem 0.5rem', borderRadius: '4px' }}>Super Admin</span>
             </div>
             <div style={{ padding: '0.5rem 0' }}>
               {section.items.map((cfg, i) => (
@@ -202,9 +219,21 @@ export default function AdminConfigPage() {
           <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Platform Team</h2>
         </div>
 
-        {/* Current admins */}
+        {/* Role legend */}
+        <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <span className="badge badge-amber" style={{ padding: '0.1rem 0.5rem', fontSize: '0.65rem' }}>Super Admin</span>
+            <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Full access inc. pricing &amp; config</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <span className="badge badge-sage" style={{ padding: '0.1rem 0.5rem', fontSize: '0.65rem' }}>Platform Admin</span>
+            <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Manage growers, buyers &amp; inventory</span>
+          </div>
+        </div>
+
+        {/* Current team */}
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
-          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Current Admins</p>
+          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Current Team</p>
           {admins.length === 0 ? (
             <p className="type-label" style={{ color: 'var(--moss)' }}>Loading…</p>
           ) : (
@@ -212,50 +241,72 @@ export default function AdminConfigPage() {
               {admins.map(admin => (
                 <div key={admin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'var(--offwhite)', gap: '1rem' }}>
                   <div>
-                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)' }}>{admin.full_name || '—'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)' }}>{admin.full_name || '—'}</p>
+                      <span className={`badge ${ROLE_BADGE[admin.role] || 'badge-olive'}`} style={{ padding: '0.1rem 0.5rem', fontSize: '0.65rem' }}>
+                        {roleLabel(admin.role)}
+                      </span>
+                    </div>
                     <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{admin.email}</p>
                   </div>
-                  <button
-                    onClick={() => revokeAdmin(admin.id)}
-                    disabled={revoking === admin.id}
-                    className="btn btn-ghost btn-sm"
-                    style={{ color: 'var(--bloom)', borderColor: 'var(--bloom-mid)', flexShrink: 0 }}
-                  >
-                    {revoking === admin.id ? '…' : 'Revoke'}
-                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => revokeAdmin(admin.id)}
+                      disabled={revoking === admin.id}
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--bloom)', borderColor: 'var(--bloom-mid)', flexShrink: 0 }}
+                    >
+                      {revoking === admin.id ? '…' : 'Revoke'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Promote new admin */}
-        <div style={{ padding: '1.25rem 1.5rem' }}>
-          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Promote User to Admin</p>
-          {teamMsg && (
-            <div className={`badge ${teamMsg.type === 'ok' ? 'badge-sage' : 'badge-red'}`}
-              style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', marginBottom: '1rem', justifyContent: 'flex-start', fontSize: '0.8rem' }}>
-              {teamMsg.type === 'ok' ? '✓' : '⚠'} {teamMsg.text}
-            </div>
-          )}
-          <form onSubmit={promoteAdmin} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <input
-              type="email"
-              className="input"
-              placeholder="user@example.com"
-              value={newAdminEmail}
-              onChange={e => setNewAdminEmail(e.target.value)}
-              required
-              style={{ flex: 1, minWidth: '14rem' }}
-            />
-            <button type="submit" className="btn btn-forest btn-sm" disabled={promoting} style={{ flexShrink: 0 }}>
-              {promoting ? '…' : 'Promote to Admin'}
-            </button>
-          </form>
-          <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.625rem' }}>
-            The user must already have a Bloom Lane account. Their role will change to admin immediately.
-          </p>
-        </div>
+        {/* Add new member */}
+        {isSuperAdmin && (
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.875rem' }}>Add Team Member</p>
+            {teamMsg && (
+              <div className={`badge ${teamMsg.type === 'ok' ? 'badge-sage' : 'badge-red'}`}
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '0.75rem', marginBottom: '1rem', justifyContent: 'flex-start', fontSize: '0.8rem' }}>
+                {teamMsg.type === 'ok' ? '✓' : '⚠'} {teamMsg.text}
+              </div>
+            )}
+            <form onSubmit={promoteAdmin} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: '14rem' }}>
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="user@example.com"
+                  value={newAdminEmail}
+                  onChange={e => setNewAdminEmail(e.target.value)}
+                  required
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <select
+                  className="input"
+                  value={newAdminRole}
+                  onChange={e => setNewAdminRole(e.target.value as any)}
+                  style={{ minWidth: '11rem' }}
+                >
+                  <option value="platform_admin">Platform Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              <button type="submit" className="btn btn-forest btn-sm" disabled={promoting} style={{ flexShrink: 0, height: '2.5rem' }}>
+                {promoting ? '…' : 'Add to Team'}
+              </button>
+            </form>
+            <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.625rem' }}>
+              The user must already have a Bloom Lane account.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

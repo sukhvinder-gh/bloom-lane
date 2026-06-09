@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
+import { isAdminRole } from '@/lib/utils/permissions'
 import { z } from 'zod'
 
 const updateProductSchema = z.object({
@@ -18,6 +19,8 @@ const updateProductSchema = z.object({
   is_gst_free: z.boolean().optional(),
   is_listed_this_week: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  image_url: z.string().url().optional().nullable(),
+  image_urls: z.array(z.string().url()).optional(),
 })
 
 async function getFarmerForUser(supabase: any, userId: string) {
@@ -55,7 +58,7 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = isAdminRole(profile?.role)
 
   if (!isAdmin) {
     const farmer = await getFarmerForUser(supabase, user.id)
@@ -117,7 +120,7 @@ export async function DELETE(
 
   const farmer = await getFarmerForUser(supabase, user.id)
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = isAdminRole(profile?.role)
 
   if (!farmer && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

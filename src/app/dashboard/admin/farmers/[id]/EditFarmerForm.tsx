@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { isSuperAdminRole } from '@/lib/utils/permissions'
 
 const STATUS_BADGE: Record<string, string> = {
   pending_approval: 'badge badge-amber',
@@ -13,7 +14,8 @@ const STATUS_LABEL: Record<string, string> = {
   suspended:        '✕ Suspended',
 }
 
-export default function EditFarmerForm({ farmer: initial }: { farmer: any }) {
+export default function EditFarmerForm({ farmer: initial, requesterRole }: { farmer: any; requesterRole?: string }) {
+  const canEditCommission = isSuperAdminRole(requesterRole)
   const [farmer, setFarmer] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
@@ -164,8 +166,18 @@ export default function EditFarmerForm({ farmer: initial }: { farmer: any }) {
           </div>
 
           <div>
-            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Commission Rate (%)</label>
-            <input className="input" type="number" min="0" max="100" step="0.5" value={form.commission_rate} onChange={e => set('commission_rate', e.target.value)} style={{ width: '100%' }} />
+            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>
+              Commission Rate (%)
+              {!canEditCommission && <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Super Admin only</span>}
+            </label>
+            <input
+              className="input"
+              type="number" min="0" max="100" step="0.5"
+              value={form.commission_rate}
+              onChange={e => canEditCommission && set('commission_rate', e.target.value)}
+              readOnly={!canEditCommission}
+              style={{ width: '100%', opacity: canEditCommission ? 1 : 0.6, cursor: canEditCommission ? undefined : 'not-allowed' }}
+            />
           </div>
 
           <div>

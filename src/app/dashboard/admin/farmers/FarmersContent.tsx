@@ -247,6 +247,16 @@ export default function FarmersContent() {
                               <span style={{ width: '1.25rem', textAlign: 'center' }}>✏️</span> Edit Profile
                             </Link>
 
+                            <Link
+                              href={`/dashboard/admin/farmers/${farmer.id}/inventory`}
+                              onClick={() => setOpenMenu(null)}
+                              style={{ ...menuItemStyle, color: 'var(--navy)', textDecoration: 'none', display: 'flex' }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--offwhite)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = '')}
+                            >
+                              <span style={{ width: '1.25rem', textAlign: 'center' }}>📋</span> Manage Inventory
+                            </Link>
+
                             {farmer.status === 'approved' && (
                               <Link
                                 href={`/growers/${farmer.id}`}

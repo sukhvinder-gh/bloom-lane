@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isAdminRole } from '@/lib/utils/permissions'
 
 export default async function DashboardRootPage() {
   const supabase = await createClient()
@@ -12,8 +13,8 @@ export default async function DashboardRootPage() {
     .eq('id', user.id)
     .single()
 
-  const role = profile?.role
-  if (role === 'admin')  redirect('/dashboard/admin')
-  if (role === 'farmer') redirect('/dashboard/farmer')
+  const role = profile?.role || ''
+  if (isAdminRole(role)) redirect('/dashboard/admin')
+  if (role === 'farmer')  redirect('/dashboard/farmer')
   redirect('/dashboard/buyer')
 }

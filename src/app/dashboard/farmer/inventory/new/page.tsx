@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { calculateStockSplits, formatPrice } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
+import ProductImageUpload from '@/components/ProductImageUpload'
 
 const CATEGORIES = [{ id: 'flowers_cut', label: '✿ Cut Flowers' }, { id: 'flowers_dried', label: '🌾 Dried Flowers' }, { id: 'foliage', label: '🍃 Foliage' }, { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' }, { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' }, { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' }]
 const UNITS = ['bunch', 'stem', 'kg', 'g', 'each', 'tray', 'box', 'punnet', 'dozen']
@@ -13,7 +14,7 @@ export default function NewProductPage() {
   const router = useRouter()
   const supabase = createClient()
   const listingOpen = isListingWindowOpen()
-  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', stock_total: '', min_order_b2b: '1', is_gst_free: false, is_listed_this_week: listingOpen })
+  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', stock_total: '', min_order_b2b: '1', is_gst_free: false, is_listed_this_week: listingOpen, image_urls: [] as string[] })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [b2bPct, setB2bPct] = useState(0.8) // default, overridden by config
@@ -33,7 +34,7 @@ export default function NewProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setError('')
-    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week }) })
+    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week, image_url: form.image_urls[0] || null, image_urls: form.image_urls }) })
     const data = await res.json()
     if (!res.ok) { setError(data.error || 'Failed to create product'); setLoading(false); return }
     router.push('/dashboard/farmer/inventory')
@@ -118,8 +119,17 @@ export default function NewProductPage() {
           )}
         </div>
 
+        {/* Photos */}
+        <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Photos</h2>
+          <ProductImageUpload
+            urls={form.image_urls}
+            onChange={urls => up('image_urls', urls)}
+          />
+        </div>
+
         {/* Listing toggle */}
-        <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
+        <div className="card reveal reveal-d4" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
           <div>
             <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '0.375rem' }}>List this week</h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{listingOpen ? 'Listing window is open — list immediately.' : 'Window closed. Product saved for next cycle.'}</p>

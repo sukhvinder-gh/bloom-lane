@@ -15,6 +15,8 @@ const createProductSchema = z.object({
   min_order_b2b: z.number().int().positive().default(1),
   is_gst_free: z.boolean().default(false),
   is_listed_this_week: z.boolean().default(false),
+  image_url: z.string().url().optional().nullable(),
+  image_urls: z.array(z.string().url()).optional(),
 })
 
 export async function GET(request: NextRequest) {

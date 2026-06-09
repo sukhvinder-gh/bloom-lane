@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { calculateStockSplits, formatPrice } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
+import ProductImageUpload from '@/components/ProductImageUpload'
 
 const CATEGORIES = [
   { id: 'flowers_cut', label: '✿ Cut Flowers' },
@@ -42,6 +43,7 @@ export default function EditProductPage() {
     min_order_b2b: '1',
     is_gst_free: false,
     is_listed_this_week: false,
+    image_urls: [] as string[],
   })
 
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -77,6 +79,7 @@ export default function EditProductPage() {
         min_order_b2b:           String(data.min_order_b2b || '1'),
         is_gst_free:             data.is_gst_free || false,
         is_listed_this_week:     data.is_listed_this_week || false,
+        image_urls:              data.image_urls || (data.image_url ? [data.image_url] : []),
       })
       setFetching(false)
     }
@@ -107,6 +110,8 @@ export default function EditProductPage() {
         min_order_b2b:      parseInt(form.min_order_b2b) || 1,
         is_gst_free:        form.is_gst_free,
         is_listed_this_week: form.is_listed_this_week,
+        image_url:          form.image_urls[0] || null,
+        image_urls:         form.image_urls,
       }),
     })
 
@@ -259,8 +264,17 @@ export default function EditProductPage() {
           )}
         </div>
 
+        {/* Photos */}
+        <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Photos</h2>
+          <ProductImageUpload
+            urls={form.image_urls}
+            onChange={urls => up('image_urls', urls)}
+          />
+        </div>
+
         {/* Listing toggle */}
-        <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
+        <div className="card reveal reveal-d4" style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
           <div>
             <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '0.375rem' }}>List this week</h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>
