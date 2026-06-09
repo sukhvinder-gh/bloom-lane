@@ -42,7 +42,8 @@ export async function middleware(request: NextRequest) {
   const isPublic =
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/marketplace')
+    pathname.startsWith('/marketplace') ||
+    pathname.startsWith('/growers')
 
   // Redirect unauthenticated users to login
   if (!user && !isPublic) {

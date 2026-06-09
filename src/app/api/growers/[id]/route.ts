@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const admin = createAdminClient()
 
   const { data: farmer, error } = await admin
@@ -21,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       sustainability,
       created_at
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('status', 'approved')
     .single()
 
@@ -31,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const { data: products } = await admin
     .from('products')
     .select('id, name, category, unit, b2c_display_price, buyer_unit_price, b2c_available, image_url, is_gst_free')
-    .eq('farmer_id', params.id)
+    .eq('farmer_id', id)
     .eq('is_active', true)
     .gt('b2c_available', 0)
     .order('category')

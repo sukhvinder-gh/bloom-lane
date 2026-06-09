@@ -5,7 +5,8 @@ import { formatPrice } from '@/lib/utils/pricing'
 
 const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
 
-export default async function GrowerProfilePage({ params }: { params: { id: string } }) {
+export default async function GrowerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const admin = createAdminClient()
 
   const { data: farmer } = await admin
@@ -16,7 +17,7 @@ export default async function GrowerProfilePage({ params }: { params: { id: stri
       region, growing_practices, seasonal_specialties, sustainability,
       created_at
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('status', 'approved')
     .single()
 
@@ -25,7 +26,7 @@ export default async function GrowerProfilePage({ params }: { params: { id: stri
   const { data: products } = await admin
     .from('products')
     .select('id, name, category, unit, b2c_display_price, buyer_unit_price, b2c_available, image_url, is_gst_free')
-    .eq('farmer_id', params.id)
+    .eq('farmer_id', id)
     .eq('is_active', true)
     .gt('b2c_available', 0)
     .order('category')
