@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
@@ -7,26 +7,111 @@ type View = 'orders' | 'packing' | 'picking'
 
 function AdminStatusBadge({ status }: { status: string }) {
   const map: Record<string, [string, string]> = {
-    pending_payment: ['badge-cream', '⏳ Pending'], payment_confirmed: ['badge-olive', '💳 Paid'],
-    preparing: ['badge-olive', '⚙ Prep'], ready_for_pickup: ['badge-sage', '📦 Ready'],
-    out_for_delivery: ['badge-sage', '🚚 Transit'], delivered: ['badge-forest', '✓ Done'],
-    disputed: ['badge-red', '🚨 Dispute'], cancelled: ['badge-cream', '✕ Cancel'],
+    pending_payment:   ['badge-cream',  '⏳ Pending'],
+    payment_confirmed: ['badge-olive',  '💳 Paid'],
+    preparing:         ['badge-olive',  '⚙ Preparing'],
+    ready_for_pickup:  ['badge-sage',   '📦 Ready'],
+    out_for_delivery:  ['badge-sage',   '🚚 Transit'],
+    delivered:         ['badge-forest', '✓ Delivered'],
+    disputed:          ['badge-red',    '🚨 Disputed'],
+    cancelled:         ['badge-cream',  '✕ Cancelled'],
   }
   const [cls, label] = map[status] || ['badge-cream', status]
   return <span className={`badge ${cls}`}>{label}</span>
 }
 
-function StatusAdvancer({ order, onUpdate, loading }: { order: any; onUpdate: any; loading: boolean }) {
-  const next: Record<string, [string, string]> = { payment_confirmed: ['preparing', '→ Preparing'], preparing: ['ready_for_pickup', '→ Ready'], ready_for_pickup: ['out_for_delivery', '→ Dispatch'], out_for_delivery: ['delivered', '→ Delivered'] }
-  const entry = next[order.status]
-  if (!entry) return null
-  return <button onClick={() => onUpdate(order.id, entry[0])} disabled={loading} className="btn btn-forest btn-sm">{loading ? '…' : entry[1]}</button>
+// All valid manual transitions per status
+const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon: string; danger?: boolean }>> = {
+  payment_confirmed: [
+    { status: 'preparing',        label: 'Mark Preparing',  icon: '⚙' },
+    { status: 'cancelled',        label: 'Cancel Order',    icon: '✕', danger: true },
+  ],
+  preparing: [
+    { status: 'ready_for_pickup', label: 'Mark Ready',      icon: '📦' },
+    { status: 'cancelled',        label: 'Cancel Order',    icon: '✕', danger: true },
+  ],
+  ready_for_pickup: [
+    { status: 'out_for_delivery', label: 'Mark Dispatched', icon: '🚚' },
+    { status: 'delivered',        label: 'Mark Delivered',  icon: '✓' },
+  ],
+  out_for_delivery: [
+    { status: 'delivered',        label: 'Mark Delivered',  icon: '✓' },
+  ],
+  disputed: [
+    { status: 'delivered',        label: 'Resolve — Delivered', icon: '✓' },
+    { status: 'refunded',         label: 'Resolve — Refund',    icon: '↩' },
+  ],
+}
+
+function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: (id: string, status: string) => void; loading: boolean }) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const actions = STATUS_ACTIONS[order.status] || []
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [open])
+
+  if (actions.length === 0) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+
+  const menuItemBase: React.CSSProperties = {
+    width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem',
+    padding: '0.7rem 1rem', fontSize: '0.85rem', background: 'none', border: 'none',
+    fontFamily: 'var(--font-body)', cursor: 'pointer', textAlign: 'left',
+  }
+
+  return (
+    <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        disabled={loading}
+        aria-label="Order actions"
+        style={{
+          width: '2rem', height: '2rem', borderRadius: '50%',
+          background: open ? 'var(--navy)' : 'var(--offwhite)',
+          border: '1px solid var(--border)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.1rem', color: open ? 'white' : 'var(--navy)', fontWeight: 700,
+          transition: 'all 0.15s',
+        }}
+      >
+        {loading ? '…' : '⋮'}
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '2.25rem', right: 0, zIndex: 100,
+          background: 'white', borderRadius: '0.75rem',
+          boxShadow: '0 4px 24px rgba(30,37,53,0.14)',
+          border: '1px solid var(--border-light)',
+          minWidth: '13rem', overflow: 'hidden',
+        }}>
+          {actions.map(action => (
+            <button
+              key={action.status}
+              onClick={() => { onUpdate(order.id, action.status); setOpen(false) }}
+              style={{ ...menuItemBase, color: action.danger ? 'var(--bloom)' : 'var(--navy)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
+              onMouseLeave={e => (e.currentTarget.style.background = '')}
+            >
+              <span style={{ width: '1.25rem', textAlign: 'center' }}>{action.icon}</span>
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<View>('orders')
+  const [orders, setOrders]       = useState<any[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [view, setView]           = useState<View>('orders')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -35,7 +120,11 @@ export default function AdminOrdersPage() {
 
   async function updateStatus(orderId: string, status: string) {
     setUpdatingId(orderId)
-    await fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    await fetch(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
     setOrders(os => os.map(o => o.id === orderId ? { ...o, status } : o))
     setUpdatingId(null)
   }
@@ -49,9 +138,9 @@ export default function AdminOrdersPage() {
   }))
 
   const TABS: { id: View; label: string; icon: string }[] = [
-    { id: 'orders', label: 'All Orders', icon: '📋' },
-    { id: 'packing', label: 'Packing List', icon: '📦' },
-    { id: 'picking', label: 'Picking List', icon: '🌿' },
+    { id: 'orders',  label: 'All Orders',   icon: '📋' },
+    { id: 'packing', label: 'Packing List',  icon: '📦' },
+    { id: 'picking', label: 'Picking List',  icon: '🌿' },
   ]
 
   return (
@@ -76,11 +165,11 @@ export default function AdminOrdersPage() {
         <>
           {/* ── All Orders ── */}
           {view === 'orders' && (
-            <div className="card reveal" style={{ overflow: 'hidden' }}>
+            <div className="card reveal" style={{ overflow: 'visible' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-                    {['Order #', 'Buyer', 'Fulfillment', 'Items', 'Status', 'Total', 'Action'].map(h => (
+                    {['Order #', 'Buyer', 'Fulfillment', 'Items', 'Status', 'Total', 'Actions'].map(h => (
                       <th key={h} className="type-label-sm" style={{ padding: '1rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.2em' }}>{h}</th>
                     ))}
                   </tr>
@@ -92,12 +181,24 @@ export default function AdminOrdersPage() {
                         <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', color: 'var(--forest)', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{order.order_number}</p>
                         <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(order.created_at, 'dd MMM, h:mma')}</p>
                       </td>
-                      <td style={{ padding: '0.875rem 1.25rem' }}><p style={{ fontWeight: 700, color: 'var(--forest)' }}>{order.profiles?.full_name}</p></td>
-                      <td style={{ padding: '0.875rem 1.25rem', fontSize: '1.25rem' }}>{order.fulfillment_type === 'hub_pickup' ? '🏭' : '🚚'}</td>
-                      <td style={{ padding: '0.875rem 1.25rem' }}><span className="type-label-sm" style={{ color: 'var(--moss)' }}>{order.order_items?.length || 0} items</span></td>
-                      <td style={{ padding: '0.875rem 1.25rem' }}><AdminStatusBadge status={order.status} /></td>
-                      <td style={{ padding: '0.875rem 1.25rem' }}><span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span></td>
-                      <td style={{ padding: '0.875rem 1.25rem' }}><StatusAdvancer order={order} onUpdate={updateStatus} loading={updatingId === order.id} /></td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <p style={{ fontWeight: 700, color: 'var(--forest)' }}>{order.profiles?.full_name}</p>
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem', fontSize: '1.25rem' }}>
+                        {order.fulfillment_type === 'hub_pickup' ? '🏭' : '🚚'}
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <span className="type-label-sm" style={{ color: 'var(--moss)' }}>{order.order_items?.length || 0} items</span>
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <AdminStatusBadge status={order.status} />
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span>
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <OrderActionsMenu order={order} onUpdate={updateStatus} loading={updatingId === order.id} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

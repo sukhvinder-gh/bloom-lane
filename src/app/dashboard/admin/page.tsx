@@ -82,20 +82,23 @@ export default async function AdminDashboard() {
         </div>
       )}
 
-      {/* KPIs */}
+      {/* KPIs — each card links to the corresponding section */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
         {[
-          { label: 'Active Growers', value: String(totalFarmers || 0), sub: `${pendingFarmers} pending`, icon: '🌿', bg: 'var(--forest)', textClr: 'var(--cream)', subClr: 'var(--moss)' },
-          { label: 'Total Buyers', value: String(totalBuyers || 0), sub: 'B2B + B2C', icon: '🏪', bg: 'var(--sage)', textClr: 'var(--forest)', subClr: 'rgba(1,71,46,0.5)' },
-          { label: 'GMV (recent)', value: formatPrice(gmv), sub: 'Last 8 orders', icon: '💰', bg: 'var(--olive)', textClr: 'var(--forest)', subClr: 'var(--moss)' },
-          { label: 'Pending Payouts', value: formatPrice(pendingPayoutTotal), sub: `${pendingPayouts?.length || 0} farmers`, icon: '⏳', bg: 'white', textClr: 'var(--forest)', subClr: 'var(--moss)' },
+          { label: 'Active Growers', value: String(totalFarmers || 0), sub: `${pendingFarmers} pending`, icon: '🌿', bg: 'var(--forest)', textClr: 'var(--cream)', subClr: 'var(--moss)', href: '/dashboard/admin/farmers' },
+          { label: 'Total Buyers',   value: String(totalBuyers || 0),  sub: 'B2B + B2C',                icon: '🏪', bg: 'var(--sage)',   textClr: 'var(--forest)', subClr: 'rgba(1,71,46,0.5)', href: '/dashboard/admin/buyers' },
+          { label: 'GMV (recent)',   value: formatPrice(gmv),           sub: 'Last 8 orders',            icon: '💰', bg: 'var(--olive)',  textClr: 'var(--forest)', subClr: 'var(--moss)', href: '/dashboard/admin/orders' },
+          { label: 'Pending Payouts',value: formatPrice(pendingPayoutTotal), sub: `${pendingPayouts?.length || 0} farmers`, icon: '⏳', bg: 'white', textClr: 'var(--forest)', subClr: 'var(--moss)', href: '/dashboard/admin/payouts' },
         ].map((s, i) => (
-          <div key={i} className={`reveal reveal-d${i + 1}`} style={{ background: s.bg, borderRadius: '2.5rem', padding: '2rem', boxShadow: '0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06)' }}>
+          <Link key={i} href={s.href} className={`reveal reveal-d${i + 1}`} style={{ display: 'block', background: s.bg, borderRadius: '2.5rem', padding: '2rem', boxShadow: '0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06)', textDecoration: 'none', transition: 'transform 0.15s, box-shadow 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(1,71,46,0.25), 0 4px 12px rgba(1,71,46,0.1)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06)' }}
+          >
             <div style={{ fontSize: '2rem', marginBottom: '0.875rem' }}>{s.icon}</div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: s.textClr, letterSpacing: '-0.03em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{s.value}</div>
             <div className="type-label" style={{ color: s.textClr, opacity: 0.7, marginBottom: '0.2rem' }}>{s.label}</div>
             <div className="type-label-sm" style={{ color: s.subClr }}>{s.sub}</div>
-          </div>
+          </Link>
         ))}
       </div>
 
