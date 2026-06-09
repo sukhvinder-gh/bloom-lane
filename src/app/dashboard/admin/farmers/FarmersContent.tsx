@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { formatAEST } from '@/lib/utils/timezone'
 
 type FilterVal = 'all' | 'pending_approval' | 'approved' | 'suspended'
@@ -144,7 +145,8 @@ export default function FarmersContent() {
                     <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(farmer.created_at, 'dd MMM yy')}</p>
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <Link href={`/dashboard/admin/farmers/${farmer.id}`} className="btn btn-ghost btn-sm">Edit</Link>
                       {farmer.status === 'pending_approval' && (
                         <button onClick={() => updateStatus(farmer.id, 'approved')} disabled={actioning === farmer.id} className="btn btn-forest btn-sm">
                           {actioning === farmer.id ? '…' : '✓ Approve'}

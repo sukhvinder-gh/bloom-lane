@@ -1,43 +1,76 @@
-// src/app/api/admin/farmers/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+
+async function requireAdmin() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized', status: 401 as const }
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return { error: 'Forbidden', status: 403 as const }
+  return { userId: user.id }
+}
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const { id } = await params
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('farmers')
+    .select(`
+      *,
+      profiles!farmers_user_id_fkey (
+        id, email, full_name, phone
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json({ data })
+}
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params
+  const auth = await requireAdmin()
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const supabase = await createSupabaseServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { id } = await params
+  const body = await request.json()
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const ALLOWED = [
+    'status',
+    'business_name', 'bio', 'suburb', 'state', 'region',
+    'growing_practices', 'seasonal_specialties', 'sustainability',
+    'brand_color', 'banner_url', 'logo_url',
+    'commission_rate', 'abn', 'abn_verified',
+  ]
 
-    const body = await request.json()
-    const { status } = body
-
-    const updates: any = { status }
-    if (status === 'approved') {
-      updates.approved_at = new Date().toISOString()
-      updates.approved_by = user.id
-    }
-
-    const adminSupabase = createAdminClient()
-    const { data, error } = await adminSupabase
-      .from('farmers')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ data })
-
-  } catch (err: any) {
-    console.error('[PATCH /api/admin/farmers/[id]]', err)
-    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 })
+  const updates: Record<string, unknown> = {}
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key]
   }
+
+  if (updates.status === 'approved') {
+    updates.approved_at = new Date().toISOString()
+    updates.approved_by = auth.userId
+  }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('farmers')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ data })
 }
