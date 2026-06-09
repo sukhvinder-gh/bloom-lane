@@ -10,11 +10,15 @@ const DELIVERY_FEE = 2000
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, fulfillment_type, setFulfillmentType, clearCart, subtotalCents, isB2B } = useCart()
+  const { items, fulfillment_type, setFulfillmentType, clearCart, subtotalCents, isB2B, updateQuantity, removeItem } = useCart()
   const [loading, setLoading] = useState(false)
   const [address, setAddress] = useState({ line1: '', suburb: '', state: 'VIC', postcode: '' })
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
+
+  type StockIssue = { product_id: string; name: string; unit: string; requested: number; available: number; delisted: boolean }
+  const [stockIssues, setStockIssues] = useState<StockIssue[]>([])
+  const [validating, setValidating] = useState(false)
 
   const [hubs, setHubs] = useState<any[]>([])
   const [selectedHubId, setSelectedHubId] = useState<string>('')
@@ -25,16 +29,64 @@ export default function CheckoutPage() {
       .then(({ data }) => {
         if (data && data.length > 0) {
           setHubs(data)
-          setSelectedHubId(data[0].id) // auto-select first hub
+          setSelectedHubId(data[0].id)
         }
       })
   }, [])
+
+  // Validate current stock for all cart items on mount
+  useEffect(() => {
+    if (items.length > 0) validateStock()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function validateStock(): Promise<boolean> {
+    setValidating(true)
+    const ids = items.map(i => i.product_id).join(',')
+    const res = await fetch(`/api/cart/validate?ids=${ids}&b2b=${isB2B}`)
+    const data = await res.json()
+    const stockMap: Record<string, { available: number; still_listed: boolean; unit: string; name: string }> = {}
+    ;(data.items || []).forEach((s: any) => { stockMap[s.product_id] = s })
+
+    const issues: StockIssue[] = []
+    for (const item of items) {
+      const stock = stockMap[item.product_id]
+      if (!stock) continue
+      if (!stock.still_listed) {
+        issues.push({ product_id: item.product_id, name: item.product.name, unit: item.product.unit, requested: item.quantity, available: 0, delisted: true })
+      } else if (item.quantity > stock.available) {
+        issues.push({ product_id: item.product_id, name: stock.name, unit: stock.unit, requested: item.quantity, available: stock.available, delisted: false })
+      }
+    }
+    setStockIssues(issues)
+    setValidating(false)
+    return issues.length === 0
+  }
+
+  function fixIssue(issue: StockIssue) {
+    if (issue.available <= 0) {
+      removeItem(issue.product_id)
+    } else {
+      updateQuantity(issue.product_id, issue.available)
+    }
+    setStockIssues(prev => prev.filter(i => i.product_id !== issue.product_id))
+  }
+
+  function fixAllIssues() {
+    for (const issue of stockIssues) fixIssue(issue)
+  }
 
   const deliveryFee = fulfillment_type === 'direct_delivery' ? DELIVERY_FEE : 0
   const total = subtotalCents() + deliveryFee
 
   async function placeOrder() {
     setLoading(true); setError('')
+    // Re-validate stock before submitting
+    const ok = await validateStock()
+    if (!ok) {
+      setError('Some items in your cart have limited stock. Please review the warnings above.')
+      setLoading(false)
+      return
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -150,12 +202,44 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {/* Stock validation warnings */}
+            {validating && (
+              <div style={{ marginTop: '1.25rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(255,255,255,0.08)', fontSize: '0.78rem', color: 'var(--sage)' }}>
+                Checking availability…
+              </div>
+            )}
+            {stockIssues.length > 0 && (
+              <div style={{ marginTop: '1.25rem', padding: '1rem', borderRadius: '0.75rem', background: '#7f1d1d', border: '1px solid #991b1b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fca5a5' }}>⚠ Stock changed since you added these items</p>
+                  <button onClick={fixAllIssues} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#fca5a5', background: 'rgba(252,165,165,0.15)', border: '1px solid rgba(252,165,165,0.3)', borderRadius: '6px', padding: '0.2rem 0.6rem', cursor: 'pointer' }}>
+                    Fix all
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {stockIssues.map(issue => (
+                    <div key={issue.product_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue.name}</p>
+                        <p style={{ fontSize: '0.7rem', color: 'rgba(252,165,165,0.7)' }}>
+                          {issue.delisted ? 'No longer available this week' : `You have ${issue.requested}, only ${issue.available} ${issue.unit} left`}
+                        </p>
+                      </div>
+                      <button onClick={() => fixIssue(issue)} style={{ fontSize: '0.7rem', fontWeight: 700, color: '#fca5a5', background: 'rgba(252,165,165,0.15)', border: '1px solid rgba(252,165,165,0.3)', borderRadius: '6px', padding: '0.2rem 0.6rem', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        {issue.available <= 0 ? 'Remove' : `Reduce to ${issue.available}`}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="badge badge-red" style={{ width: '100%', padding: '0.875rem', borderRadius: '0.75rem', justifyContent: 'flex-start', fontSize: '0.7rem', marginTop: '1.25rem' }}>⚠ {error}</div>
             )}
 
-            <button onClick={placeOrder} disabled={loading} className="btn btn-cream" style={{ width: '100%', marginTop: '1.5rem' }}>
-              {loading ? 'Placing order…' : `Pay ${formatPrice(total)}`}
+            <button onClick={placeOrder} disabled={loading || stockIssues.length > 0} className="btn btn-cream" style={{ width: '100%', marginTop: '1.5rem', opacity: stockIssues.length > 0 ? 0.5 : 1, cursor: stockIssues.length > 0 ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Placing order…' : stockIssues.length > 0 ? 'Resolve stock issues to continue' : `Pay ${formatPrice(total)}`}
             </button>
             <p className="type-label-sm" style={{ color: 'var(--moss)', textAlign: 'center', marginTop: '0.875rem' }}>{isB2B ? 'Secure via Stripe · GST itemised above' : 'Secure via Stripe · GST included'}</p>
           </div>
