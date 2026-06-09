@@ -108,7 +108,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
 
             {/* Current listings */}
             {products && products.length > 0 && (
-              <div className="card reveal" style={{ overflow: 'hidden' }}>
+              <div id="products" className="card reveal" style={{ overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid var(--border-light)' }}>
                   <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Products in Stock</h2>
                 </div>

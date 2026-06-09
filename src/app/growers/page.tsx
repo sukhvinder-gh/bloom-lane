@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 const FLOWER_TYPES = [
   { id: '', label: 'All types' },
@@ -20,6 +21,7 @@ const SUSTAINABILITY_OPTIONS = [
 ]
 
 export default function GrowersPage() {
+  const router = useRouter()
   const [growers, setGrowers]       = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
@@ -27,6 +29,18 @@ export default function GrowersPage() {
   const [flowerType, setFlowerType] = useState('')
   const [sustain, setSustain]       = useState('')
   const [regions, setRegions]       = useState<string[]>([])
+  const [openMenu, setOpenMenu]     = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null)
+      }
+    }
+    if (openMenu) document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [openMenu])
 
   useEffect(() => {
     setLoading(true)
@@ -164,43 +178,78 @@ export default function GrowersPage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(17rem, 1fr))', gap: '1.25rem' }}>
               {filtered.map((grower, i) => (
-                <Link key={grower.id} href={`/growers/${grower.id}`} style={{ textDecoration: 'none' }}>
-                  <div className={`card card-hover reveal reveal-d${(i % 3) + 1}`} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    {/* Banner */}
-                    <div style={{ height: '5rem', background: grower.brand_color || 'var(--navy)', flexShrink: 0, position: 'relative' }}>
-                      {grower.banner_url && <img src={grower.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
+                <div key={grower.id} style={{ position: 'relative' }}>
 
-                    <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>{grower.business_name}</h3>
-                        <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
-                          📍 {[grower.region, grower.suburb, grower.state].filter(Boolean).join(', ')}
-                        </p>
+                  {/* Three-dot menu button */}
+                  <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setOpenMenu(openMenu === grower.id ? null : grower.id) }}
+                    style={{ position: 'absolute', top: '0.625rem', right: '0.625rem', zIndex: 10, width: '2rem', height: '2rem', borderRadius: '50%', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', color: 'var(--navy)', lineHeight: 1, fontWeight: 700 }}
+                    aria-label="Actions"
+                  >
+                    ⋮
+                  </button>
+
+                  {/* Dropdown */}
+                  {openMenu === grower.id && (
+                    <div ref={menuRef} style={{ position: 'absolute', top: '2.75rem', right: '0.625rem', zIndex: 50, background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 24px rgba(30,37,53,0.14)', border: '1px solid var(--border-light)', minWidth: '11rem', overflow: 'hidden' }}>
+                      {[
+                        { icon: '👤', label: 'View Profile',      href: `/growers/${grower.id}` },
+                        { icon: '🛒', label: 'Shop Marketplace',   href: '/marketplace' },
+                        { icon: '📋', label: 'See Their Products', href: `/growers/${grower.id}#products` },
+                      ].map(action => (
+                        <button
+                          key={action.label}
+                          onClick={e => { e.stopPropagation(); setOpenMenu(null); router.push(action.href) }}
+                          style={{ width: '100%', padding: '0.75rem 1rem', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.85rem', color: 'var(--navy)', fontFamily: 'var(--font-body)', cursor: 'pointer', textAlign: 'left' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--offwhite)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                        >
+                          <span style={{ width: '1.25rem', textAlign: 'center' }}>{action.icon}</span>
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Card */}
+                  <Link href={`/growers/${grower.id}`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+                    <div className={`card card-hover reveal reveal-d${(i % 3) + 1}`} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      {/* Banner */}
+                      <div style={{ height: '5rem', background: grower.brand_color || 'var(--navy)', flexShrink: 0, position: 'relative' }}>
+                        {grower.banner_url && <img src={grower.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>
 
-                      {grower.bio && (
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {grower.bio}
-                        </p>
-                      )}
-
-                      {grower.sustainability?.length > 0 && (
-                        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                          {grower.sustainability.slice(0, 3).map((s: string) => (
-                            <span key={s} className="badge badge-sage" style={{ fontSize: '0.65rem' }}>{s}</span>
-                          ))}
+                      <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div>
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>{grower.business_name}</h3>
+                          <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                            📍 {[grower.region, grower.suburb, grower.state].filter(Boolean).join(', ')}
+                          </p>
                         </div>
-                      )}
 
-                      {grower.seasonal_specialties?.length > 0 && (
-                        <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: 'auto' }}>
-                          🌸 {grower.seasonal_specialties.slice(0, 2).join(' · ')}
-                        </p>
-                      )}
+                        {grower.bio && (
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {grower.bio}
+                          </p>
+                        )}
+
+                        {grower.sustainability?.length > 0 && (
+                          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                            {grower.sustainability.slice(0, 3).map((s: string) => (
+                              <span key={s} className="badge badge-sage" style={{ fontSize: '0.65rem' }}>{s}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {grower.seasonal_specialties?.length > 0 && (
+                          <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: 'auto' }}>
+                            🌸 {grower.seasonal_specialties.slice(0, 2).join(' · ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </div>
           )}
