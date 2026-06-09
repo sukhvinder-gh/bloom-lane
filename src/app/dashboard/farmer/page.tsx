@@ -1,288 +1,137 @@
-// src/app/dashboard/farmer/storefront/page.tsx
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+const STATUS_INFO: Record<string, { label: string; color: string; bg: string; hint: string }> = {
+  approved:         { label: '✓ Approved',        color: 'var(--forest)',  bg: 'var(--sage)',        hint: 'Your profile is live and visible to buyers.' },
+  pending_approval: { label: '⏳ Pending Approval', color: '#92400e',        bg: '#fef9c3',            hint: 'An admin will review your application shortly.' },
+  suspended:        { label: '✕ Suspended',         color: 'var(--bloom)',   bg: 'var(--bloom-soft)',  hint: 'Contact support to resolve your account status.' },
+}
 
-export default function FarmerStorefrontPage() {
-  const supabase = createClient()
-  const router = useRouter()
+export default async function FarmerOverviewPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
 
-  const [farmer, setFarmer]   = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [saved, setSaved]     = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
+  const { data: farmer } = await supabase
+    .from('farmers')
+    .select('id, business_name, status, region, suburb, state, sustainability, seasonal_specialties')
+    .eq('user_id', user.id)
+    .single()
 
-  const [form, setForm] = useState({
-    business_name: '',
-    bio: '',
-    brand_color: '#01472e',
-    suburb: '',
-    state: 'VIC',
-    postcode: '',
-    address: '',
-    abn: '',
-  })
+  const { count: orderCount } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
 
-  useEffect(() => { load() }, [])
+  const { count: productCount } = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('farmer_id', farmer?.id || '')
+    .eq('is_active', true)
 
-  async function load() {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data } = await supabase
-      .from('farmers')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (data) {
-      setFarmer(data)
-      setForm({
-        business_name: data.business_name || '',
-        bio:           data.bio || '',
-        brand_color:   data.brand_color || '#01472e',
-        suburb:        data.suburb || '',
-        state:         data.state || 'VIC',
-        postcode:      data.postcode || '',
-        address:       data.address || '',
-        abn:           data.abn || '',
-      })
-    }
-    setLoading(false)
-  }
-
-  async function handleCreate() {
-    setCreating(true)
-    setError(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Validate required fields
-    if (!form.business_name || !form.abn || !form.address || !form.suburb || !form.postcode) {
-      setError('Please fill in all required fields: Business Name, ABN, Address, Suburb, Postcode')
-      setCreating(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('farmers')
-      .insert({
-        user_id:       user.id,
-        business_name: form.business_name,
-        bio:           form.bio,
-        brand_color:   form.brand_color,
-        address:       form.address,
-        suburb:        form.suburb,
-        state:         form.state,
-        postcode:      form.postcode,
-        abn:           form.abn,
-        abn_verified:  false,
-        abn_verification_status: 'pending',
-        status:        'pending_approval',
-        commission_rate: 0.10,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      setError(error.message)
-      setCreating(false)
-    } else {
-      // Hard navigation — forces Server Component to re-fetch farmer record
-      // setFarmer alone won't update the /dashboard/farmer Server Component cache
-      router.push('/dashboard/farmer')
-      router.refresh()
-    }
-  }
-
-  async function handleSave() {
-    if (!farmer) return
-    setSaving(true)
-    setError(null)
-
-    const { error } = await supabase
-      .from('farmers')
-      .update({
-        business_name: form.business_name,
-        bio:           form.bio,
-        brand_color:   form.brand_color,
-        suburb:        form.suburb,
-        state:         form.state,
-        postcode:      form.postcode,
-        address:       form.address,
-        updated_at:    new Date().toISOString(),
-      })
-      .eq('id', farmer.id)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-    }
-    setSaving(false)
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '0.625rem 0.75rem',
-    borderRadius: '0.5rem',
-    border: '1.5px solid var(--sage)',
-    fontFamily: 'var(--font-body)',
-    fontSize: '0.9rem',
-    color: 'var(--forest)',
-    background: 'var(--cream)',
-    boxSizing: 'border-box' as const,
-  }
-
-  if (loading) return (
-    <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--forest)', opacity: 0.5, fontFamily: 'var(--font-body)' }}>
-      Loading...
-    </div>
-  )
+  const status = farmer?.status ? STATUS_INFO[farmer.status] : null
 
   return (
-    <div className="page-pad" style={{ padding: '2.5rem', fontFamily: 'var(--font-body)', maxWidth: '42rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
-        {farmer ? 'Storefront' : 'Create Farmer Profile'}
-      </h1>
-      <p style={{ color: 'var(--forest)', opacity: 0.5, marginBottom: '2rem', fontSize: '0.9rem' }}>
-        {farmer
-          ? `Status: ${farmer.status === 'approved' ? '✅ Approved' : farmer.status === 'pending_approval' ? '⏳ Pending admin approval' : '🚫 ' + farmer.status}`
-          : 'Set up your farm profile to start selling on Bloom Lane'}
-      </p>
+    <div className="page-pad">
 
-      {/* Pending approval notice */}
-      {farmer?.status === 'pending_approval' && (
-        <div style={{ background: '#fef9c3', border: '1px solid #fbbf24', borderRadius: '0.75rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', fontSize: '0.875rem', color: '#92400e' }}>
-          ⏳ Your farmer account is pending admin approval. You can update your profile details below while you wait.
-        </div>
-      )}
-
-      {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem 1rem', borderRadius: '0.5rem', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Live preview card */}
-      <div style={{ marginBottom: '2rem', borderRadius: 'var(--r-card)', overflow: 'hidden', border: '1px solid var(--olive)' }}>
-        <div style={{ height: '4rem', background: form.brand_color }} />
-        <div style={{ padding: '1.25rem', background: 'white' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: form.brand_color }}>
-            {form.business_name || 'Your Farm Name'}
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.2rem' }}>
-            {[form.suburb, form.state, form.postcode].filter(Boolean).join(' ')}
-          </p>
-          <p style={{ fontSize: '0.875rem', color: 'var(--forest)', marginTop: '0.5rem', opacity: 0.7 }}>
-            {form.bio || 'Your farm description will appear here...'}
-          </p>
-        </div>
-      </div>
-
-      <div style={{ background: 'white', borderRadius: 'var(--r-card)', padding: '1.75rem', border: '1px solid var(--olive)', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-
-        {/* Business Name */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-            Farm / Business Name <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <input style={inputStyle} value={form.business_name} onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))} placeholder="e.g. Green Valley Farms" />
-        </div>
-
-        {/* ABN — only shown when creating */}
-        {!farmer && (
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              ABN <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input style={inputStyle} value={form.abn} onChange={e => setForm(f => ({ ...f, abn: e.target.value }))} placeholder="e.g. 51 824 753 556" />
-            <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>
-              Your ABN will be verified with the Australian Business Register
-            </p>
-          </div>
+      {/* Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 className="type-heading reveal" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>
+          {farmer ? farmer.business_name : 'Welcome'}
+        </h1>
+        {status && (
+          <span style={{ display: 'inline-block', padding: '0.25rem 0.875rem', borderRadius: '99px', background: status.bg, color: status.color, fontSize: '0.8rem', fontWeight: 600 }}>
+            {status.label}
+          </span>
         )}
-
-        {/* Bio */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Bio</label>
-          <textarea
-            value={form.bio}
-            onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-            rows={3}
-            placeholder="Tell buyers about your farm — what you grow, your story, your values"
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
-
-        {/* Brand colour */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Brand Colour</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <input type="color" value={form.brand_color} onChange={e => setForm(f => ({ ...f, brand_color: e.target.value }))}
-              style={{ width: '3rem', height: '2.5rem', border: '1.5px solid var(--sage)', borderRadius: '0.5rem', cursor: 'pointer', padding: '0.1rem' }} />
-            <span style={{ fontSize: '0.85rem', color: 'var(--forest)', opacity: 0.6 }}>{form.brand_color}</span>
-          </div>
-        </div>
-
-        {/* Address */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-            Street Address {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-          </label>
-          <input style={inputStyle} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Farm Road" />
-        </div>
-
-        {/* Suburb / State / Postcode */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              Suburb {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-            </label>
-            <input style={inputStyle} value={form.suburb} onChange={e => setForm(f => ({ ...f, suburb: e.target.value }))} placeholder="Melbourne" />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>State</label>
-            <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} style={inputStyle}>
-              {['VIC','NSW','QLD','SA','WA','TAS','NT','ACT'].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
-              Postcode {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
-            </label>
-            <input style={inputStyle} value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="3000" maxLength={4} />
-          </div>
-        </div>
-
-        {/* Submit */}
-        <button
-          onClick={farmer ? handleSave : handleCreate}
-          disabled={saving || creating}
-          style={{
-            marginTop: '0.25rem',
-            width: '100%',
-            padding: '0.75rem',
-            borderRadius: '0.75rem',
-            background: saved ? '#dcfce7' : 'var(--forest)',
-            color: saved ? '#166534' : 'var(--cream)',
-            border: 'none',
-            fontFamily: 'var(--font-body)',
-            fontWeight: 700,
-            fontSize: '0.95rem',
-            cursor: (saving || creating) ? 'wait' : 'pointer',
-            transition: 'all 0.2s',
-          }}
-        >
-          {creating ? 'Creating profile...' : saving ? 'Saving...' : saved ? '✓ Saved' : farmer ? 'Save Changes' : 'Create Farmer Profile'}
-        </button>
+        {status && (
+          <p className="type-label" style={{ color: 'var(--moss)', marginTop: '0.5rem' }}>{status.hint}</p>
+        )}
       </div>
+
+      {/* No profile yet */}
+      {!farmer && (
+        <div className="card reveal" style={{ padding: '2.5rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🌱</p>
+          <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Set up your farm profile</h2>
+          <p style={{ color: 'var(--moss)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            Create your grower profile to start listing products and getting discovered by buyers.
+          </p>
+          <Link href="/dashboard/farmer/storefront" className="btn btn-forest">Create Profile →</Link>
+        </div>
+      )}
+
+      {farmer && (
+        <>
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            {[
+              { label: 'Active Products',  value: productCount ?? 0,  icon: '📋', href: '/dashboard/farmer/inventory' },
+              { label: 'Pending Orders',   value: orderCount ?? 0,    icon: '📦', href: '/dashboard/farmer/orders' },
+            ].map(s => (
+              <Link key={s.label} href={s.href} style={{ textDecoration: 'none' }}>
+                <div className="card reveal" style={{ padding: '1.25rem 1.5rem', cursor: 'pointer' }}>
+                  <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{s.icon}</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>{s.value}</p>
+                  <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.25rem' }}>{s.label}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Quick actions */}
+          <div className="card reveal" style={{ overflow: 'hidden', marginBottom: '1.5rem' }}>
+            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--offwhite)' }}>
+              <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Quick Actions</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: '1px', background: 'var(--border-light)' }}>
+              {[
+                { icon: '🏪', label: 'Edit Storefront',    desc: 'Update bio, region, growing practices, sustainability',  href: '/dashboard/farmer/storefront' },
+                { icon: '📋', label: 'Manage Inventory',   desc: 'List products and set stock for this week',               href: '/dashboard/farmer/inventory' },
+                { icon: '📦', label: 'View Orders',        desc: 'See incoming orders and update fulfilment status',         href: '/dashboard/farmer/orders' },
+                { icon: '💰', label: 'Payouts',            desc: 'Check your earnings and payout history',                   href: '/dashboard/farmer/payouts' },
+              ].map(a => (
+                <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
+                  <div style={{ background: 'white', padding: '1.25rem 1.5rem', cursor: 'pointer', transition: 'background 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--offwhite)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                    <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{a.icon}</p>
+                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>{a.label}</p>
+                    <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{a.desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Profile completeness nudge */}
+          {(!farmer.region || !farmer.sustainability?.length) && (
+            <div className="card reveal" style={{ padding: '1.25rem 1.5rem', background: 'var(--bloom-soft)', border: '1px solid var(--bloom-mid)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>Complete your public profile</p>
+                  <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                    Add your region, growing practices, and sustainability badges to get discovered by buyers browsing the grower directory.
+                  </p>
+                </div>
+                <Link href="/dashboard/farmer/storefront" className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>
+                  Complete Profile →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* View public profile */}
+          {farmer.status === 'approved' && (
+            <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+              <Link href={`/growers/${farmer.id}`} className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'none' }}>
+                View your public grower profile →
+              </Link>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
