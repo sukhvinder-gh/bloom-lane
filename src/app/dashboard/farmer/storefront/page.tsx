@@ -25,6 +25,10 @@ export default function FarmerStorefrontPage() {
     postcode: '',
     address: '',
     abn: '',
+    region: '',
+    growing_practices: '',
+    seasonal_specialties: '',
+    sustainability: '',
   })
 
   useEffect(() => { load() }, [])
@@ -43,14 +47,18 @@ export default function FarmerStorefrontPage() {
     if (data) {
       setFarmer(data)
       setForm({
-        business_name: data.business_name || '',
-        bio:           data.bio || '',
-        brand_color:   data.brand_color || '#01472e',
-        suburb:        data.suburb || '',
-        state:         data.state || 'VIC',
-        postcode:      data.postcode || '',
-        address:       data.address || '',
-        abn:           data.abn || '',
+        business_name:        data.business_name || '',
+        bio:                  data.bio || '',
+        brand_color:          data.brand_color || '#01472e',
+        suburb:               data.suburb || '',
+        state:                data.state || 'VIC',
+        postcode:             data.postcode || '',
+        address:              data.address || '',
+        abn:                  data.abn || '',
+        region:               data.region || '',
+        growing_practices:    data.growing_practices || '',
+        seasonal_specialties: (data.seasonal_specialties || []).join(', '),
+        sustainability:       (data.sustainability || []).join(', '),
       })
     }
     setLoading(false)
@@ -108,14 +116,18 @@ export default function FarmerStorefrontPage() {
     const { error } = await supabase
       .from('farmers')
       .update({
-        business_name: form.business_name,
-        bio:           form.bio,
-        brand_color:   form.brand_color,
-        suburb:        form.suburb,
-        state:         form.state,
-        postcode:      form.postcode,
-        address:       form.address,
-        updated_at:    new Date().toISOString(),
+        business_name:        form.business_name,
+        bio:                  form.bio,
+        brand_color:          form.brand_color,
+        suburb:               form.suburb,
+        state:                form.state,
+        postcode:             form.postcode,
+        address:              form.address,
+        region:               form.region || null,
+        growing_practices:    form.growing_practices || null,
+        seasonal_specialties: form.seasonal_specialties ? form.seasonal_specialties.split(',').map(s => s.trim()).filter(Boolean) : [],
+        sustainability:       form.sustainability ? form.sustainability.split(',').map(s => s.trim()).filter(Boolean) : [],
+        updated_at:           new Date().toISOString(),
       })
       .eq('id', farmer.id)
 
@@ -219,6 +231,39 @@ export default function FarmerStorefrontPage() {
             placeholder="Tell buyers about your farm — what you grow, your story, your values"
             style={{ ...inputStyle, resize: 'vertical' }}
           />
+        </div>
+
+        {/* Region */}
+        <div>
+          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Region</label>
+          <input style={inputStyle} value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} placeholder="e.g. Yarra Valley, Mornington Peninsula" />
+          <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Shown publicly on your grower profile to help buyers find you</p>
+        </div>
+
+        {/* Growing practices */}
+        <div>
+          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Growing Practices</label>
+          <textarea
+            value={form.growing_practices}
+            onChange={e => setForm(f => ({ ...f, growing_practices: e.target.value }))}
+            rows={3}
+            placeholder="Describe how you grow — soil health, pest management, water use, certifications…"
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </div>
+
+        {/* Seasonal specialties */}
+        <div>
+          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Seasonal Specialties</label>
+          <input style={inputStyle} value={form.seasonal_specialties} onChange={e => setForm(f => ({ ...f, seasonal_specialties: e.target.value }))} placeholder="e.g. Spring tulips, Summer dahlias, Autumn natives" />
+          <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Comma-separated list of your seasonal or specialty offerings</p>
+        </div>
+
+        {/* Sustainability */}
+        <div>
+          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Sustainability Practices</label>
+          <input style={inputStyle} value={form.sustainability} onChange={e => setForm(f => ({ ...f, sustainability: e.target.value }))} placeholder="e.g. Organic, Spray-free, Composting, Rainwater harvesting" />
+          <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Comma-separated — shown as green badges on your public profile</p>
         </div>
 
         {/* Brand colour */}

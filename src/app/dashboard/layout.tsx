@@ -61,6 +61,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     buyer: [
       { href: '/dashboard/buyer',        label: 'Overview',    icon: '◎' },
       { href: '/marketplace',            label: 'Marketplace', icon: '🛒' },
+      { href: '/growers',                label: 'Growers',     icon: '🌱' },
       { href: '/dashboard/buyer/orders', label: 'Orders',      icon: '📦' },
     ],
   }

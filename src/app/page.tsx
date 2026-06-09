@@ -19,6 +19,9 @@ export default function HomePage() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+          <Link href="/growers" className="home-nav-mkt" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            Growers
+          </Link>
           <Link href="/marketplace" className="home-nav-mkt" style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
             Marketplace
           </Link>

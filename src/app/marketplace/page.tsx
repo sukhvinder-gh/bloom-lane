@@ -178,7 +178,11 @@ export default function MarketplacePage() {
                       {product.is_gst_free && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
                     </div>
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.25rem' }}>{product.farmers?.business_name}</p>
+                      <Link href={`/growers/${product.farmer_id}`} onClick={e => e.stopPropagation()} className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.25rem', textDecoration: 'none', display: 'block' }}
+                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
+                        {product.farmers?.business_name}
+                      </Link>
                       <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>per {product.unit} · {available} left</p>
                       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 'auto' }}>
