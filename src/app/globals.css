@@ -159,11 +159,12 @@ body {
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-card);
 }
-.card-hover {
+.card-hover, .kpi-card {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06);
 }
-.card-hover:hover {
-  box-shadow: var(--shadow-float);
+.card-hover:hover, .kpi-card:hover {
+  box-shadow: 0 12px 40px rgba(1,71,46,0.25), 0 4px 12px rgba(1,71,46,0.1);
   transform: translateY(-2px);
 }
 .card-sage  { background: var(--green-soft); border-radius: var(--r-card); }
