@@ -23,21 +23,17 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // getUser() makes a live Supabase network call on every request.
-  // If it times out (Azure cold-start, transient network), fall back to
-  // getSession() which reads the JWT from cookies locally without a round-trip.
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] | null = null
+  // Use getSession() (local JWT validation, no Supabase network round-trip) so that
+  // a transient network error or Azure cold-start never kicks an authenticated user
+  // to the login page. Layout-level auth uses getUser() for server-side verification.
+  let user: { id: string } | null = null
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+    const { data: { session } } = await supabase.auth.getSession()
+    user = session?.user ?? null
   } catch {
-    try {
-      const { data } = await supabase.auth.getSession()
-      user = data.session?.user ?? null
-    } catch {
-      // both failed — treat as no session; page-level auth will redirect if needed
-    }
+    // If session read fails, let the request through — the layout auth will handle it
   }
+
   const { pathname } = request.nextUrl
 
   // Skip ALL API routes — they handle their own auth

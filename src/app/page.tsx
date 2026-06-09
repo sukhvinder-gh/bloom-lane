@@ -7,39 +7,33 @@ export default function HomePage() {
   return (
     <main style={{ fontFamily: 'var(--font-body)', background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* ── Amber top stripe (Box Divvy style) ── */}
-      <div style={{ height: '6px', background: 'var(--brand)' }} />
-
       {/* ── Nav ── */}
       <nav className="home-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(255,255,255,0.97)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(0,0,0,0.08)',
-        padding: '0 2rem', height: '60px',
+        background: '#1a3328',
+        padding: '0 2rem', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <span style={{ fontSize: '1.3rem' }}>🌸</span>
           <span className="home-nav-logo" style={{
             fontFamily: 'var(--font-body)', fontSize: '1.05rem', fontWeight: 800,
-            color: 'var(--green)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+            color: 'white', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap',
           }}>
             Bloom Lane
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
-          <Link href="/growers" className="home-nav-mkt" style={{ color: '#4b5563', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <Link href="/growers" className="home-nav-mkt" style={{ color: 'rgba(255,255,255,0.65)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
             Growers
           </Link>
-          <Link href="/marketplace" className="home-nav-mkt" style={{ color: '#4b5563', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+          <Link href="/marketplace" className="home-nav-mkt" style={{ color: 'rgba(255,255,255,0.65)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
             Marketplace
           </Link>
-          <Link href="/auth/login" style={{ color: '#4b5563', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap', border: '1.5px solid #d1d5db', borderRadius: '99px', padding: '0.4rem 1.1rem' }}>
-            Login
+          <Link href="/auth/login" style={{ color: 'rgba(255,255,255,0.65)', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+            Sign in
           </Link>
-          <Link href="/auth/register" className="btn btn-sm" style={{ background: 'var(--brand)', color: 'white', whiteSpace: 'nowrap' }}>
+          <Link href="/auth/register" className="btn btn-sm" style={{ background: 'var(--green)', color: 'white', whiteSpace: 'nowrap' }}>
             Join free
           </Link>
         </div>
@@ -47,14 +41,14 @@ export default function HomePage() {
 
       {/* ── Market status bar ── */}
       <div style={{
-        background: marketOpen ? 'var(--brand)' : 'var(--surface-2)',
+        background: marketOpen ? 'var(--green)' : 'var(--surface-2)',
         padding: '0.55rem 2rem',
         textAlign: 'center',
         borderBottom: '1px solid rgba(0,0,0,0.08)',
       }}>
         {marketOpen ? (
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'white', letterSpacing: '0.02em' }}>
-            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fde68a', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
+            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#a5f3c0', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
             Market is OPEN · Order before Wednesday 8:00 PM AEST
           </span>
         ) : (
@@ -65,7 +59,7 @@ export default function HomePage() {
       </div>
 
       {/* ── Hero ── */}
-      <section style={{ background: '#1c0e00', padding: '5.5rem 2rem 6rem', textAlign: 'center' }}>
+      <section style={{ background: '#1a3328', padding: '5.5rem 2rem 6rem', textAlign: 'center' }}>
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
           <h1 style={{
             fontFamily: 'var(--font-body)',
@@ -77,14 +71,14 @@ export default function HomePage() {
             letterSpacing: '-0.025em',
           }}>
             Fresh Australian flowers,{' '}
-            <span style={{ color: 'var(--brand-mid)' }}>direct from the grower</span>
+            <span style={{ color: '#7dcf9a' }}>direct from the grower</span>
           </h1>
           <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.55)', maxWidth: '520px', margin: '0 auto 2.5rem', lineHeight: 1.75 }}>
             Weekly market window. Wholesale pricing for florists, retail for flower lovers.
             Know who grew your flowers and what they were paid.
           </p>
           <div style={{ display: 'flex', gap: '0.875rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/marketplace" className="btn" style={{ background: 'var(--brand)', color: 'white', padding: '0.9rem 2.25rem', fontSize: '1rem', fontWeight: 700 }}>
+            <Link href="/marketplace" className="btn" style={{ background: 'var(--green)', color: 'white', padding: '0.9rem 2.25rem', fontSize: '1rem', fontWeight: 700 }}>
               Browse the market →
             </Link>
             <Link href="/auth/register" style={{
@@ -102,7 +96,7 @@ export default function HomePage() {
       <section style={{ padding: '5rem 2rem', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: '0.625rem' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--green)', marginBottom: '0.625rem' }}>
               How it works
             </p>
             <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(1.5rem, 3vw, 2.1rem)', fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.025em' }}>
@@ -122,7 +116,7 @@ export default function HomePage() {
                 border: '1px solid rgba(0,0,0,0.07)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '10px', background: 'var(--brand-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '10px', background: 'var(--green-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
                     {s.icon}
                   </div>
                   <span style={{ fontSize: '2.25rem', fontWeight: 900, color: 'rgba(0,0,0,0.05)', letterSpacing: '-0.05em', lineHeight: 1 }}>{s.num}</span>
@@ -139,7 +133,7 @@ export default function HomePage() {
       <section style={{ background: 'white', padding: '4.5rem 2rem', borderTop: '1px solid rgba(0,0,0,0.06)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: '0.625rem' }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--green)', marginBottom: '0.625rem' }}>
               Who shops here
             </p>
             <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 'clamp(1.5rem, 3vw, 2.1rem)', fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.025em' }}>
@@ -148,18 +142,18 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
             {/* Florists */}
-            <div style={{ background: '#92400e', borderRadius: '16px', padding: '2.5rem' }}>
+            <div style={{ background: '#1a3328', borderRadius: '16px', padding: '2.5rem' }}>
               <div style={{ fontSize: '1.75rem', marginBottom: '1.25rem' }}>💼</div>
               <h3 style={{ fontFamily: 'var(--font-body)', fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.875rem' }}>Florists & businesses</h3>
               <ul style={{ listStyle: 'none', marginBottom: '2rem' }}>
                 {['Wholesale pricing ex-GST', 'ABN-verified accounts', 'No minimum spend', 'Weekly fresh stock'].map(f => (
-                  <li key={f} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '0.5rem', paddingLeft: '1.375rem', position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, color: 'var(--brand-mid)', fontWeight: 700 }}>✓</span>
+                  <li key={f} style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '0.5rem', paddingLeft: '1.375rem', position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 0, color: '#7dcf9a', fontWeight: 700 }}>✓</span>
                     {f}
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register?role=buyer_b2b" className="btn btn-sm" style={{ background: 'var(--brand)', color: 'white', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <Link href="/auth/register?role=buyer_b2b" className="btn btn-sm" style={{ background: 'var(--green)', color: 'white', width: '100%', display: 'flex', justifyContent: 'center' }}>
                 Open wholesale account
               </Link>
             </div>
@@ -170,12 +164,12 @@ export default function HomePage() {
               <ul style={{ listStyle: 'none', marginBottom: '2rem' }}>
                 {['Retail pricing inc-GST', 'No subscription needed', 'Know your grower', 'Fresh, seasonal varieties'].map(f => (
                   <li key={f} style={{ color: 'var(--text-2)', fontSize: '0.9rem', marginBottom: '0.5rem', paddingLeft: '1.375rem', position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, color: 'var(--brand)', fontWeight: 700 }}>✓</span>
+                    <span style={{ position: 'absolute', left: 0, color: 'var(--green)', fontWeight: 700 }}>✓</span>
                     {f}
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register?role=buyer_b2c" className="btn btn-sm" style={{ background: 'var(--brand)', color: 'white', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <Link href="/auth/register?role=buyer_b2c" className="btn btn-sm" style={{ background: 'var(--green)', color: 'white', width: '100%', display: 'flex', justifyContent: 'center' }}>
                 Start shopping
               </Link>
             </div>
@@ -187,11 +181,11 @@ export default function HomePage() {
       <section style={{ padding: '5rem 2rem' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{
-            background: 'var(--brand-soft)',
+            background: 'var(--green-soft)',
             borderRadius: '20px',
             padding: '4rem 2.5rem',
             textAlign: 'center',
-            border: '1px solid rgba(217,119,6,0.2)',
+            border: '1px solid var(--green-mid)',
           }}>
             <div style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>🌻</div>
             <h2 style={{
@@ -208,7 +202,7 @@ export default function HomePage() {
               List your flowers for free. Set your own wholesale price. 5% commission only when you sell.
               Payouts land in your account automatically.
             </p>
-            <Link href="/auth/register?role=farmer" className="btn" style={{ background: 'var(--brand)', color: 'white', padding: '0.875rem 2.25rem', fontSize: '0.95rem', fontWeight: 700 }}>
+            <Link href="/auth/register?role=farmer" className="btn" style={{ background: 'var(--green)', color: 'white', padding: '0.875rem 2.25rem', fontSize: '0.95rem', fontWeight: 700 }}>
               List your flowers for free →
             </Link>
           </div>
@@ -216,7 +210,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer style={{ background: '#1c0e00', color: 'rgba(255,255,255,0.4)', padding: '2.5rem 2rem', textAlign: 'center', fontSize: '0.8rem' }}>
+      <footer style={{ background: '#1a3328', color: 'rgba(255,255,255,0.4)', padding: '2.5rem 2rem', textAlign: 'center', fontSize: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
           <span style={{ fontSize: '1.1rem' }}>🌸</span>
           <span style={{ fontFamily: 'var(--font-body)', color: 'white', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: '0.9rem' }}>Bloom Lane</span>

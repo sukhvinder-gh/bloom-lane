@@ -115,9 +115,9 @@ export default function MarketplacePage() {
 
       {/* Market status banner */}
       {marketOpen ? (
-        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--brand)' }}>
+        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--green)' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'white', letterSpacing: '0.02em' }}>
-            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fde68a', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
+            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#a5f3c0', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
             Market is OPEN · Order before Wednesday 8:00 PM AEST
           </span>
         </div>

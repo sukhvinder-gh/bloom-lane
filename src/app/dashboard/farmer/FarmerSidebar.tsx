@@ -38,7 +38,7 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
         <Link href="/dashboard/farmer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
           <span style={{ fontSize: '1.5rem', lineHeight: 1, flexShrink: 0 }}>🌸</span>
           <div>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800, lineHeight: 1.2 }}>Bloom Lane</p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--green)', fontWeight: 800, lineHeight: 1.2 }}>Bloom Lane</p>
             <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginTop: '0.1rem' }}>Grower Portal</p>
           </div>
         </Link>
@@ -137,7 +137,7 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
       <div className="mobile-topbar">
         <Link href="/dashboard/farmer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
           <span style={{ fontSize: '1.25rem' }}>🌸</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800 }}>{businessName || 'Grower'}</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--green)', fontWeight: 800 }}>{businessName || 'Grower'}</span>
         </Link>
         <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: 'var(--text-2)', fontSize: '1.3rem', lineHeight: 1 }}>
           {open ? '✕' : '☰'}
