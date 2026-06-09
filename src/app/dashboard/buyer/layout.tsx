@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
   { href: '/dashboard/buyer',        label: 'Overview',    icon: '🏠',  exact: true },
@@ -25,7 +26,7 @@ function BuyerSidebar() {
         <Link href="/dashboard/buyer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
           <span style={{ fontSize: '1.5rem', lineHeight: 1, flexShrink: 0 }}>🌸</span>
           <div>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--green)', fontWeight: 800, lineHeight: 1.2 }}>Bloom Lane</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--navy)', fontWeight: 700, lineHeight: 1.2 }}>Bloom Lane</p>
             <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginTop: '0.1rem' }}>Buyer Portal</p>
           </div>
         </Link>
@@ -65,7 +66,7 @@ function BuyerSidebar() {
       <div className="mobile-topbar">
         <Link href="/dashboard/buyer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
           <span style={{ fontSize: '1.25rem' }}>🌸</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--green)', fontWeight: 800 }}>Bloom Lane</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--navy)', fontWeight: 700 }}>Bloom Lane</span>
         </Link>
         <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: 'var(--text-2)', fontSize: '1.3rem', lineHeight: 1 }}>
           {open ? '✕' : '☰'}
@@ -85,6 +86,14 @@ function BuyerSidebar() {
 }
 
 export default function BuyerLayout({ children }: { children: ReactNode }) {
+  const router = useRouter()
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) router.replace('/auth/login')
+    })
+  }, [router])
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
       <BuyerSidebar />
