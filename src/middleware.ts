@@ -4,43 +4,36 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
-          )
-        },
-      },
-    }
-  )
-
-  // Use getSession() (local JWT validation, no Supabase network round-trip) so that
-  // a transient network error or Azure cold-start never kicks an authenticated user
-  // to the login page. Layout-level auth uses getUser() for server-side verification.
-  let user: { id: string } | null = null
+  // Keep Supabase client alive so it can refresh tokens via setAll
+  // (writes new cookies into supabaseResponse when access token expires)
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    user = session?.user ?? null
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+            )
+          },
+        },
+      }
+    )
+    // Fire-and-forget: just lets Supabase refresh the token if needed
+    await supabase.auth.getSession()
   } catch {
-    // If session read fails, let the request through — the layout auth will handle it
+    // Ignore — token refresh is best-effort; layouts do the real auth check
   }
 
   const { pathname } = request.nextUrl
 
-  // Skip ALL API routes — they handle their own auth
-  if (pathname.startsWith('/api/')) return supabaseResponse
-
-  // Skip browser/extension probes
+  // Skip API routes, static files, and browser probes
   if (
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/.well-known') ||
     pathname.includes('chrome') ||
     pathname.includes('devtools') ||
@@ -55,8 +48,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/marketplace') ||
     pathname.startsWith('/growers')
 
-  // Redirect unauthenticated users to login
-  if (!user && !isPublic) {
+  if (isPublic) return supabaseResponse
+
+  // Auth gate: check for the Supabase session cookie directly.
+  // Avoids the Supabase client call which can return null on Azure despite
+  // valid cookies (chunking / cold-start issues). Layouts use getUser() for
+  // proper server-side verification after this pass-through.
+  const allCookies = request.cookies.getAll()
+  const hasSession = allCookies.some(c =>
+    c.name.startsWith('sb-') && c.name.includes('auth-token')
+  )
+
+  if (!hasSession) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/checkout')) {
@@ -65,8 +68,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect logged-in users away from login page only
-  if (user && pathname === '/auth/login') {
+  // Don't show login page to already-authenticated users
+  if (pathname === '/auth/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
