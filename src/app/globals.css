@@ -34,6 +34,12 @@
   --border:       rgba(0,0,0,0.1);
   --border-light: rgba(0,0,0,0.06);
 
+  /* ── Brand: Warm Amber (primary public brand colour) ── */
+  --brand:       #d97706;
+  --brand-dark:  #b45309;
+  --brand-soft:  #fffbeb;
+  --brand-mid:   #fcd34d;
+
   /* ── Amber / warning ── */
   --amber-new:  #c47c2b;
   --amber-soft: #fdf0e0;
