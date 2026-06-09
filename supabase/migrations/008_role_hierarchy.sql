@@ -1,25 +1,30 @@
 -- Migration 008: Two-tier admin role hierarchy + product image support
 -- Run manually in Supabase SQL Editor
+--
+-- IMPORTANT: PostgreSQL requires enum values to be committed before they can be
+-- referenced in policies. Run this in TWO separate steps:
+--
+--   STEP 1 — paste and run only the lines between the "STEP 1" markers below.
+--   STEP 2 — after step 1 succeeds, paste and run the "STEP 2" block.
 
--- ── New admin roles ──────────────────────────────────────────────────────────
--- super_admin  : full access (pricing, commission, all inventory, config)
--- platform_admin: manage growers/buyers, basic setup — no pricing/commission edit
+-- ════════════════════════════════════════════════════════════════════
+-- STEP 1: Add enum values  (run this first, on its own)
+-- ════════════════════════════════════════════════════════════════════
 
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_admin';
 ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'platform_admin';
 
--- ── Product image support ────────────────────────────────────────────────────
--- image_url  : kept as the primary/first image (backward compat)
--- image_urls : array of all product images (up to 5)
+-- ════════════════════════════════════════════════════════════════════
+-- STEP 2: Schema changes + RLS policies  (run AFTER step 1 commits)
+-- ════════════════════════════════════════════════════════════════════
 
+-- Product image support
+-- image_url  : primary/first image (backward compat)
+-- image_urls : array of all product images (up to 5)
 ALTER TABLE products
   ADD COLUMN IF NOT EXISTS image_urls TEXT[] DEFAULT '{}';
 
--- ── RLS: allow new admin roles the same access as 'admin' ────────────────────
--- The existing policies use EXISTS (SELECT 1 FROM profiles WHERE role = 'admin')
--- We extend them to also match super_admin and platform_admin.
-
--- Products: admins can update any product
+-- Extend products policy to accept all three admin roles
 DROP POLICY IF EXISTS "products_admin" ON products;
 CREATE POLICY "products_admin" ON products FOR ALL USING (
   EXISTS (
@@ -29,7 +34,7 @@ CREATE POLICY "products_admin" ON products FOR ALL USING (
   )
 );
 
--- Config: restrict writes to super_admin only (reads still open to all admins)
+-- Config writes restricted to super_admin only
 DROP POLICY IF EXISTS "config_admin_write" ON config;
 CREATE POLICY "config_admin_write" ON config FOR UPDATE USING (
   EXISTS (
