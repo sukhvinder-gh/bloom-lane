@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { formatAEST } from '@/lib/utils/timezone'
 
 type FilterKey = 'all' | 'pending' | 'verified' | 'b2c'
@@ -221,6 +222,16 @@ export default function AdminBuyersPage() {
 
                           {openMenu === buyer.id && (
                             <div ref={menuRef} style={{ position: 'absolute', top: '2.25rem', right: 0, zIndex: 100, background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 24px rgba(30,37,53,0.14)', border: '1px solid var(--border-light)', minWidth: '13rem', overflow: 'hidden' }}>
+
+                              <Link
+                                href={`/dashboard/admin/buyers/${buyer.id}`}
+                                onClick={() => setOpenMenu(null)}
+                                style={{ ...menuItemStyle, color: 'var(--navy)', textDecoration: 'none', display: 'flex' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--offwhite)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                              >
+                                <span style={{ width: '1.25rem', textAlign: 'center' }}>✏️</span> Edit Profile
+                              </Link>
 
                               {isB2B && !verified && buyer.abn && (
                                 <button
