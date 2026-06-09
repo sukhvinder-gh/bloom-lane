@@ -5,10 +5,10 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 const NAV = [
-  { href: '/dashboard/buyer',        label: 'Overview',    icon: '◉', exact: true },
-  { href: '/dashboard/buyer/orders', label: 'My Orders',   icon: '📦' },
-  { href: '/marketplace',            label: 'Marketplace', icon: '🛒' },
-  { href: '/growers',                label: 'Growers',     icon: '🌿' },
+  { href: '/dashboard/buyer',        label: 'Overview',    icon: '🏠',  exact: true },
+  { href: '/dashboard/buyer/orders', label: 'My Orders',   icon: '📋' },
+  { href: '/marketplace',            label: 'Marketplace', icon: '🛍️' },
+  { href: '/growers',                label: 'Growers',     icon: '🌾' },
 ]
 
 function BuyerSidebar() {
@@ -21,17 +21,17 @@ function BuyerSidebar() {
 
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '1.25rem 1rem 1rem', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
-        <Link href="/dashboard/buyer" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
-          <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem', flexShrink: 0 }}>B</div>
+      <div style={{ padding: '1.5rem 1.25rem 1.25rem', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
+        <Link href="/dashboard/buyer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
+          <span style={{ fontSize: '1.5rem', lineHeight: 1, flexShrink: 0 }}>🌸</span>
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--text-1)', fontWeight: 600, lineHeight: 1.1 }}>Bloom Lane</p>
-            <p style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)' }}>Buyer Portal</p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800, lineHeight: 1.2 }}>Bloom Lane</p>
+            <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginTop: '0.1rem' }}>Buyer Portal</p>
           </div>
         </Link>
       </div>
 
-      <nav style={{ flex: 1, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.1rem', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, paddingTop: '0.625rem', paddingBottom: '0.625rem', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {NAV.map(item => {
           const active = isActive(item.href, item.exact)
           return (
@@ -39,25 +39,17 @@ function BuyerSidebar() {
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.6rem 0.875rem', borderRadius: '10px',
-                textDecoration: 'none', fontSize: '0.875rem',
-                fontWeight: active ? 600 : 500,
-                color: active ? 'var(--green)' : 'var(--text-2)',
-                background: active ? 'var(--green-soft)' : 'transparent',
-                transition: 'all 0.15s',
-              }}
+              className={`rf-nav-item${active ? ' active' : ''}`}
             >
-              <span style={{ width: '1.25rem', textAlign: 'center', fontSize: '0.9rem', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: '1rem', flexShrink: 0, opacity: active ? 1 : 0.65 }}>{item.icon}</span>
               {item.label}
             </Link>
           )
         })}
       </nav>
 
-      <div style={{ padding: '0.875rem', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
-        <Link href="/auth/logout" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '8px', textDecoration: 'none', fontSize: '0.78rem', color: 'var(--text-3)' }}>
+      <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
+        <Link href="/auth/logout" className="rf-nav-item" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-3)', borderLeft: 'none' }}>
           ↗ Sign out
         </Link>
       </div>
@@ -66,14 +58,14 @@ function BuyerSidebar() {
 
   return (
     <>
-      <aside className="desktop-sidebar" style={{ width: '232px', background: 'var(--surface)', borderRight: '1px solid var(--border-light)', height: '100vh', position: 'sticky', top: 0, flexShrink: 0, overflowY: 'auto' }}>
+      <aside className="desktop-sidebar" style={{ width: '220px', background: 'var(--surface)', borderRight: '1px solid var(--border-light)', height: '100vh', position: 'sticky', top: 0, flexShrink: 0, overflowY: 'auto' }}>
         <SidebarContent />
       </aside>
 
       <div className="mobile-topbar">
         <Link href="/dashboard/buyer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '0.4rem', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.875rem' }}>B</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--text-1)', fontWeight: 600 }}>Bloom Lane</span>
+          <span style={{ fontSize: '1.25rem' }}>🌸</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800 }}>Bloom Lane</span>
         </Link>
         <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: 'var(--text-2)', fontSize: '1.3rem', lineHeight: 1 }}>
           {open ? '✕' : '☰'}
@@ -82,7 +74,7 @@ function BuyerSidebar() {
 
       {open && (
         <div className="mobile-only" style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
-          <div onClick={() => setOpen(false)} style={{ flex: 1, background: 'rgba(26,46,31,0.45)', backdropFilter: 'blur(2px)' }} />
+          <div onClick={() => setOpen(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }} />
           <aside style={{ width: '240px', background: 'var(--surface)', height: '100%', overflowY: 'auto', animation: 'slideInLeft 0.2s ease', flexShrink: 0 }}>
             <SidebarContent />
           </aside>

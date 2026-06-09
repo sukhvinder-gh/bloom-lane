@@ -23,7 +23,21 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() makes a live Supabase network call on every request.
+  // If it times out (Azure cold-start, transient network), fall back to
+  // getSession() which reads the JWT from cookies locally without a round-trip.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] | null = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    try {
+      const { data } = await supabase.auth.getSession()
+      user = data.session?.user ?? null
+    } catch {
+      // both failed — treat as no session; page-level auth will redirect if needed
+    }
+  }
   const { pathname } = request.nextUrl
 
   // Skip ALL API routes — they handle their own auth

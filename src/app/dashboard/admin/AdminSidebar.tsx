@@ -12,12 +12,12 @@ type Props = {
 }
 
 const NAV = [
-  { href: '/dashboard/admin',          label: 'Overview',  icon: '◉',  exact: true },
-  { href: '/dashboard/admin/farmers',  label: 'Growers',   icon: '🌿' },
-  { href: '/dashboard/admin/buyers',   label: 'Buyers',    icon: '🛒' },
-  { href: '/dashboard/admin/orders',   label: 'Orders',    icon: '📦' },
-  { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '🛡' },
-  { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💸' },
+  { href: '/dashboard/admin',          label: 'Overview',  icon: '🏠',  exact: true },
+  { href: '/dashboard/admin/farmers',  label: 'Growers',   icon: '🌾' },
+  { href: '/dashboard/admin/buyers',   label: 'Buyers',    icon: '👥' },
+  { href: '/dashboard/admin/orders',   label: 'Orders',    icon: '📋' },
+  { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '⚖️' },
+  { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💳' },
 ]
 
 export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccount }: Props) {
@@ -33,18 +33,18 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* Brand */}
-      <div style={{ padding: '1.25rem 1rem 1rem', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
-        <Link href="/dashboard/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
-          <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'white', fontSize: '1.1rem', flexShrink: 0 }}>B</div>
+      <div style={{ padding: '1.5rem 1.25rem 1.25rem', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
+        <Link href="/dashboard/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
+          <span style={{ fontSize: '1.5rem', lineHeight: 1, flexShrink: 0 }}>🌸</span>
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--text-1)', fontWeight: 600, lineHeight: 1.1 }}>Bloom Lane</p>
-            <p style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-3)' }}>{roleLabel(role)}</p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800, lineHeight: 1.2 }}>Bloom Lane</p>
+            <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginTop: '0.1rem' }}>{roleLabel(role)}</p>
           </div>
         </Link>
       </div>
 
       {/* Nav items */}
-      <nav style={{ flex: 1, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.1rem', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, paddingTop: '0.625rem', paddingBottom: '0.625rem', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
         {NAV.map(item => {
           const active = isActive(item.href, item.exact)
           return (
@@ -52,17 +52,9 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '0.6rem 0.875rem', borderRadius: '10px',
-                textDecoration: 'none', fontSize: '0.875rem',
-                fontWeight: active ? 600 : 500,
-                color: active ? 'var(--green)' : 'var(--text-2)',
-                background: active ? 'var(--green-soft)' : 'transparent',
-                transition: 'all 0.15s',
-              }}
+              className={`rf-nav-item${active ? ' active' : ''}`}
             >
-              <span style={{ width: '1.25rem', textAlign: 'center', fontSize: '0.9rem', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: '1rem', flexShrink: 0, opacity: active ? 1 : 0.65 }}>{item.icon}</span>
               {item.label}
             </Link>
           )
@@ -73,32 +65,24 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
           <Link
             href="/dashboard/admin/config"
             onClick={() => setOpen(false)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.6rem 0.875rem', borderRadius: '10px',
-              textDecoration: 'none', fontSize: '0.875rem',
-              fontWeight: isActive('/dashboard/admin/config') ? 600 : 500,
-              color: isActive('/dashboard/admin/config') ? 'var(--green)' : 'var(--text-2)',
-              background: isActive('/dashboard/admin/config') ? 'var(--green-soft)' : 'transparent',
-              transition: 'all 0.15s',
-            }}
+            className={`rf-nav-item${isActive('/dashboard/admin/config') ? ' active' : ''}`}
           >
-            <span style={{ width: '1.25rem', textAlign: 'center', fontSize: '0.9rem', flexShrink: 0 }}>⚙</span>
+            <span style={{ fontSize: '1rem', flexShrink: 0, opacity: isActive('/dashboard/admin/config') ? 1 : 0.65 }}>⚙️</span>
             Config
-            <span style={{ marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>Super</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>Super</span>
           </Link>
         )}
 
         {/* Grower account link for dual-role users */}
         {hasGrowerAccount && (
           <>
-            <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.625rem 0.25rem' }} />
+            <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.5rem 1.25rem' }} />
             <Link
               href="/dashboard/farmer"
               onClick={() => setOpen(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.875rem', borderRadius: '10px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-2)', transition: 'all 0.15s' }}
+              className="rf-nav-item"
             >
-              <span style={{ width: '1.25rem', textAlign: 'center', fontSize: '0.9rem', flexShrink: 0 }}>🌾</span>
+              <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🌱</span>
               My Grower Account
             </Link>
           </>
@@ -106,9 +90,9 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
       </nav>
 
       {/* User section */}
-      <div style={{ padding: '0.875rem', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.75rem', borderRadius: '12px', background: 'var(--surface-2)' }}>
-          <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
+      <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
+          <div style={{ width: '1.875rem', height: '1.875rem', borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
             {userName?.[0]?.toUpperCase() || 'A'}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -116,7 +100,7 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
             <p style={{ fontSize: '0.68rem', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userEmail}</p>
           </div>
         </div>
-        <Link href="/auth/logout" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '8px', textDecoration: 'none', fontSize: '0.78rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>
+        <Link href="/auth/logout" className="rf-nav-item" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-3)', borderLeft: 'none' }}>
           ↗ Sign out
         </Link>
       </div>
@@ -126,25 +110,25 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="desktop-sidebar" style={{ width: '232px', background: 'var(--surface)', borderRight: '1px solid var(--border-light)', height: '100vh', position: 'sticky', top: 0, flexShrink: 0, overflowY: 'auto' }}>
+      <aside className="desktop-sidebar" style={{ width: '220px', background: 'var(--surface)', borderRight: '1px solid var(--border-light)', height: '100vh', position: 'sticky', top: 0, flexShrink: 0, overflowY: 'auto' }}>
         <SidebarContent />
       </aside>
 
       {/* Mobile topbar */}
       <div className="mobile-topbar">
         <Link href="/dashboard/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '0.4rem', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.875rem' }}>B</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--text-1)', fontWeight: 600 }}>Bloom Lane</span>
+          <span style={{ fontSize: '1.25rem' }}>🌸</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.95rem', color: 'var(--brand)', fontWeight: 800 }}>Bloom Lane</span>
         </Link>
         <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: 'var(--text-2)', fontSize: '1.3rem', lineHeight: 1 }}>
           {open ? '✕' : '☰'}
         </button>
       </div>
 
-      {/* Mobile drawer overlay */}
+      {/* Mobile drawer */}
       {open && (
         <div className="mobile-only" style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex' }}>
-          <div onClick={() => setOpen(false)} style={{ flex: 1, background: 'rgba(26,46,31,0.45)', backdropFilter: 'blur(2px)' }} />
+          <div onClick={() => setOpen(false)} style={{ flex: 1, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)' }} />
           <aside style={{ width: '240px', background: 'var(--surface)', height: '100%', overflowY: 'auto', animation: 'slideInLeft 0.2s ease', flexShrink: 0 }}>
             <SidebarContent />
           </aside>
