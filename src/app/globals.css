@@ -257,6 +257,8 @@ body {
 /* ── Table ────────────────────────────────────────────────── */
 .table-row { transition: background 0.12s ease; }
 .table-row:hover { background: var(--offwhite); }
+.farmer-action-card { transition: background 0.12s ease; }
+.farmer-action-card:hover { background: var(--offwhite) !important; }
 .th { padding: 0.875rem 1.25rem; text-align: left; }
 .td { padding: 0.875rem 1.25rem; border-top: 1px solid var(--border-light); }
 

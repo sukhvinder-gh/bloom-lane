@@ -92,14 +92,10 @@ export default async function FarmerOverviewPage() {
                 { icon: '📦', label: 'View Orders',        desc: 'See incoming orders and update fulfilment status',         href: '/dashboard/farmer/orders' },
                 { icon: '💰', label: 'Payouts',            desc: 'Check your earnings and payout history',                   href: '/dashboard/farmer/payouts' },
               ].map(a => (
-                <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
-                  <div style={{ background: 'white', padding: '1.25rem 1.5rem', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--offwhite)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                    <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{a.icon}</p>
-                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>{a.label}</p>
-                    <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{a.desc}</p>
-                  </div>
+                <Link key={a.href} href={a.href} className="farmer-action-card" style={{ textDecoration: 'none', background: 'white', padding: '1.25rem 1.5rem', display: 'block' }}>
+                  <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{a.icon}</p>
+                  <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)', marginBottom: '0.2rem' }}>{a.label}</p>
+                  <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{a.desc}</p>
                 </Link>
               ))}
             </div>
