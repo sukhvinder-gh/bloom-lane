@@ -67,10 +67,10 @@ export default function MarketplacePage() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
 
       {/* ── Top nav ── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,247,249,0.9)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--olive)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>B</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Bloom Lane</span>
+          <span style={{ fontSize: '1.1rem' }}>🌸</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', fontWeight: 800, color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bloom Lane</span>
         </Link>
         <div style={{ flex: 1, position: 'relative' }}>
           <svg style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'var(--moss)', pointerEvents: 'none' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -115,15 +115,15 @@ export default function MarketplacePage() {
 
       {/* Market status banner */}
       {marketOpen ? (
-        <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--forest)' }}>
-          <span className="type-label" style={{ color: 'var(--sage)' }}>
-            <span className="status-dot status-live" style={{ marginRight: '0.5rem' }} />
-            Market is LIVE · Order before Wednesday 8:00 PM AEST
+        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--green)' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'white', letterSpacing: '0.02em' }}>
+            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#a5f3c0', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
+            Market is OPEN · Order before Wednesday 8:00 PM AEST
           </span>
         </div>
       ) : (
-        <div style={{ padding: '0.75rem', textAlign: 'center', background: 'var(--olive)' }}>
-          <span className="type-label" style={{ color: 'var(--forest)' }}>
+        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--surface-2)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-2)' }}>
             🕐 Market closed · Opens Wednesday 8:00 AM AEST · Browse now, order Wednesday
           </span>
         </div>

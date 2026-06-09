@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
-   BLOOM LANE — Design System v2
-   Palette: sage green + warm off-white + terracotta accent
-   Typography: DM Sans (body) + Playfair Display (headings)
-   Inspired by: Box Divvy — clean community marketplace
+   BLOOM LANE — Design System v3
+   Palette: fresh green + clean white + subtle accents
+   Typography: DM Sans (primary) + Playfair Display (brand/logo)
+   Aesthetic: Box Divvy — clean community marketplace
    ═══════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
@@ -21,9 +21,9 @@
   --terra-mid:   #f0a88f;
 
   /* ── Surfaces ── */
-  --bg:          #f8f6f1;        /* warm off-white page background */
+  --bg:          #f4f7f3;        /* clean near-white with green tint */
   --surface:     #ffffff;
-  --surface-2:   #f2f0eb;        /* card inner sections, table headers */
+  --surface-2:   #edf1ec;        /* card inner sections, table headers */
 
   /* ── Text ── */
   --text-1:      #1a2e1f;
@@ -31,8 +31,8 @@
   --text-3:      #8a9b8c;
 
   /* ── Borders ── */
-  --border:       rgba(58,125,81,0.14);
-  --border-light: rgba(58,125,81,0.07);
+  --border:       rgba(0,0,0,0.1);
+  --border-light: rgba(0,0,0,0.06);
 
   /* ── Amber / warning ── */
   --amber-new:  #c47c2b;
@@ -85,7 +85,7 @@
   --forest-06:   rgba(58,125,81,0.06);
 
   --sage:        rgba(58,125,81,0.10);
-  --olive:       var(--surface-2);
+  --olive:       var(--surface-2);  /* = #edf1ec */
   --moss:        var(--text-2);
   --sage-30:     rgba(58,125,81,0.08);
 
@@ -161,11 +161,10 @@ body {
 }
 .card-hover, .kpi-card {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  box-shadow: 0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06);
 }
 .card-hover:hover, .kpi-card:hover {
-  box-shadow: 0 12px 40px rgba(1,71,46,0.25), 0 4px 12px rgba(1,71,46,0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
 }
 .card-sage  { background: var(--green-soft); border-radius: var(--r-card); }
 .card-forest{ background: var(--green); border-radius: var(--r-card); border: none; }
