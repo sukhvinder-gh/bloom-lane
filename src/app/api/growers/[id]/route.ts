@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   // Fetch their active products (public info only)
   const { data: products } = await admin
     .from('products')
-    .select('id, name, category, unit, b2c_display_price, buyer_unit_price, b2c_available, image_url, is_gst_free')
+    .select('id, name, category, unit, wholesale_price, b2c_markup_pct, b2c_available, image_url, is_gst_free')
     .eq('farmer_id', id)
     .eq('is_active', true)
     .gt('b2c_available', 0)

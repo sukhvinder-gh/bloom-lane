@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/server'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, getBuyerUnitPrice } from '@/lib/utils/pricing'
 
 const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
 
@@ -25,7 +25,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
 
   const { data: products } = await admin
     .from('products')
-    .select('id, name, category, unit, b2c_display_price, buyer_unit_price, b2c_available, image_url, is_gst_free')
+    .select('id, name, category, unit, wholesale_price, b2c_markup_pct, b2c_available, image_url, is_gst_free')
     .eq('farmer_id', id)
     .eq('is_active', true)
     .gt('b2c_available', 0)
@@ -119,7 +119,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                       <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--navy)', marginBottom: '0.15rem' }}>{p.name}</p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.5rem' }}>per {p.unit} · {p.b2c_available} left</p>
                       <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-                        {formatPrice(p.b2c_display_price || p.buyer_unit_price)}
+                        {formatPrice(getBuyerUnitPrice(p, false))}
                       </p>
                     </div>
                   ))}
