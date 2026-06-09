@@ -522,3 +522,17 @@ input[type=number] { -moz-appearance: textfield; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--green-mid); border-radius: 99px; }
+
+
+/* ── Farm name link hover (marketplace) ──────────────────── */
+.farm-name-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── Print / PDF styles ───────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  nav, aside, header, .market-sidebar, .market-cats-mobile { display: none !important; }
+  body { background: white !important; color: #1a2e1f !important; }
+  .page-pad { padding: 0 !important; }
+  .card, .card-forest, .card-sage { box-shadow: none !important; border: 1px solid #ddd !important; }
+  @page { margin: 1.5cm; }
+}

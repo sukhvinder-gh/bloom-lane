@@ -21,10 +21,29 @@ export default function MarketplacePage() {
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('')
   const [isB2B, setIsB2B] = useState(true)
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [marketOpen] = useState(isMarketOpen())
   const [search, setSearch] = useState('')
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
   const { addItem, updateQuantity, items, totalItems } = useCart()
+
+  // Auto-detect buyer type from profile — buyers never see the toggle
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data }) => {
+        const role = data?.role || null
+        setUserRole(role)
+        if (role === 'buyer_b2b') setIsB2B(true)
+        else if (role === 'buyer_b2c') setIsB2B(false)
+        // admin / farmer roles keep the default (true) and can toggle for preview
+      })
+    })
+  }, [])
+
+  // Buyers have their type auto-set; admins/farmers can toggle for browsing preview
+  const isBuyer = userRole === 'buyer_b2b' || userRole === 'buyer_b2c'
 
   useEffect(() => {
     setLoading(true)
@@ -68,19 +87,21 @@ export default function MarketplacePage() {
 
       {/* ── Mobile controls (hidden on desktop) ── */}
       <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
-        {/* B2B/B2C toggle */}
-        <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
-          <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>Buyer type</span>
-          <div style={{ display: 'flex', background: 'var(--offwhite)', borderRadius: '99px', padding: '0.2rem', gap: '0.2rem' }}>
-            {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
-              <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
-                className="type-label-sm"
-                style={{ padding: '0.35rem 0.875rem', borderRadius: '99px', border: 'none', cursor: 'pointer', transition: 'all 0.18s', background: isB2B === opt.id ? 'var(--navy)' : 'transparent', color: isB2B === opt.id ? 'white' : 'var(--moss)' }}>
-                {opt.l}
-              </button>
-            ))}
+        {/* B2B/B2C toggle — hidden for buyers (auto-set from profile) */}
+        {!isBuyer && (
+          <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
+            <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>View as</span>
+            <div style={{ display: 'flex', background: 'var(--offwhite)', borderRadius: '99px', padding: '0.2rem', gap: '0.2rem' }}>
+              {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
+                <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
+                  className="type-label-sm"
+                  style={{ padding: '0.35rem 0.875rem', borderRadius: '99px', border: 'none', cursor: 'pointer', transition: 'all 0.18s', background: isB2B === opt.id ? 'var(--navy)' : 'transparent', color: isB2B === opt.id ? 'white' : 'var(--moss)' }}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         {/* Category pills */}
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.75rem 1rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
@@ -113,20 +134,32 @@ export default function MarketplacePage() {
         {/* Sidebar — hidden on mobile */}
         <aside className="market-sidebar" style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
 
-          {/* B2B/B2C toggle */}
-          <div style={{ marginBottom: '1.75rem' }}>
-            <p className="label" style={{ marginBottom: '0.75rem' }}>Buyer type</p>
-            <div className="card" style={{ padding: '0.25rem', display: 'flex', background: 'var(--olive)', borderRadius: '2rem' }}>
-              {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
-                <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
-                  className="type-label-sm"
-                  style={{ flex: 1, padding: '0.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', background: isB2B === opt.id ? 'var(--forest)' : 'transparent', color: isB2B === opt.id ? 'var(--cream)' : 'var(--moss)' }}>
-                  {opt.l}
-                </button>
-              ))}
+          {/* B2B/B2C toggle — hidden for buyers (type auto-set from profile) */}
+          {!isBuyer && (
+            <div style={{ marginBottom: '1.75rem' }}>
+              <p className="label" style={{ marginBottom: '0.75rem' }}>View as</p>
+              <div className="card" style={{ padding: '0.25rem', display: 'flex', background: 'var(--olive)', borderRadius: '2rem' }}>
+                {[{ id: true, l: 'Wholesale' }, { id: false, l: 'Retail' }].map(opt => (
+                  <button key={String(opt.id)} type="button" onClick={() => setIsB2B(opt.id)}
+                    className="type-label-sm"
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', transition: 'all 0.2s ease', background: isB2B === opt.id ? 'var(--forest)' : 'transparent', color: isB2B === opt.id ? 'var(--cream)' : 'var(--moss)' }}>
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
             </div>
-            {isB2B && <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.5rem', letterSpacing: '0.15em' }}>ABN required · Ex-GST</p>}
-          </div>
+          )}
+          {/* Buyer type indicator for actual buyers */}
+          {isBuyer && (
+            <div style={{ marginBottom: '1.75rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '1rem' }}>
+              <p className="type-label-sm" style={{ color: 'var(--forest)', fontWeight: 700 }}>
+                {isB2B ? 'Wholesale pricing' : 'Retail pricing'}
+              </p>
+              <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.2rem' }}>
+                {isB2B ? 'Ex-GST · ABN required' : 'Inc-GST'}
+              </p>
+            </div>
+          )}
 
           {/* Category */}
           <p className="label">Category</p>
@@ -178,9 +211,7 @@ export default function MarketplacePage() {
                       {product.is_gst_free && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
                     </div>
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Link href={`/growers/${product.farmer_id}`} onClick={e => e.stopPropagation()} className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.25rem', textDecoration: 'none', display: 'block' }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
+                      <Link href={`/growers/${product.farmer_id}`} onClick={e => e.stopPropagation()} className="type-label-sm farm-name-link" style={{ color: 'var(--moss)', marginBottom: '0.25rem', textDecoration: 'none', display: 'block' }}>
                         {product.farmers?.business_name}
                       </Link>
                       <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
@@ -37,6 +38,9 @@ const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon
   out_for_delivery: [
     { status: 'delivered',        label: 'Mark Delivered',  icon: '✓' },
   ],
+  delivered: [
+    { status: '_gen_payouts',     label: 'Generate Payouts', icon: '💸' },
+  ],
   disputed: [
     { status: 'delivered',        label: 'Resolve — Delivered', icon: '✓' },
     { status: 'refunded',         label: 'Resolve — Refund',    icon: '↩' },
@@ -45,6 +49,7 @@ const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon
 
 function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: (id: string, status: string) => void; loading: boolean }) {
   const [open, setOpen] = useState(false)
+  const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
 
@@ -56,7 +61,20 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
     return () => document.removeEventListener('mousedown', onOutside)
   }, [open])
 
-  if (actions.length === 0) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  async function handleAction(status: string) {
+    setOpen(false)
+    if (status === '_gen_payouts') {
+      const res = await fetch(`/api/admin/orders/${order.id}/generate-payouts`, { method: 'POST' })
+      const data = await res.json()
+      setGenPayoutsMsg(data.created?.length ? `✓ ${data.created.length} payout(s) created` : `Already generated (${data.skipped} skipped)`)
+      setTimeout(() => setGenPayoutsMsg(''), 4000)
+    } else {
+      onUpdate(order.id, status)
+    }
+  }
+
+  if (actions.length === 0 && !genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  if (genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{genPayoutsMsg}</span>
 
   const menuItemBase: React.CSSProperties = {
     width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem',
@@ -93,7 +111,7 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
           {actions.map(action => (
             <button
               key={action.status}
-              onClick={() => { onUpdate(order.id, action.status); setOpen(false) }}
+              onClick={() => handleAction(action.status)}
               style={{ ...menuItemBase, color: action.danger ? 'var(--bloom)' : 'var(--navy)' }}
               onMouseEnter={e => (e.currentTarget.style.background = action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
               onMouseLeave={e => (e.currentTarget.style.background = '')}
@@ -108,14 +126,77 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
   )
 }
 
+function DateManager({ order, onUpdate }: { order: any; onUpdate: (id: string, field: string, value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [fulfillDate, setFulfillDate] = useState(order.grower_fulfillment_date ? order.grower_fulfillment_date.slice(0, 16) : '')
+  const [deliveryDate, setDeliveryDate] = useState(order.florist_delivery_date ? order.florist_delivery_date.slice(0, 16) : '')
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function outside(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    if (open) document.addEventListener('mousedown', outside)
+    return () => document.removeEventListener('mousedown', outside)
+  }, [open])
+
+  async function save() {
+    setSaving(true)
+    await fetch(`/api/admin/orders/${order.id}/dates`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grower_fulfillment_date: fulfillDate || null, florist_delivery_date: deliveryDate || null }),
+    })
+    onUpdate(order.id, 'grower_fulfillment_date', fulfillDate)
+    onUpdate(order.id, 'florist_delivery_date', deliveryDate)
+    setSaving(false)
+    setOpen(false)
+  }
+
+  const hasDates = order.grower_fulfillment_date || order.florist_delivery_date
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="Set fulfillment / delivery dates"
+        style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: hasDates ? 'var(--olive)' : 'var(--offwhite)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', transition: 'all 0.15s' }}
+      >📅</button>
+      {open && (
+        <div style={{ position: 'absolute', top: '2.25rem', right: 0, zIndex: 100, background: 'white', borderRadius: '1rem', boxShadow: '0 4px 24px rgba(30,37,53,0.14)', border: '1px solid var(--border-light)', padding: '1.25rem', minWidth: '17rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <p className="type-label-sm" style={{ color: 'var(--forest)', fontWeight: 700 }}>Fulfilment &amp; Delivery Dates</p>
+          <div>
+            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>Grower fulfils by</label>
+            <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              value={fulfillDate} onChange={e => setFulfillDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>Florist delivery date</label>
+            <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+          </div>
+          <button onClick={save} disabled={saving} className="btn btn-forest btn-sm">{saving ? 'Saving…' : 'Save dates'}</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders]       = useState<any[]>([])
   const [loading, setLoading]     = useState(true)
   const [view, setView]           = useState<View>('orders')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
+  const [rejectedPOs, setRejectedPOs] = useState<any[]>([])
+
   useEffect(() => {
-    fetch('/api/admin/orders').then(r => r.json()).then(d => { setOrders(d.data || []); setLoading(false) })
+    fetch('/api/admin/orders').then(r => r.json()).then(d => {
+      setOrders(d.data || [])
+      setLoading(false)
+    })
+    // Load rejected POs for alert banner
+    fetch('/api/admin/purchase-orders?status=rejected').then(r => r.json()).then(d => {
+      setRejectedPOs(d.data || [])
+    }).catch(() => {})
   }, [])
 
   async function updateStatus(orderId: string, status: string) {
@@ -127,6 +208,10 @@ export default function AdminOrdersPage() {
     })
     setOrders(os => os.map(o => o.id === orderId ? { ...o, status } : o))
     setUpdatingId(null)
+  }
+
+  function updateOrderField(orderId: string, field: string, value: string) {
+    setOrders(os => os.map(o => o.id === orderId ? { ...o, [field]: value } : o))
   }
 
   const packingList = orders.filter(o => ['payment_confirmed', 'preparing'].includes(o.status))
@@ -145,7 +230,23 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem' }}>
-      <h1 className="type-heading reveal" style={{ color: 'var(--forest)', marginBottom: '2rem' }}>Order Management</h1>
+      <h1 className="type-heading reveal" style={{ color: 'var(--forest)', marginBottom: rejectedPOs.length ? '1rem' : '2rem' }}>Order Management</h1>
+
+      {rejectedPOs.length > 0 && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '1rem', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+          <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🚫</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 700, color: '#b91c1c', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              {rejectedPOs.length} PO{rejectedPOs.length > 1 ? 's' : ''} rejected by growers — action required
+            </p>
+            {rejectedPOs.slice(0, 3).map((po: any) => (
+              <p key={po.id} style={{ fontSize: '0.8rem', color: '#b91c1c', opacity: 0.8, marginTop: '0.2rem' }}>
+                · {po.farmers?.business_name} — Order {po.orders?.order_number}: "{po.rejection_reason}"
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.75rem' }}>
@@ -169,7 +270,7 @@ export default function AdminOrdersPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-                    {['Order #', 'Buyer', 'Fulfillment', 'Items', 'Status', 'Total', 'Actions'].map(h => (
+                    {['Order #', 'Buyer', 'Fulfillment', 'Items', 'Dates', 'Status', 'Total', 'Actions'].map(h => (
                       <th key={h} className="type-label-sm" style={{ padding: '1rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.2em' }}>{h}</th>
                     ))}
                   </tr>
@@ -191,13 +292,26 @@ export default function AdminOrdersPage() {
                         <span className="type-label-sm" style={{ color: 'var(--moss)' }}>{order.order_items?.length || 0} items</span>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--moss)', whiteSpace: 'nowrap' }}>
+                          {order.grower_fulfillment_date
+                            ? <div>🌿 {formatAEST(order.grower_fulfillment_date, 'dd MMM, h:mma')}</div>
+                            : <div style={{ opacity: 0.4 }}>🌿 —</div>}
+                          {order.florist_delivery_date
+                            ? <div style={{ marginTop: '0.15rem' }}>🚚 {formatAEST(order.florist_delivery_date, 'dd MMM, h:mma')}</div>
+                            : <div style={{ marginTop: '0.15rem', opacity: 0.4 }}>🚚 —</div>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.875rem 1.25rem' }}>
                         <AdminStatusBadge status={order.status} />
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
-                        <OrderActionsMenu order={order} onUpdate={updateStatus} loading={updatingId === order.id} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <DateManager order={order} onUpdate={updateOrderField} />
+                          <OrderActionsMenu order={order} onUpdate={updateStatus} loading={updatingId === order.id} />
+                        </div>
                       </td>
                     </tr>
                   ))}

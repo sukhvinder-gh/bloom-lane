@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
 
@@ -65,11 +66,16 @@ export default function FarmerOrdersPage() {
                   </div>
                   <StatusBadge status={order.status} />
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>{formatPrice(order.subtotal_cents)}</p>
-                  {order.dispute_deadline && canDispute(order.dispute_deadline) && (
-                    <p className="type-label-sm" style={{ color: 'var(--moss)' }}>🛡 {timeUntilDeadline(order.dispute_deadline)}</p>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>{formatPrice(order.subtotal_cents)}</p>
+                    {order.dispute_deadline && canDispute(order.dispute_deadline) && (
+                      <p className="type-label-sm" style={{ color: 'var(--moss)' }}>🛡 {timeUntilDeadline(order.dispute_deadline)}</p>
+                    )}
+                  </div>
+                  <Link href={`/dashboard/farmer/orders/${order.id}/po`} className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+                    View PO
+                  </Link>
                 </div>
               </div>
 

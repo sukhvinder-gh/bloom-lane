@@ -5,16 +5,29 @@ import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
 
+// Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal)
+const BUYER_STATUS: Record<string, [string, string]> = {
+  pending_payment:   ['badge-cream',   'Submitted'],
+  payment_confirmed: ['badge-olive',   'Processing'],
+  preparing:         ['badge-olive',   'Processing'],
+  ready_for_pickup:  ['badge-sage',    'Ready for delivery'],
+  out_for_delivery:  ['badge-sage',    'Ready for delivery'],
+  delivered:         ['badge-forest',  'Completed'],
+  disputed:          ['badge-red',     'Disputed'],
+  cancelled:         ['badge-cream',   'Cancelled'],
+  refunded:          ['badge-cream',   'Refunded'],
+}
+
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = { payment_confirmed: 'badge-olive', preparing: 'badge-olive', out_for_delivery: 'badge-sage', delivered: 'badge-forest', disputed: 'badge-red', cancelled: 'badge-cream', refunded: 'badge-cream' }
-  return <span className={`badge ${map[status] || 'badge-cream'}`}>{status?.replace(/_/g, ' ')}</span>
+  const [cls, label] = BUYER_STATUS[status] || ['badge-cream', status.replace(/_/g, ' ')]
+  return <span className={`badge ${cls}`}>{label}</span>
 }
 
 const TIMELINE_STEPS = [
-  { key: 'payment_confirmed', label: 'Paid' },
-  { key: 'preparing', label: 'Preparing' },
-  { key: 'out_for_delivery', label: 'En route' },
-  { key: 'delivered', label: 'Delivered' },
+  { statuses: ['pending_payment', 'payment_confirmed'], label: 'Submitted' },
+  { statuses: ['preparing'],                            label: 'Processing' },
+  { statuses: ['ready_for_pickup', 'out_for_delivery'], label: 'Ready for delivery' },
+  { statuses: ['delivered'],                            label: 'Completed' },
 ]
 
 export default function BuyerOrderDetailPage() {
@@ -46,14 +59,17 @@ export default function BuyerOrderDetailPage() {
     </div>
   )
 
-  const currentIdx = TIMELINE_STEPS.findIndex(s => s.key === order.status)
+  const currentIdx = TIMELINE_STEPS.findIndex(s => s.statuses.includes(order.status))
   const disputeAllowed = canDispute(order.dispute_deadline) && order.status === 'delivered'
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
         <Link href="/dashboard/buyer/orders" className="btn btn-ghost btn-sm">← Orders</Link>
-        <h1 className="type-subheading reveal" style={{ color: 'var(--forest)' }}>{order.order_number}</h1>
+        <h1 className="type-subheading reveal" style={{ color: 'var(--forest)', flex: 1 }}>{order.order_number}</h1>
+        {!['pending_payment', 'cancelled', 'refunded'].includes(order.status) && (
+          <Link href={`/dashboard/buyer/orders/${order.id}/invoice`} className="btn btn-outline btn-sm">🧾 Invoice</Link>
+        )}
       </div>
 
       {/* Success banner */}
@@ -84,7 +100,7 @@ export default function BuyerOrderDetailPage() {
               {TIMELINE_STEPS.map((step, i) => {
                 const done = i <= currentIdx
                 return (
-                  <div key={step.key} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
                       <div style={{ width: '0.875rem', height: '0.875rem', borderRadius: '50%', background: done ? 'var(--forest)' : 'var(--olive)', marginBottom: '0.5rem', transition: 'background 0.3s ease' }} />
                       <span className="type-label-sm" style={{ color: done ? 'var(--forest)' : 'var(--moss)', whiteSpace: 'nowrap' }}>{step.label}</span>
