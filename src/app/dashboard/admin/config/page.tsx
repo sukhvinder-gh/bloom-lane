@@ -111,12 +111,14 @@ export default function AdminConfigPage() {
 
   async function handleSave(key: string) {
     setSaving(key); setError(null)
-    const { error } = await supabase
-      .from('config')
-      .update({ value: config[key] ?? '', updated_at: new Date().toISOString() })
-      .eq('key', key)
-    if (error) {
-      setError(`Failed to save ${key}: ${error.message}`)
+    const res = await fetch('/api/admin/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: config[key] ?? '' }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      setError(`Failed to save ${key}: ${json.error || res.statusText}`)
     } else {
       setSaved(key)
       setTimeout(() => setSaved(null), 2000)
