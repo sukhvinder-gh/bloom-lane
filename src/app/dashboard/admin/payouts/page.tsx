@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
+export const dynamic = 'force-dynamic'
+
 const STATUS_BADGE: Record<string, string> = {
   paid:       'badge badge-sage',
   processing: 'badge badge-amber',

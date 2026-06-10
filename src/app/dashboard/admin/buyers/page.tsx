@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import BuyersContent from './BuyersContent'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminBuyersPage() {
   const admin = createAdminClient()
   const { data: initialBuyers } = await admin
