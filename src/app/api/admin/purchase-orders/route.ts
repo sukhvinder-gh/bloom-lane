@@ -7,13 +7,14 @@ import { isAdminRole } from '@/lib/utils/permissions'
 // Returns purchase orders filtered by status (for admin dashboard alerts)
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
   if (!isAdminRole(profile?.role)) {
@@ -22,8 +23,6 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status')
-
-  const admin = createAdminClient()
   let query = admin
     .from('purchase_orders')
     .select('*, farmers(business_name), orders(order_number)')

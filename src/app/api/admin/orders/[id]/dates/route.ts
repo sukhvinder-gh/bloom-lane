@@ -1,30 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
 
+async function requireAdmin() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return { error: 'Unauthorised', status: 401 as const, userId: null }
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
+  if (!isAdminRole(profile?.role)) return { error: 'Admin access required', status: 403 as const, userId: null }
+  return { error: null, status: 200 as const, userId: session.user.id }
+}
+
 // PATCH /api/admin/orders/[id]/dates
-// Admin sets grower_fulfillment_date and/or florist_delivery_date on an order.
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAdmin()
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { id: orderId } = await params
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!isAdminRole(profile?.role)) {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
-
   const body = await request.json()
   const updates: Record<string, string | null> = {}
 
@@ -48,31 +44,18 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ data })
 }
 
-// GET /api/admin/orders/[id]/dates — returns current dates + any rejected POs for this order
+// GET /api/admin/orders/[id]/dates
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAdmin()
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
   const { id: orderId } = await params
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!isAdminRole(profile?.role)) {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
-
   const admin = createAdminClient()
   const [{ data: order }, { data: pos }] = await Promise.all([
     admin.from('orders')

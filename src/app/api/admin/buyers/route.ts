@@ -1,19 +1,24 @@
 // src/app/api/admin/buyers/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
+
+async function requireAdmin() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return { error: 'Unauthorized', status: 401 as const }
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
+  if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const }
+  return { userId: session.user.id }
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const adminSupabase = await createAdminClient()
+    const auth = await requireAdmin()
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
+    const adminSupabase = createAdminClient()
     const filter = new URL(request.url).searchParams.get('filter') || 'all'
 
     let query = adminSupabase
@@ -40,15 +45,10 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const adminSupabase = await createAdminClient()
+    const auth = await requireAdmin()
+    if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
+    const adminSupabase = createAdminClient()
     const body = await request.json()
     const { user_id, action } = body
     if (!user_id || !action) return NextResponse.json({ error: 'user_id and action required' }, { status: 400 })

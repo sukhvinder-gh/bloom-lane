@@ -1,17 +1,17 @@
 // src/app/api/admin/orders/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { isAdminRole } from '@/lib/utils/permissions'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const adminSupabase = await createAdminClient()
+    const supabase = await createSupabaseServerClient()
+    const adminSupabase = createAdminClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    const { isAdminRole } = await import('@/lib/utils/permissions')
+    const { data: profile } = await adminSupabase.from('profiles').select('role').eq('id', session.user.id).single()
     if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data, error } = await adminSupabase

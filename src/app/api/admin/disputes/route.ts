@@ -4,11 +4,11 @@ import { isAdminRole } from '@/lib/utils/permissions'
 
 export async function GET() {
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
   if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data, error } = await admin
@@ -28,11 +28,11 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
   if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { dispute_id, order_id, resolution_note, new_order_status } = await request.json()

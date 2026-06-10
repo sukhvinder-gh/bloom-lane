@@ -4,11 +4,12 @@ import { isSuperAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized', status: 401 as const }
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return { error: 'Unauthorized', status: 401 as const }
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
   if (!isSuperAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const }
-  return { userId: user.id }
+  return { userId: session.user.id }
 }
 
 export async function PATCH(request: NextRequest) {
