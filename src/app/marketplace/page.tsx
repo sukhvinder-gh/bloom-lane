@@ -20,7 +20,7 @@ export default function MarketplacePage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('')
-  const [isB2B, setIsB2B] = useState(true)
+  const [isB2B, setIsB2B] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
   const [marketOpen] = useState(isMarketOpen())
@@ -39,12 +39,13 @@ export default function MarketplacePage() {
         setUserRole(role)
         if (role === 'buyer_b2b') setIsB2B(true)
         else if (role === 'buyer_b2c') setIsB2B(false)
+        else if (role === 'farmer' || role === 'admin' || role === 'super_admin' || role === 'platform_admin') setIsB2B(true)
       })
     })
   }, [])
 
-  // Buyers have their type auto-set; admins/farmers can toggle for browsing preview
   const isBuyer = userRole === 'buyer_b2b' || userRole === 'buyer_b2c'
+  const isAdminOrFarmer = userRole === 'farmer' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'platform_admin'
 
   useEffect(() => {
     setLoading(true)
@@ -88,8 +89,8 @@ export default function MarketplacePage() {
 
       {/* ── Mobile controls (hidden on desktop) ── */}
       <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
-        {/* B2B/B2C toggle — hidden for buyers (auto-set from profile) */}
-        {!isBuyer && (
+        {/* B2B/B2C toggle — admin/farmer only */}
+        {isAdminOrFarmer && (
           <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
             <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>View as</span>
             <div style={{ display: 'flex', background: 'var(--offwhite)', borderRadius: '99px', padding: '0.2rem', gap: '0.2rem' }}>
@@ -135,8 +136,8 @@ export default function MarketplacePage() {
         {/* Sidebar — hidden on mobile */}
         <aside className="market-sidebar" style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
 
-          {/* B2B/B2C toggle — hidden for buyers (type auto-set from profile) */}
-          {!isBuyer && (
+          {/* B2B/B2C toggle — admin/farmer only */}
+          {isAdminOrFarmer && (
             <div style={{ marginBottom: '1.75rem' }}>
               <p className="label" style={{ marginBottom: '0.75rem' }}>View as</p>
               <div className="card" style={{ padding: '0.25rem', display: 'flex', background: 'var(--olive)', borderRadius: '2rem' }}>
@@ -150,7 +151,7 @@ export default function MarketplacePage() {
               </div>
             </div>
           )}
-          {/* Buyer type indicator for actual buyers */}
+          {/* Buyer type indicator */}
           {isBuyer && (
             <div style={{ marginBottom: '1.75rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '1rem' }}>
               <p className="type-label-sm" style={{ color: 'var(--forest)', fontWeight: 700 }}>
@@ -221,9 +222,20 @@ export default function MarketplacePage() {
                         <div>
                           {!authLoaded ? (
                             <div style={{ width: '4rem', height: '1.4rem', borderRadius: '0.4rem', background: 'var(--offwhite)' }} />
-                          ) : !userRole ? (
-                            <a href="/auth/login" style={{ fontSize: '0.8rem', color: 'var(--moss)', textDecoration: 'underline' }}>Sign in to see pricing</a>
+                          ) : isAdminOrFarmer ? (
+                            // Admin/Farmer: show both wholesale and retail
+                            <>
+                              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
+                                {formatPrice(product.b2b_display_price || product.wholesale_price)}
+                                <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-body)', marginLeft: '0.3rem', opacity: 0.6 }}>wholesale</span>
+                              </div>
+                              <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                                {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
+                                {' · '}Retail: {formatPrice(product.b2c_display_price || product.buyer_unit_price || Math.round((product.wholesale_price || 0) * 1.1))}
+                              </div>
+                            </>
                           ) : (
+                            // B2B buyer, B2C buyer, or not logged in (retail)
                             <>
                               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
