@@ -1,27 +1,26 @@
 // src/app/dashboard/buyer/invoices/page.tsx
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 
 export default async function BuyerInvoicesPage() {
-  const supabase = await createClient()
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
-
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role, full_name, email, abn, business_name, abn_verified')
-    .eq('id', session.user.id)
+    .eq('id', sessionUser.id)
     .single()
 
   // Only show paid/completed orders as invoices
-  const { data: orders } = await supabase
+  const { data: orders } = await admin
     .from('orders')
     .select('*, order_items(*, products(name, unit, farmer_id, is_gst_free), farmers(business_name))')
-    .eq('buyer_id', session.user.id)
+    .eq('buyer_id', sessionUser.id)
     .in('status', ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'resolved'])
     .order('created_at', { ascending: false })
 

@@ -1,19 +1,18 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { isAdminRole } from '@/lib/utils/permissions'
 import FarmerSidebar from './FarmerSidebar'
 
 export default async function FarmerLayout({ children }: { children: ReactNode }) {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
     .select('role, full_name')
-    .eq('id', session.user.id)
+    .eq('id', sessionUser.id)
     .single()
 
   const role = profile?.role || ''
@@ -22,7 +21,7 @@ export default async function FarmerLayout({ children }: { children: ReactNode }
   const { data: farmer } = await admin
     .from('farmers')
     .select('id, business_name, status')
-    .eq('user_id', session.user.id)
+    .eq('user_id', sessionUser.id)
     .maybeSingle()
 
   return (
@@ -30,7 +29,7 @@ export default async function FarmerLayout({ children }: { children: ReactNode }
       <FarmerSidebar
         role={role}
         userName={profile?.full_name || ''}
-        userEmail={session.user.email || ''}
+        userEmail={sessionUser.email || ''}
         businessName={farmer?.business_name || ''}
         farmerId={farmer?.id || null}
         farmerStatus={farmer?.status || null}

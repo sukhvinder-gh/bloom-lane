@@ -1,4 +1,4 @@
-import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
@@ -20,9 +20,8 @@ function AdminStatusBadge({ status }: { status: string }) {
 }
 
 export default async function AdminDashboard() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
   const adminSupabase = createAdminClient()
 

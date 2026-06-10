@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,22 +9,22 @@ const STATUS_INFO: Record<string, { label: string; color: string; bg: string; hi
 }
 
 export default async function FarmerOverviewPage() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
-  const { data: farmer } = await supabase
+  const admin = createAdminClient()
+  const { data: farmer } = await admin
     .from('farmers')
     .select('id, business_name, status, region, suburb, state, sustainability, seasonal_specialties')
-    .eq('user_id', session.user.id)
+    .eq('user_id', sessionUser.id)
     .single()
 
-  const { count: orderCount } = await supabase
+  const { count: orderCount } = await admin
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
 
-  const { count: productCount } = await supabase
+  const { count: productCount } = await admin
     .from('products')
     .select('id', { count: 'exact', head: true })
     .eq('farmer_id', farmer?.id || '')

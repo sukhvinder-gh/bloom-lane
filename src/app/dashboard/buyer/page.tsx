@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
@@ -10,16 +10,16 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function BuyerDashboard() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('*').eq('id', sessionUser.id).single()
   const marketOpen = isMarketOpen()
   const isB2B = profile?.role === 'buyer_b2b'
 
-  const { data: orders } = await supabase.from('orders').select('*, order_items(count)').eq('buyer_id', session.user.id).order('created_at', { ascending: false }).limit(6)
-  const { data: allOrders } = await supabase.from('orders').select('total_cents, status').eq('buyer_id', session.user.id)
+  const { data: orders } = await admin.from('orders').select('*, order_items(count)').eq('buyer_id', sessionUser.id).order('created_at', { ascending: false }).limit(6)
+  const { data: allOrders } = await admin.from('orders').select('total_cents, status').eq('buyer_id', sessionUser.id)
 
   const totalSpend   = allOrders?.reduce((s, o) => s + o.total_cents, 0) || 0
   const activeOrders = allOrders?.filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status)).length || 0

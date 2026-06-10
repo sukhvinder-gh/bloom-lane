@@ -1,4 +1,4 @@
-import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
@@ -8,23 +8,21 @@ import { PrintButton } from '@/components/PrintButton'
 export default async function BuyerInvoicePrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params
 
-  const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, email, abn, business_name, abn_verified, role')
-    .eq('id', session.user.id)
-    .single()
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
   const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('full_name, email, abn, business_name, abn_verified, role')
+    .eq('id', sessionUser.id)
+    .single()
 
   const { data: order } = await admin
     .from('orders')
     .select('*, order_items(*, products(name, unit, is_gst_free))')
     .eq('id', orderId)
-    .eq('buyer_id', session.user.id)
+    .eq('buyer_id', sessionUser.id)
     .single()
 
   if (!order) redirect('/dashboard/buyer/orders')

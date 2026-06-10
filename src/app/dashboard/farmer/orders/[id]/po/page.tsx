@@ -1,4 +1,4 @@
-import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
@@ -9,20 +9,19 @@ import { RejectPOForm } from './RejectPOForm'
 export default async function FarmerPOPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params
 
-  const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
+
+  const admin = createAdminClient()
 
   // Fetch the farmer record for this user
-  const { data: farmer } = await supabase
+  const { data: farmer } = await admin
     .from('farmers')
     .select('id, business_name, abn, email, suburb, state')
-    .eq('user_id', session.user.id)
+    .eq('user_id', sessionUser.id)
     .single()
 
   if (!farmer) redirect('/dashboard')
-
-  const admin = createAdminClient()
 
   // Fetch order header
   const { data: order } = await admin

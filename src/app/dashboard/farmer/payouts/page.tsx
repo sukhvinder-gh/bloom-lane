@@ -1,20 +1,19 @@
 // src/app/dashboard/farmer/payouts/page.tsx
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
 export default async function FarmerPayoutsPage() {
-  const supabase = await createClient()
-  const adminSupabase = await createAdminClient()
+  const sessionUser = await getSessionUserFromCookie()
+  if (!sessionUser) redirect('/auth/login')
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) redirect('/auth/login')
+  const adminSupabase = createAdminClient()
 
-  const { data: farmer } = await supabase
+  const { data: farmer } = await adminSupabase
     .from('farmers')
     .select('id, business_name, commission_rate, stripe_account_id, stripe_onboarding_complete')
-    .eq('user_id', session.user.id)
+    .eq('user_id', sessionUser.id)
     .single()
 
   if (!farmer) { return (<div style={{ padding: "3rem", textAlign: "center" }}><p style={{ color: "var(--forest)", opacity: 0.5 }}>No farmer profile found.</p><a href="/dashboard/farmer/storefront" style={{ display: "inline-block", marginTop: "1rem", color: "var(--forest)", fontWeight: 700 }}>Create Profile →</a></div>) }
