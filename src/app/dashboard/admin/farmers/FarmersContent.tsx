@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatAEST } from '@/lib/utils/timezone'
 
@@ -19,14 +18,10 @@ const STATUS_LABEL: Record<string, string> = {
   suspended:        '✕ Suspended',
 }
 
-export default function FarmersContent() {
-  const searchParams = useSearchParams()
-  const rawFilter    = searchParams.get('filter') || 'all'
-  const normalise    = (f: string): FilterVal => f === 'pending' ? 'pending_approval' : f as FilterVal
-
-  const [farmers,   setFarmers]   = useState<any[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [filter,    setFilter]    = useState<FilterVal>(normalise(rawFilter))
+export default function FarmersContent({ initialFarmers }: { initialFarmers: any[] }) {
+  const [farmers,   setFarmers]   = useState<any[]>(initialFarmers)
+  const [loading,   setLoading]   = useState(false)
+  const [filter,    setFilter]    = useState<FilterVal>('all')
   const [actioning, setActioning] = useState<string | null>(null)
   const [search,    setSearch]    = useState('')
   const [sortKey,   setSortKey]   = useState<SortKey>('created_at')
@@ -41,15 +36,6 @@ export default function FarmersContent() {
     if (openMenu) document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [openMenu])
-
-  useEffect(() => {
-    setLoading(true)
-    const param = filter === 'all' ? '' : `?filter=${filter}`
-    fetch(`/api/admin/farmers${param}`)
-      .then(r => r.json())
-      .then(d => { setFarmers(Array.isArray(d) ? d : d.data || []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [filter])
 
   async function updateStatus(id: string, status: 'approved' | 'suspended') {
     setActioning(id)
@@ -76,12 +62,13 @@ export default function FarmersContent() {
   const pendingCount = farmers.filter(f => f.status === 'pending_approval').length
 
   const displayed = farmers
-    .filter(f =>
-      !search ||
-      f.business_name?.toLowerCase().includes(search.toLowerCase()) ||
-      f.profiles?.email?.toLowerCase().includes(search.toLowerCase()) ||
-      f.abn?.includes(search)
-    )
+    .filter(f => {
+      if (filter !== 'all' && f.status !== filter) return false
+      if (search && !f.business_name?.toLowerCase().includes(search.toLowerCase()) &&
+          !f.profiles?.email?.toLowerCase().includes(search.toLowerCase()) &&
+          !f.abn?.includes(search)) return false
+      return true
+    })
     .sort((a, b) => {
       let av: any = a[sortKey]
       let bv: any = b[sortKey]
