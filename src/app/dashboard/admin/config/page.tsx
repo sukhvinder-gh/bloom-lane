@@ -46,6 +46,20 @@ const SECTIONS = [
   },
 ]
 
+const BG_PRESETS = [
+  { id: 'none',     label: 'Default',   value: '' },
+  { id: 'forest',   label: 'Forest',    value: 'linear-gradient(160deg, #091510 0%, #0e2318 35%, #142b1b 60%, #0b1d12 100%)' },
+  { id: 'ocean',    label: 'Ocean',     value: 'linear-gradient(160deg, #060c18 0%, #0a1929 35%, #0c2240 60%, #07101e 100%)' },
+  { id: 'dusk',     label: 'Dusk',      value: 'linear-gradient(160deg, #140b22 0%, #2d1040 35%, #1e1530 60%, #0e0918 100%)' },
+  { id: 'ember',    label: 'Ember',     value: 'linear-gradient(160deg, #1a0a05 0%, #2d1505 35%, #3d1d08 60%, #1a0d05 100%)' },
+  { id: 'slate',    label: 'Slate',     value: 'linear-gradient(160deg, #0d1117 0%, #161b22 50%, #0d1117 100%)' },
+  { id: 'bloom',    label: 'Bloom',     value: 'linear-gradient(160deg, #1f0a10 0%, #3d0f1e 35%, #2a0c18 60%, #180810 100%)' },
+  { id: 'sage',     label: 'Sage',      value: '#e8f0e8' },
+  { id: 'sky',      label: 'Sky',       value: '#e8f0fe' },
+  { id: 'neutral',  label: 'Neutral',   value: '#f5f5f7' },
+  { id: 'white',    label: 'White',     value: '#ffffff' },
+]
+
 const ROLE_BADGE: Record<string, string> = {
   super_admin:    'badge-amber',
   platform_admin: 'badge-sage',
@@ -58,6 +72,7 @@ export default function AdminConfigPage() {
   const [saving, setSaving]   = useState<string | null>(null)
   const [saved, setSaved]     = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
+  const [bgSaved, setBgSaved] = useState(false)
 
   const [myRole, setMyRole]   = useState('')
   const [admins, setAdmins]   = useState<any[]>([])
@@ -123,6 +138,17 @@ export default function AdminConfigPage() {
       setTeamMsg({ type: 'ok', text: 'Access revoked' })
     }
     setRevoking(null)
+  }
+
+  async function handleBgSave(value: string) {
+    setConfig(prev => ({ ...prev, portal_background: value }))
+    await fetch('/api/admin/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'portal_background', value }),
+    })
+    setBgSaved(true)
+    setTimeout(() => setBgSaved(false), 2000)
   }
 
   async function handleSave(key: string) {
@@ -210,6 +236,48 @@ export default function AdminConfigPage() {
 
       <div className="reveal" style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'var(--amber-soft)', border: '1px solid rgba(196,124,43,0.2)', borderRadius: '0.75rem' }}>
         <p className="type-label" style={{ color: 'var(--amber-new)' }}>⚠ Changing B2C Markup or Stock Split affects all new orders immediately. Existing orders are unaffected.</p>
+      </div>
+
+      {/* ── Portal Background ── */}
+      <div className="card reveal" style={{ overflow: 'hidden', marginTop: '1.5rem' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '0.625rem', background: 'var(--offwhite)' }}>
+          <span style={{ fontSize: '1.1rem' }}>🎨</span>
+          <h2 className="type-label-lg" style={{ color: 'var(--navy)' }}>Portal Background</h2>
+          {bgSaved && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--sage-new)', fontWeight: 600 }}>✓ Saved</span>}
+        </div>
+        <div style={{ padding: '1.5rem' }}>
+          <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1.25rem' }}>
+            Set the background for all portal dashboards (admin, grower & buyer). Takes effect on next page load.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: '0.875rem' }}>
+            {BG_PRESETS.map(preset => {
+              const active = (config['portal_background'] ?? '') === preset.value
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => handleBgSave(preset.value)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem' }}
+                >
+                  <div style={{
+                    width: '100%', aspectRatio: '1.6', borderRadius: '8px',
+                    background: preset.value || '#f5f5f7',
+                    border: `2px solid ${active ? 'var(--bloom)' : 'transparent'}`,
+                    outline: `2px solid ${active ? 'var(--bloom-soft)' : 'transparent'}`,
+                    outlineOffset: '1px',
+                    position: 'relative',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    transition: 'all 0.12s',
+                  }}>
+                    {active && (
+                      <div style={{ position: 'absolute', top: '3px', right: '3px', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--bloom)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'white', fontWeight: 700 }}>✓</div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: active ? 'var(--bloom)' : 'var(--text-secondary)', fontWeight: active ? 700 : 400, textAlign: 'center', whiteSpace: 'nowrap' }}>{preset.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ── Platform Team ── */}

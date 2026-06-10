@@ -26,8 +26,7 @@ export async function PATCH(request: NextRequest) {
   const admin = createAdminClient()
   const { error } = await admin
     .from('config')
-    .update({ value: String(value), updated_at: new Date().toISOString() })
-    .eq('key', key)
+    .upsert({ key, value: String(value), updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
