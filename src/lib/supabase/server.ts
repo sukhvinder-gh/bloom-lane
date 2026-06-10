@@ -2,32 +2,67 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
-// Reads user identity directly from the Supabase session cookie — zero network calls.
-// Works even when the access token is expired (avoids the refresh network call that
-// fails intermittently on Azure). Use this for "is the user logged in" checks in
-// server component layouts.
+// Returns the logged-in user identity for server component layouts/pages.
+//
+// Strategy:
+// 1. getSession() — fast, reads JWT from cookie, no network call for valid tokens.
+//    Covers the common case (fresh sign-in, active session).
+// 2. If getSession() returns null (token expired AND refresh network call failed on
+//    Azure), fall back to parsing the raw cookie so an expired-but-real session
+//    doesn't wrongly redirect to login.
 export async function getSessionUserFromCookie(): Promise<{ id: string; email: string } | null> {
+  // --- primary: use the SSR client (handles all encoding, no network for valid tokens) ---
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => cookieStore.getAll(),
+          setAll: () => { /* server component — writes are no-ops */ },
+        },
+      }
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user?.id) {
+      return { id: session.user.id, email: session.user.email ?? '' }
+    }
+  } catch {
+    // fall through to cookie fallback
+  }
+
+  // --- fallback: direct cookie parse for expired-token + failed-refresh scenario ---
   try {
     const cookieStore = await cookies()
     const projectRef = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
       .replace('https://', '').split('.')[0]
     if (!projectRef) return null
 
-    // Reassemble potentially chunked Supabase session cookie
+    // Supabase SSR chunks the session across multiple cookies when it exceeds ~3600 chars
     let raw = cookieStore.get(`sb-${projectRef}-auth-token`)?.value
     if (!raw) {
       const parts: string[] = []
       for (let i = 0; i < 10; i++) {
-        const chunk = cookieStore.get(`sb-${projectRef}-auth-token.${i}`)
-        if (!chunk) break
-        parts.push(chunk.value)
+        const c = cookieStore.get(`sb-${projectRef}-auth-token.${i}`)
+        if (!c) break
+        parts.push(c.value)
       }
       raw = parts.join('') || undefined
     }
     if (!raw) return null
 
-    // The cookie value is JSON.stringify(session) where session has .user.id
-    const parsed = JSON.parse(raw)
+    // @supabase/ssr encodes cookie values as base64url (no-padding variant)
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - b64.length % 4) % 4)
+    let parsed: any
+    try {
+      parsed = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
+    } catch {
+      // Older/plain-JSON format fallback
+      parsed = JSON.parse(raw)
+    }
+
     const userId = parsed?.user?.id as string | undefined
     if (!userId) return null
     return { id: userId, email: (parsed?.user?.email ?? '') as string }
