@@ -22,22 +22,23 @@ export default function MarketplacePage() {
   const [category, setCategory] = useState('')
   const [isB2B, setIsB2B] = useState(true)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [authLoaded, setAuthLoaded] = useState(false)
   const [marketOpen] = useState(isMarketOpen())
   const [search, setSearch] = useState('')
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
   const { addItem, updateQuantity, items, totalItems } = useCart()
 
-  // Auto-detect buyer type from profile — buyers never see the toggle
+  // Detect user role to control price visibility
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthLoaded(true)
       if (!user) return
       supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data }) => {
         const role = data?.role || null
         setUserRole(role)
         if (role === 'buyer_b2b') setIsB2B(true)
         else if (role === 'buyer_b2c') setIsB2B(false)
-        // admin / farmer roles keep the default (true) and can toggle for preview
       })
     })
   }, [])
@@ -218,13 +219,21 @@ export default function MarketplacePage() {
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>per {product.unit} · {available} left</p>
                       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 'auto' }}>
                         <div>
-                          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
-                          <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
-                            {priceLabel}
-                            {isB2B && !product.is_gst_free && (
-                              <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST</span>
-                            )}
-                          </div>
+                          {!authLoaded ? (
+                            <div style={{ width: '4rem', height: '1.4rem', borderRadius: '0.4rem', background: 'var(--offwhite)' }} />
+                          ) : !userRole ? (
+                            <a href="/auth/login" style={{ fontSize: '0.8rem', color: 'var(--moss)', textDecoration: 'underline' }}>Sign in to see pricing</a>
+                          ) : (
+                            <>
+                              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
+                              <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                                {priceLabel}
+                                {isB2B && !product.is_gst_free && (
+                                  <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST</span>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                         {!marketOpen ? (
                           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Closed</span>
@@ -236,7 +245,16 @@ export default function MarketplacePage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--forest)', borderRadius: '99px', padding: '0.2rem 0.25rem' }}>
                             <button onClick={() => updateQuantity(product.id, getCartQty(product.id) - 1)}
                               style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                            <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', minWidth: '1.25rem', textAlign: 'center' }}>{getCartQty(product.id)}</span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={getCartQty(product.id)}
+                              onChange={e => {
+                                const v = parseInt(e.target.value)
+                                if (!isNaN(v) && v >= 0) updateQuantity(product.id, Math.min(v, available))
+                              }}
+                              style={{ width: '2.25rem', background: 'transparent', border: 'none', color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', textAlign: 'center', outline: 'none' }}
+                            />
                             <button onClick={() => handleAdd(product)} disabled={getCartQty(product.id) >= available}
                               style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: getCartQty(product.id) >= available ? 'rgba(255,247,249,0.1)' : 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: getCartQty(product.id) >= available ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                           </div>

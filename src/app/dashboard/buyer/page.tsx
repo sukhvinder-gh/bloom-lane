@@ -58,17 +58,17 @@ export default async function BuyerDashboard() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
         {[
-          { label: 'Total spend', value: formatPrice(totalSpend), sub: 'All time', icon: '💳', bg: 'var(--forest)', textClr: 'var(--cream)', subClr: 'var(--moss)' },
-          { label: 'Active orders', value: String(activeOrders), sub: 'In progress', icon: '📦', bg: 'var(--sage)', textClr: 'var(--forest)', subClr: 'rgba(1,71,46,0.5)' },
-          { label: 'Total orders', value: String(allOrders?.length || 0), sub: 'All time', icon: '🧾', bg: 'var(--olive)', textClr: 'var(--forest)', subClr: 'var(--moss)' },
-          { label: 'Account type', value: isB2B ? 'Wholesale' : 'Retail', sub: isB2B ? 'Ex-GST pricing' : 'Inc-GST pricing', icon: isB2B ? '🏪' : '🛍️', bg: 'white', textClr: 'var(--forest)', subClr: 'var(--moss)' },
+          { label: 'Total spend', value: formatPrice(totalSpend), sub: 'All time', icon: '💳', bg: 'var(--forest)', textClr: 'var(--cream)', subClr: 'var(--moss)', href: '/dashboard/buyer/orders' },
+          { label: 'Active orders', value: String(activeOrders), sub: 'In progress', icon: '📦', bg: 'var(--sage)', textClr: 'var(--forest)', subClr: 'rgba(1,71,46,0.5)', href: '/dashboard/buyer/orders' },
+          { label: 'Total orders', value: String(allOrders?.length || 0), sub: 'All time', icon: '🧾', bg: 'var(--olive)', textClr: 'var(--forest)', subClr: 'var(--moss)', href: '/dashboard/buyer/invoices' },
+          { label: 'Account type', value: isB2B ? 'Wholesale' : 'Retail', sub: isB2B ? 'Ex-GST pricing' : 'Inc-GST pricing', icon: isB2B ? '🏪' : '🛍️', bg: 'white', textClr: 'var(--forest)', subClr: 'var(--moss)', href: '/marketplace' },
         ].map((s, i) => (
-          <div key={i} className={`reveal reveal-d${i + 1}`} style={{ background: s.bg, borderRadius: '2.5rem', padding: '2rem', boxShadow: '0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06)' }}>
+          <Link key={i} href={s.href} className={`reveal reveal-d${i + 1}`} style={{ display: 'block', background: s.bg, borderRadius: '2.5rem', padding: '2rem', boxShadow: '0 8px 32px rgba(1,71,46,0.2), 0 2px 8px rgba(1,71,46,0.06)', textDecoration: 'none' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.875rem' }}>{s.icon}</div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: s.textClr, letterSpacing: '-0.03em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{s.value}</div>
             <div className="type-label" style={{ color: s.textClr, opacity: 0.7, marginBottom: '0.2rem' }}>{s.label}</div>
             <div className="type-label-sm" style={{ color: s.subClr }}>{s.sub}</div>
-          </div>
+          </Link>
         ))}
       </div>
 
