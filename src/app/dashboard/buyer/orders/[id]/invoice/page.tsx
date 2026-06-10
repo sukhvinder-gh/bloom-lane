@@ -24,7 +24,7 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
     .from('orders')
     .select('*, order_items(*, products(name, unit, is_gst_free))')
     .eq('id', orderId)
-    .eq('buyer_id', user.id)
+    .eq('buyer_id', session.user.id)
     .single()
 
   if (!order) redirect('/dashboard/buyer/orders')
