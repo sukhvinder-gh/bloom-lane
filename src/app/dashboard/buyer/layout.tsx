@@ -50,9 +50,13 @@ function BuyerSidebar() {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
-        <Link href="/auth/logout" className="rf-nav-item" style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-3)', borderLeft: 'none' }}>
+        <button
+          onClick={() => fetch('/api/auth/signout', { method: 'POST' }).then(() => { window.location.href = '/auth/login' })}
+          className="rf-nav-item"
+          style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-3)', borderLeft: 'none', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+        >
           ↗ Sign out
-        </Link>
+        </button>
       </div>
     </div>
   )
