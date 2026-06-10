@@ -10,14 +10,14 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   const { id: orderId } = await params
 
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
   // Fetch the farmer record for this user
   const { data: farmer } = await supabase
     .from('farmers')
     .select('id, business_name, abn, email, suburb, state')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .single()
 
   if (!farmer) redirect('/dashboard')

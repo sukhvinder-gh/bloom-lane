@@ -11,15 +11,15 @@ function StatusBadge({ status }: { status: string }) {
 
 export default async function BuyerDashboard() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
   const marketOpen = isMarketOpen()
   const isB2B = profile?.role === 'buyer_b2b'
 
-  const { data: orders } = await supabase.from('orders').select('*, order_items(count)').eq('buyer_id', user.id).order('created_at', { ascending: false }).limit(6)
-  const { data: allOrders } = await supabase.from('orders').select('total_cents, status').eq('buyer_id', user.id)
+  const { data: orders } = await supabase.from('orders').select('*, order_items(count)').eq('buyer_id', session.user.id).order('created_at', { ascending: false }).limit(6)
+  const { data: allOrders } = await supabase.from('orders').select('total_cents, status').eq('buyer_id', session.user.id)
 
   const totalSpend   = allOrders?.reduce((s, o) => s + o.total_cents, 0) || 0
   const activeOrders = allOrders?.filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status)).length || 0

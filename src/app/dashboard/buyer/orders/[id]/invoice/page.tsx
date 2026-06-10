@@ -9,13 +9,13 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
   const { id: orderId } = await params
 
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email, abn, business_name, abn_verified, role')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
   const admin = createAdminClient()

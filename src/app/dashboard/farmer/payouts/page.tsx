@@ -8,13 +8,13 @@ export default async function FarmerPayoutsPage() {
   const supabase = await createClient()
   const adminSupabase = await createAdminClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
   const { data: farmer } = await supabase
     .from('farmers')
     .select('id, business_name, commission_rate, stripe_account_id, stripe_onboarding_complete')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .single()
 
   if (!farmer) { return (<div style={{ padding: "3rem", textAlign: "center" }}><p style={{ color: "var(--forest)", opacity: 0.5 }}>No farmer profile found.</p><a href="/dashboard/farmer/storefront" style={{ display: "inline-block", marginTop: "1rem", color: "var(--forest)", fontWeight: 700 }}>Create Profile →</a></div>) }

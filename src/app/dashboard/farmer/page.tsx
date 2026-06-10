@@ -10,13 +10,13 @@ const STATUS_INFO: Record<string, { label: string; color: string; bg: string; hi
 
 export default async function FarmerOverviewPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
   const { data: farmer } = await supabase
     .from('farmers')
     .select('id, business_name, status, region, suburb, state, sustainability, seasonal_specialties')
-    .eq('user_id', user.id)
+    .eq('user_id', session.user.id)
     .single()
 
   const { count: orderCount } = await supabase

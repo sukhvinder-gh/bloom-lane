@@ -8,20 +8,20 @@ import Link from 'next/link'
 export default async function BuyerInvoicesPage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, full_name, email, abn, business_name, abn_verified')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
   // Only show paid/completed orders as invoices
   const { data: orders } = await supabase
     .from('orders')
     .select('*, order_items(*, products(name, unit, farmer_id, is_gst_free), farmers(business_name))')
-    .eq('buyer_id', user.id)
+    .eq('buyer_id', session.user.id)
     .in('status', ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'resolved'])
     .order('created_at', { ascending: false })
 
