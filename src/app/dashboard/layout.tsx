@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 
@@ -6,13 +6,14 @@ import type { ReactNode } from 'react'
 // Each sub-section (admin, farmer, buyer) has its own layout with its own sidebar.
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role, full_name')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
   // Role missing — don't redirect (causes infinite loop through this layout)
@@ -20,16 +21,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-body)' }}>
         <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--green)', fontSize: '1.8rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--navy)', fontSize: '1.8rem', marginBottom: '1rem' }}>
             Account Setup Incomplete
           </h2>
           <p style={{ color: 'var(--text-2)', marginBottom: '0.5rem' }}>
             Your account role hasn&apos;t been assigned yet.
           </p>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: '2rem' }}>
-            {user.email} · {user.id}
+            {session.user.email} · {session.user.id}
           </p>
-          <a href="/auth/login" style={{ background: 'var(--green)', color: 'white', padding: '0.75rem 2rem', borderRadius: '99px', textDecoration: 'none', fontWeight: 700 }}>
+          <a href="/auth/login" style={{ background: 'var(--navy)', color: 'white', padding: '0.75rem 2rem', borderRadius: '99px', textDecoration: 'none', fontWeight: 700 }}>
             Back to Login
           </a>
         </div>
