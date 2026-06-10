@@ -17,7 +17,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Bloom Lane — Farm-fresh flowers & produce, direct to you',
+  title: 'The Green Guild — Farm-fresh flowers & produce, direct to you',
   description: "Australia's freshest B2B agricultural marketplace.",
 }
 

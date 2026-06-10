@@ -79,7 +79,7 @@ function printInvoice(order: any, profile: any) {
   </style></head><body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px">
     <div>
-      <h1>BLOOM LANE</h1>
+      <h1>THE GREEN GUILD</h1>
       <div style="font-size:11px;color:#4a7a65;margin-top:6px;letter-spacing:.1em">TAX INVOICE</div>
     </div>
     <div style="text-align:right">

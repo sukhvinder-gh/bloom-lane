@@ -38,7 +38,7 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
         <Link href="/dashboard/farmer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }} onClick={() => setOpen(false)}>
           <span style={{ fontSize: '1.5rem', lineHeight: 1, flexShrink: 0 }}>🌸</span>
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--navy)', fontWeight: 700, lineHeight: 1.2 }}>Bloom Lane</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: 'var(--navy)', fontWeight: 700, lineHeight: 1.2 }}>The Green Guild</p>
             <p style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginTop: '0.1rem' }}>Grower Portal</p>
           </div>
         </Link>

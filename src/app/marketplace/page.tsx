@@ -70,7 +70,7 @@ export default function MarketplacePage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none', flexShrink: 0 }}>
           <span style={{ fontSize: '1.1rem' }}>🌸</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', fontWeight: 800, color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bloom Lane</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', fontWeight: 800, color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Green Guild</span>
         </Link>
         <div style={{ flex: 1, position: 'relative' }}>
           <svg style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'var(--moss)', pointerEvents: 'none' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>

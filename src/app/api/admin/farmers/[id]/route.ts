@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { isAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized', status: 401 as const }
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return { error: 'Forbidden', status: 403 as const }
+  if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const }
   return { userId: user.id }
 }
 

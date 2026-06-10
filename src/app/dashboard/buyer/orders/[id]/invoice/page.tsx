@@ -59,9 +59,9 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', borderBottom: '2px solid var(--forest)', paddingBottom: '1.5rem' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>BLOOM LANE</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Bloom Lane Market Pty Ltd</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: [Bloom Lane ABN]</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>THE GREEN GUILD</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>The Green Guild Market Pty Ltd</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: [The Green Guild ABN]</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>TAX INVOICE</div>
@@ -161,7 +161,7 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
-          <p>Bloom Lane Market · This is a tax invoice. {isB2B ? 'All prices shown are exclusive of GST unless indicated. GST of 10% applies to applicable items.' : 'All prices include GST where applicable.'}</p>
+          <p>The Green Guild Market · This is a tax invoice. {isB2B ? 'All prices shown are exclusive of GST unless indicated. GST of 10% applies to applicable items.' : 'All prices include GST where applicable.'}</p>
           <p style={{ marginTop: '0.25rem' }}>Invoice #{order.order_number} · Generated {formatAEST(new Date().toISOString(), 'dd MMM yyyy')}</p>
         </div>
       </div>

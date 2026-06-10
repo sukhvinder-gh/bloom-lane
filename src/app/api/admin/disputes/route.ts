@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { isAdminRole } from '@/lib/utils/permissions'
 
 export async function GET() {
   const supabase = await createSupabaseServerClient()
@@ -8,7 +9,7 @@ export async function GET() {
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data, error } = await admin
     .from('disputes')
@@ -32,7 +33,7 @@ export async function PATCH(request: NextRequest) {
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { dispute_id, order_id, resolution_note, new_order_status } = await request.json()
 

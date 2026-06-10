@@ -303,7 +303,7 @@ export default function AdminConfigPage() {
               </button>
             </form>
             <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.625rem' }}>
-              The user must already have a Bloom Lane account.
+              The user must already have a The Green Guild account.
             </p>
           </div>
         )}

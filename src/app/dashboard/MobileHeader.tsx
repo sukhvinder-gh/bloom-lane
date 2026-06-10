@@ -38,7 +38,7 @@ export default function MobileHeader({
       <header className="mobile-topbar">
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
           <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '0.375rem', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'white', fontSize: '0.875rem' }}>B</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--navy)', fontWeight: 600 }}>Bloom Lane</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--navy)', fontWeight: 600 }}>The Green Guild</span>
         </Link>
         <button
           onClick={() => setOpen(true)}

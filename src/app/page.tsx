@@ -21,7 +21,7 @@ export default function HomePage() {
             fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700,
             color: 'white', letterSpacing: '-0.01em', whiteSpace: 'nowrap',
           }}>
-            Bloom Lane
+            The Green Guild
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
@@ -217,9 +217,9 @@ export default function HomePage() {
       <footer style={{ background: 'var(--navy)', color: 'rgba(255,255,255,0.4)', padding: '2.5rem 2rem', textAlign: 'center', fontSize: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
           <span style={{ fontSize: '1.1rem' }}>🌸</span>
-          <span style={{ fontFamily: 'var(--font-display)', color: 'white', fontWeight: 700, letterSpacing: '-0.01em', fontSize: '0.95rem' }}>Bloom Lane</span>
+          <span style={{ fontFamily: 'var(--font-display)', color: 'white', fontWeight: 700, letterSpacing: '-0.01em', fontSize: '0.95rem' }}>The Green Guild</span>
         </div>
-        <p>© {new Date().getFullYear()} Bloom Lane Pty Ltd · ABN · Australia</p>
+        <p>© {new Date().getFullYear()} The Green Guild Pty Ltd · ABN · Australia</p>
         <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '0.875rem', flexWrap: 'wrap' }}>
           <Link href="/auth/login" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Sign in</Link>
           <Link href="/auth/register" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Register</Link>

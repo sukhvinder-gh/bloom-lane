@@ -57,7 +57,7 @@ export default async function FarmerPayoutsPage() {
               <p style={{ color: '#92400e', fontSize: '0.8rem', opacity: 0.8, lineHeight: 1.5 }}>
                 {farmer.stripe_account_id
                   ? 'Your Stripe account was created but needs more information before you can receive payouts.'
-                  : 'Connect your bank account via Stripe to receive automatic payouts after each delivery. Bloom Lane uses Stripe Connect — secure, fast, and free to set up.'}
+                  : 'Connect your bank account via Stripe to receive automatic payouts after each delivery. The Green Guild uses Stripe Connect — secure, fast, and free to set up.'}
               </p>
               <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <a href="/api/stripe/onboarding"

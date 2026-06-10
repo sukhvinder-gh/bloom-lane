@@ -1,5 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
@@ -14,10 +13,6 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default async function AdminPayoutsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-
   const admin = createAdminClient()
   const { data: payouts } = await admin
     .from('payouts')

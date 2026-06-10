@@ -166,7 +166,7 @@ export default function FarmerStorefrontPage() {
       <p style={{ color: 'var(--forest)', opacity: 0.5, marginBottom: '2rem', fontSize: '0.9rem' }}>
         {farmer
           ? `Status: ${farmer.status === 'approved' ? '✅ Approved' : farmer.status === 'pending_approval' ? '⏳ Pending admin approval' : '🚫 ' + farmer.status}`
-          : 'Set up your farm profile to start selling on Bloom Lane'}
+          : 'Set up your farm profile to start selling on The Green Guild'}
       </p>
 
       {/* Pending approval notice */}

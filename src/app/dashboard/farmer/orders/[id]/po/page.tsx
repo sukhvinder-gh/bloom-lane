@@ -87,8 +87,8 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', borderBottom: '2px solid var(--forest)', paddingBottom: '1.5rem' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>BLOOM LANE</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Bloom Lane Market · ABN on file</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>THE GREEN GUILD</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>The Green Guild Market · ABN on file</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>PURCHASE ORDER</div>
@@ -169,7 +169,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--moss)' }}>
-          <span>Bloom Lane Market · This document constitutes a purchase order between Bloom Lane and the above grower.</span>
+          <span>The Green Guild Market · This document constitutes a purchase order between The Green Guild and the above grower.</span>
           <span>PO #{order.order_number}</span>
         </div>
       </div>

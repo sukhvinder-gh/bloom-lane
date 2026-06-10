@@ -129,7 +129,7 @@ export default function RegisterForm() {
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '2rem' }}>
             <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.1rem' }}>B</div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>Bloom Lane</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
           </Link>
           <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Create account</h1>
           <p className="type-label" style={{ color: 'var(--moss)' }}>
