@@ -1,36 +1,12 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  // Refresh Supabase session tokens so they don't expire mid-session.
-  // Auth gating is intentionally NOT done here — each server layout/page
-  // calls getUser() directly, which is more reliable on Azure than reading
-  // cookies in middleware (chunking / cold-start timing issues).
-  try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return request.cookies.getAll() },
-          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-            supabaseResponse = NextResponse.next({ request })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
-            )
-          },
-        },
-      }
-    )
-    await supabase.auth.getSession()
-  } catch {
-    // ignore — token refresh is best-effort
-  }
-
-  return supabaseResponse
+// Token refresh is handled by the browser-side Supabase client automatically.
+// Server-side auth reads the session cookie directly via getSessionUserFromCookie()
+// and works regardless of token expiry — so no server-side refresh is needed here.
+// Previously calling getSession() here caused Azure network failures to clear the
+// session cookies via setAll(), which logged users out mid-session.
+export function middleware(_request: NextRequest) {
+  return NextResponse.next()
 }
 
 export const config = {
