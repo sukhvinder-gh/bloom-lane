@@ -81,11 +81,16 @@ export async function createSupabaseServerClient() {
         },
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
+            // Skip empty/delete values — @supabase/ssr calls setAll({value:'',maxAge:0})
+            // when a token expires inside getSession(). In Route Handlers cookies CAN
+            // be written, so without this filter those Set-Cookie responses would wipe
+            // the browser's session cookie and log everyone out on their next navigation.
+            // Explicit sign-out clears cookies directly via deleteAuthCookies().
+            cookiesToSet
+              .filter(({ value }) => value && value.length > 0)
+              .forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           } catch {
-            // Ignore — called from Server Component, cookies can't be set
+            // Silently ignored when called from a Server Component (can't set cookies there)
           }
         },
       },
@@ -104,6 +109,23 @@ export function createAdminClient() {
       },
     }
   )
+}
+
+// Deletes all Supabase session cookies from the response.
+// Call this explicitly in sign-out route handlers AFTER supabase.auth.signOut(),
+// because createSupabaseServerClient's setAll skips empty values (to prevent
+// accidental session wiping from expired-token getSession() calls in API routes).
+export async function deleteAuthCookies() {
+  const cookieStore = await cookies()
+  const projectRef = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
+    .replace('https://', '').split('.')[0]
+  if (!projectRef) return
+  const prefix = `sb-${projectRef}-auth-token`
+  cookieStore.getAll()
+    .filter(c => c.name === prefix || c.name.startsWith(`${prefix}.`))
+    .forEach(c => {
+      try { cookieStore.delete(c.name) } catch {}
+    })
 }
 
 // Alias for backwards compatibility — many files import { createClient } from here

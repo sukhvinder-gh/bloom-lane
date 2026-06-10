@@ -88,10 +88,14 @@ function BuyerSidebar() {
 export default function BuyerLayout({ children }: { children: ReactNode }) {
   const router = useRouter()
   useEffect(() => {
+    let mounted = true
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace('/auth/login')
+    // getSession() reads from cookie locally (no extra network call) and refreshes
+    // automatically if expired. getUser() always hits the network — unreliable on Azure.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted && !session) router.replace('/auth/login')
     })
+    return () => { mounted = false }
   }, [router])
 
   return (
