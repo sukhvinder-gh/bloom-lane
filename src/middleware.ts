@@ -1,12 +1,39 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Token refresh is handled by the browser-side Supabase client automatically.
-// Server-side auth reads the session cookie directly via getSessionUserFromCookie()
-// and works regardless of token expiry — so no server-side refresh is needed here.
-// Previously calling getSession() here caused Azure network failures to clear the
-// session cookies via setAll(), which logged users out mid-session.
-export function middleware(_request: NextRequest) {
-  return NextResponse.next()
+// Proactively refresh Supabase tokens so server components see fresh cookies.
+// setAll only applies updates with real values — empty/delete calls (which happen
+// when a refresh fails on Azure) are ignored, preserving the existing session.
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+            // Skip empty/short values — those are deletions from a failed refresh.
+            // We only want to save successfully refreshed tokens, never clear the session.
+            const updates = cookiesToSet.filter(({ value }) => value && value.length > 10)
+            if (updates.length === 0) return
+            updates.forEach(({ name, value }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({ request })
+            updates.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+            )
+          },
+        },
+      }
+    )
+    await supabase.auth.getSession()
+  } catch {
+    // ignore — token refresh is best-effort
+  }
+
+  return supabaseResponse
 }
 
 export const config = {

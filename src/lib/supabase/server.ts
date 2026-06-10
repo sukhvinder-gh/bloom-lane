@@ -78,11 +78,12 @@ export const getSessionUserFromCookie = cache(async (): Promise<{ id: string; em
     }
   } catch { /* fall through to SSR client */ }
 
-  // --- fallback: SSR client getSession() with real setAll ---
-  // setAll is NOT a no-op here: when the token is refreshed the new token is written
-  // to the response cookies so the next request finds a fresh token and avoids another
-  // network call. Without this the rotated refresh token is never saved and the next
-  // request fails.
+  // --- fallback: SSR client getSession() ---
+  // setAll is a strict no-op. @supabase/ssr's createServerClient already sets
+  // autoRefreshToken:false so getSession() returns the session without making any
+  // network call, even for expired tokens. We must NOT write cookies here because
+  // any setAll call with empty/delete values would clear the session cookies from
+  // the response, causing the browser to lose its session immediately.
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -90,11 +91,7 @@ export const getSessionUserFromCookie = cache(async (): Promise<{ id: string; em
       {
         cookies: {
           getAll: () => cookieStore.getAll(),
-          setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-            } catch { /* ignore — page components can't always set cookies */ }
-          },
+          setAll: () => {},
         },
       }
     )
