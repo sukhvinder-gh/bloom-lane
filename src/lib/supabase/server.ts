@@ -3,103 +3,67 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
 
-// Memoised per-request with React.cache() so multiple layouts/pages calling this
-// in the same render pass share one result. Without this, each call creates a fresh
-// SSR client; if the first call refreshes+rotates the token the second call sees the
-// already-rotated (now invalid) refresh token and fails → spurious login redirect.
+// Memoised per React render pass so all layouts/pages in one request share the result.
 export const getSessionUserFromCookie = cache(async (): Promise<{ id: string; email: string } | null> => {
   const cookieStore = await cookies()
 
-  const projectRef = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
-    .replace('https://', '').split('.')[0]
-
-  // --- primary: parse cookie directly, no network call ---
-  try {
-    if (projectRef) {
-      // Reassemble chunked cookies (@supabase/ssr splits large values across .0 .1 .2 ...)
-      let raw = cookieStore.get(`sb-${projectRef}-auth-token`)?.value
-      if (!raw) {
-        const parts: string[] = []
-        for (let i = 0; i < 10; i++) {
-          const c = cookieStore.get(`sb-${projectRef}-auth-token.${i}`)
-          if (!c) break
-          parts.push(c.value)
-        }
-        if (parts.length > 0) raw = parts.join('')
-      }
-
-      if (raw) {
-        // Strategy 0: raw value is itself a JWT (3 dot-separated base64url parts)
-        const dotParts = raw.split('.')
-        if (dotParts.length === 3) {
-          try {
-            const payload = JSON.parse(
-              Buffer.from(dotParts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-            )
-            if (payload?.sub) return { id: payload.sub as string, email: (payload.email ?? '') as string }
-          } catch { /* try next */ }
-        }
-
-        let parsed: Record<string, any> | null = null
-
-        // Strategy 1: base64url-encoded JSON
-        try {
-          const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
-          const padded = b64 + '='.repeat((4 - b64.length % 4) % 4)
-          parsed = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
-        } catch { /* try next */ }
-
-        // Strategy 2: URL-encoded JSON
-        if (!parsed?.user?.id) {
-          try { parsed = JSON.parse(decodeURIComponent(raw)) } catch { /* try next */ }
-        }
-
-        // Strategy 3: plain JSON
-        if (!parsed?.user?.id) {
-          try { parsed = JSON.parse(raw) } catch { /* try next */ }
-        }
-
-        const userId = parsed?.user?.id as string | undefined
-        if (userId) return { id: userId, email: (parsed?.user?.email ?? '') as string }
-
-        // Strategy 4: decode the access_token JWT payload (sub = user id)
-        if (parsed?.access_token) {
-          try {
-            const jwtParts = (parsed.access_token as string).split('.')
-            if (jwtParts.length === 3) {
-              const payload = JSON.parse(
-                Buffer.from(jwtParts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-              )
-              if (payload?.sub) return { id: payload.sub as string, email: (payload.email ?? '') as string }
-            }
-          } catch { /* fall through */ }
-        }
-      }
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        // Strict no-op: server components cannot write cookies. Any setAll call
+        // (e.g. expiry cleanup inside getSession) is silently dropped, so the
+        // browser's session cookies are never cleared by a server render.
+        setAll: () => {},
+      },
     }
-  } catch { /* fall through to SSR client */ }
+  )
 
-  // --- fallback: SSR client getSession() ---
-  // setAll is a strict no-op. @supabase/ssr's createServerClient already sets
-  // autoRefreshToken:false so getSession() returns the session without making any
-  // network call, even for expired tokens. We must NOT write cookies here because
-  // any setAll call with empty/delete values would clear the session cookies from
-  // the response, causing the browser to lose its session immediately.
+  // Strategy 1: getSession() — reads cookie locally, no network call.
+  // Works for non-expired tokens.
   try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: () => {},
-        },
-      }
-    )
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user?.id) {
       return { id: session.user.id, email: session.user.email ?? '' }
     }
-  } catch { /* ignore */ }
+  } catch {}
+
+  // Strategy 2: access @supabase/ssr's storage adapter directly.
+  // getSession() returns null for expired tokens AND clears its in-memory state,
+  // but because setAll is no-op the cookie itself was never deleted. Calling
+  // storage.getItem() re-reads from cookieStore (immutable request snapshot) and
+  // decodes the session using @supabase/ssr's own decoder — no expiry check here.
+  // This lets users continue navigating even when the access token has just expired
+  // (the browser client will refresh the token in the background).
+  try {
+    const auth = supabase.auth as any
+    const storageKey: string | undefined = auth.storageKey
+    const storage: { getItem?: (key: string) => unknown } | undefined = auth.storage
+
+    if (storage?.getItem && storageKey) {
+      const raw = await Promise.resolve(storage.getItem(storageKey))
+      if (raw && typeof raw === 'string') {
+        const parsed = JSON.parse(raw)
+        if (parsed?.user?.id) {
+          return { id: parsed.user.id as string, email: (parsed.user.email ?? '') as string }
+        }
+        // Decode user ID from the access_token JWT payload (sub claim)
+        if (parsed?.access_token) {
+          const parts = (parsed.access_token as string).split('.')
+          if (parts.length === 3) {
+            const payload = JSON.parse(
+              Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
+            )
+            if (payload?.sub) {
+              return { id: payload.sub as string, email: (payload.email ?? '') as string }
+            }
+          }
+        }
+      }
+    }
+  } catch {}
 
   return null
 })
