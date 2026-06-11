@@ -2,8 +2,6 @@ import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { PODocument, type POData } from '@/lib/pdf/PODocument'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
@@ -16,6 +14,7 @@ function fmtDate(iso: string | null, fallback = 'TBC') {
 }
 
 export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const gross = po.items.reduce((s, i) => s + i.subtotal_cents, 0)
   const commission = Math.round(gross * po.commission_rate)
   const net = gross - commission
