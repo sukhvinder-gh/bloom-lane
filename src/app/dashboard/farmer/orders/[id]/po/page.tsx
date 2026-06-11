@@ -14,43 +14,59 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
 
   const admin = createAdminClient()
 
-  // Fetch the farmer record for this user
-  const { data: farmer } = await admin
+  // Fetch the farmer record for this user — limit(1) handles multiple records gracefully
+  const { data: farmers } = await admin
     .from('farmers')
     .select('id, business_name, abn, email, suburb, state, commission_rate')
     .eq('user_id', sessionUser.id)
-    .single()
+    .limit(1)
 
+  const farmer = farmers?.[0] ?? null
   if (!farmer) redirect('/dashboard')
 
-  // Fetch order header (include hub_id for delivery zone lookup)
-  const { data: order } = await admin
+  // Fetch order header (no hub_id — fetched separately below to avoid column-not-found errors)
+  const { data: order, error: orderErr } = await admin
     .from('orders')
-    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, hub_id')
+    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b')
     .eq('id', orderId)
     .single()
 
-  if (!order) redirect('/dashboard/farmer/orders')
+  if (orderErr || !order) {
+    console.error('[PO] Order fetch failed:', orderErr)
+    redirect('/dashboard/farmer/orders')
+  }
 
-  // Fetch hub details if this is a hub_pickup order
+  // Fetch hub details separately — safe, non-blocking if column/row missing
   let hubZone: { hub_address: string | null; hub_suburb: string | null; hub_state: string | null; hub_postcode: string | null; hub_collection_day: string | null; hub_collection_time_start: string | null; hub_collection_time_end: string | null } | null = null
-  if (order.fulfillment_type === 'hub_pickup' && (order as any).hub_id) {
-    const { data } = await admin
-      .from('delivery_zones')
-      .select('hub_address, hub_suburb, hub_state, hub_postcode, hub_collection_day, hub_collection_time_start, hub_collection_time_end')
-      .eq('id', (order as any).hub_id)
-      .single()
-    hubZone = data
+  if (order.fulfillment_type === 'hub_pickup') {
+    try {
+      const { data: orderWithHub } = await admin
+        .from('orders')
+        .select('hub_id')
+        .eq('id', orderId)
+        .single()
+      if ((orderWithHub as any)?.hub_id) {
+        const { data } = await admin
+          .from('delivery_zones')
+          .select('hub_address, hub_suburb, hub_state, hub_postcode, hub_collection_day, hub_collection_time_start, hub_collection_time_end')
+          .eq('id', (orderWithHub as any).hub_id)
+          .single()
+        hubZone = data
+      }
+    } catch { /* hub details are optional — page still renders without them */ }
   }
 
   // Fetch this farmer's items from the order
-  const { data: items } = await admin
+  const { data: items, error: itemsErr } = await admin
     .from('order_items')
     .select('id, quantity, unit_price_cents, subtotal_cents, is_b2b, products(name, unit, category)')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
 
-  if (!items || items.length === 0) redirect('/dashboard/farmer/orders')
+  if (itemsErr || !items || items.length === 0) {
+    console.error('[PO] Items fetch failed or empty:', itemsErr, 'farmer:', farmer.id, 'order:', orderId)
+    redirect('/dashboard/farmer/orders')
+  }
 
   // Fetch existing PO status (if any)
   const { data: poRecord } = await admin
