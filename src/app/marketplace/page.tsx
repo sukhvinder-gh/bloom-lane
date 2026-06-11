@@ -79,7 +79,20 @@ export default function MarketplacePage() {
           <input className="input" style={{ paddingLeft: '2.5rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }} placeholder="Search products or farms…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
+          {authLoaded && userRole && (
+            <>
+              <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => fetch('/api/auth/signout', { method: 'POST' }).then(() => { window.location.href = '/auth/login' })}
+              >
+                Sign out
+              </button>
+            </>
+          )}
+          {authLoaded && !userRole && (
+            <Link href="/auth/login" className="btn btn-ghost btn-sm">Sign in</Link>
+          )}
           <Link href="/checkout" className="btn btn-forest btn-sm" style={{ position: 'relative' }}>
             Cart
             {totalItems() > 0 && <span style={{ position: 'absolute', top: '-0.5rem', right: '-0.5rem', width: '1.25rem', height: '1.25rem', borderRadius: '50%', background: 'var(--sage)', color: 'var(--forest)', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{totalItems()}</span>}
