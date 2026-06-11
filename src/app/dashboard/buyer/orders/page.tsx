@@ -158,12 +158,6 @@ export default function BuyerOrdersPage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--forest)', opacity: 0.5 }}>{displayOrders.length} {tab === 'orders' ? 'orders' : 'invoices'}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {displayOrders.length > 0 && (
-            <button onClick={() => exportCSV(displayOrders, `harvest-${tab}.csv`)}
-              style={{ padding: '0.5rem 1rem', background: 'var(--olive)', border: '1px solid var(--sage)', borderRadius: '99px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--forest)', fontFamily: 'var(--font-body)' }}>
-              ↓ Export all CSV
-            </button>
-          )}
           <Link href="/marketplace"
             style={{ padding: '0.5rem 1.25rem', background: 'var(--forest)', color: 'var(--cream)', borderRadius: '99px', textDecoration: 'none', fontWeight: 700, fontSize: '0.8rem' }}>
             + New Order
@@ -290,10 +284,6 @@ export default function BuyerOrdersPage() {
                             style={{ padding: '0.3rem 0.6rem', background: 'var(--navy)', color: 'white', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
                             View
                           </Link>
-                          <button onClick={() => exportCSV([order], `${order.order_number}.csv`)}
-                            style={{ padding: '0.3rem 0.6rem', background: 'var(--olive)', border: '1px solid var(--sage)', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, color: 'var(--forest)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
-                            ↓ CSV
-                          </button>
                           {invoiceStatuses.includes(order.status) && (
                             <button onClick={() => printInvoice(order, profile)}
                               style={{ padding: '0.3rem 0.6rem', background: 'var(--forest)', border: 'none', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
