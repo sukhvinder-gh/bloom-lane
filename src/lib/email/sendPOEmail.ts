@@ -1,6 +1,5 @@
 import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
-import React from 'react'
 import { PODocument, type POData } from '@/lib/pdf/PODocument'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -22,8 +21,8 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
   const net = gross - commission
   const commissionPct = Math.round(po.commission_rate * 100)
 
-  // Generate PDF buffer server-side
-  const pdfBuffer = await renderToBuffer(React.createElement(PODocument, { po }))
+  // Generate PDF buffer server-side (call as function to get the Document element directly)
+  const pdfBuffer = await renderToBuffer(PODocument({ po }))
 
   const itemRows = po.items.map(item => `
     <tr>
