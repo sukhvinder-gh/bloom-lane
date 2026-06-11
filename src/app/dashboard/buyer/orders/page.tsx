@@ -238,8 +238,12 @@ export default function BuyerOrdersPage() {
                       <td style={{ ...td, textAlign: 'center', width: '2rem' }}>
                         <span style={{ display: 'inline-block', transition: 'transform 0.18s', transform: isOpen ? 'rotate(90deg)' : 'none', fontSize: '0.6rem', color: 'var(--moss)' }}>▶</span>
                       </td>
-                      <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}>
-                        {order.order_number}
+                      <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}
+                          onClick={e => e.stopPropagation()}>
+                        <Link href={`/dashboard/buyer/orders/${order.id}`}
+                          style={{ color: 'var(--forest)', textDecoration: 'none', borderBottom: '1.5px dotted var(--moss)' }}>
+                          {order.order_number}
+                        </Link>
                       </td>
                       <td style={{ ...td, opacity: 0.6, whiteSpace: 'nowrap' }}>
                         {formatAEST(order.created_at, 'dd MMM yyyy')}
@@ -282,6 +286,10 @@ export default function BuyerOrdersPage() {
                       )}
                       <td style={{ ...td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          <Link href={`/dashboard/buyer/orders/${order.id}`}
+                            style={{ padding: '0.3rem 0.6rem', background: 'var(--navy)', color: 'white', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                            View
+                          </Link>
                           <button onClick={() => exportCSV([order], `${order.order_number}.csv`)}
                             style={{ padding: '0.3rem 0.6rem', background: 'var(--olive)', border: '1px solid var(--sage)', borderRadius: '0.4rem', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, color: 'var(--forest)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
                             ↓ CSV
