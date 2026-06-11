@@ -73,7 +73,7 @@ export default function FarmerOrdersPage() {
                       <p className="type-label-sm" style={{ color: 'var(--moss)' }}>🛡 {timeUntilDeadline(order.dispute_deadline)}</p>
                     )}
                   </div>
-                  <Link href={`/dashboard/farmer/orders/${order.id}/po`} className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+                  <Link href={`/dashboard/farmer/orders/${order.id}/po`} className="btn btn-outline btn-sm" style={{ flexShrink: 0 }} prefetch={false}>
                     View PO
                   </Link>
                 </div>

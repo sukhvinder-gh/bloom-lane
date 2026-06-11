@@ -57,7 +57,6 @@ function printInvoice(order: any, profile: any) {
     const exGst = item.subtotal_cents - gst
     return `<tr>
       <td>${item.products?.name || ''}</td>
-      <td>${item.farmers?.business_name || ''}</td>
       <td style="text-align:right">${item.quantity} ${item.products?.unit || ''}</td>
       <td style="text-align:right">$${((item.unit_price_cents / 1.1) / 100).toFixed(2)}</td>
       <td style="text-align:right">$${(exGst / 100).toFixed(2)}</td>
@@ -94,7 +93,7 @@ function printInvoice(order: any, profile: any) {
     <div style="color:#4a7a65;font-size:12px;margin-top:2px">${order.delivery_suburb ? `Delivery: ${order.delivery_suburb}, ${order.delivery_state || ''}` : 'Collection: Hub Pickup'}</div>
   </div>
   <table>
-    <thead><tr><th>Product</th><th>Supplier</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Ex-GST</th><th class="r">GST</th><th class="r">Total</th></tr></thead>
+    <thead><tr><th>Product</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Ex-GST</th><th class="r">GST</th><th class="r">Total</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div style="display:flex;justify-content:flex-end;margin-top:20px">
@@ -324,7 +323,7 @@ export default function BuyerOrdersPage() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid var(--sage)' }}>
-                                  {['Product','Supplier','Qty','Unit price','Ex-GST', isB2B ? 'GST' : '','Total'].filter(Boolean).map(h => (
+                                  {['Product','Qty','Unit price','Ex-GST', isB2B ? 'GST' : '','Total'].filter(Boolean).map(h => (
                                     <th key={h} style={{ padding: '6px 8px', textAlign: ['Ex-GST','GST','Total','Unit price','Qty'].includes(h) ? 'right' : 'left', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--forest)', opacity: 0.5 }}>{h}</th>
                                   ))}
                                 </tr>
@@ -336,7 +335,6 @@ export default function BuyerOrdersPage() {
                                   return (
                                     <tr key={item.id} style={{ borderBottom: '1px solid var(--olive)' }}>
                                       <td style={{ padding: '7px 8px', fontWeight: 600, color: 'var(--forest)' }}>{item.products?.name}</td>
-                                      <td style={{ padding: '7px 8px', color: 'var(--forest)', opacity: 0.6 }}>{item.farmers?.business_name}</td>
                                       <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{item.quantity} {item.products?.unit}</td>
                                       <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(Math.round(item.unit_price_cents / 1.1))}</td>
                                       <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(exGst)}</td>

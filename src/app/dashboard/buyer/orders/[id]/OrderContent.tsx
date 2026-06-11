@@ -145,7 +145,7 @@ export default function BuyerOrderDetailPage() {
                   <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🌸</div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.2rem' }}>{item.products?.name}</p>
-                    <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_url ? '0.625rem' : 0 }}>{item.farmers?.business_name} · {item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
+                    <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_url ? '0.625rem' : 0 }}>{item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
                     {item.ppod_url && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                         <img src={item.ppod_url} alt="Proof of delivery" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover' }} />
