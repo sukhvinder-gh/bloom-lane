@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { constructWebhookEvent } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 import QRCode from 'qrcode'
+import { sendPOEmail } from '@/lib/email/sendPOEmail'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -64,6 +65,11 @@ export async function POST(request: NextRequest) {
           ...(qrCodeUrl ? { qr_code_url: qrCodeUrl } : {}),
         })
         .eq('id', orderId)
+
+      // Send one PO email per grower (non-blocking — webhook must return quickly)
+      sendPOEmailsForOrder(supabase, orderId).catch(err =>
+        console.error('PO email dispatch failed (non-blocking):', err)
+      )
 
       break
     }
@@ -141,4 +147,79 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true })
+}
+
+async function sendPOEmailsForOrder(supabase: ReturnType<typeof createAdminClient>, orderId: string) {
+  // Fetch order header
+  const { data: order } = await supabase
+    .from('orders')
+    .select('order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, hub_id')
+    .eq('id', orderId)
+    .single()
+  if (!order) return
+
+  // Fetch hub address if hub_pickup
+  let hubAddress: string | null = null
+  if (order.fulfillment_type === 'hub_pickup' && (order as any).hub_id) {
+    const { data: zone } = await supabase
+      .from('delivery_zones')
+      .select('hub_address, hub_suburb, hub_state')
+      .eq('id', (order as any).hub_id)
+      .single()
+    if (zone) {
+      hubAddress = [zone.hub_address, zone.hub_suburb, zone.hub_state].filter(Boolean).join(', ')
+    }
+  }
+
+  // Fetch all items with farmer + product info
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('id, farmer_id, quantity, unit_price_cents, subtotal_cents, products(name, unit)')
+    .eq('order_id', orderId)
+  if (!items || items.length === 0) return
+
+  // Group items by farmer_id
+  const byFarmer = new Map<string, typeof items>()
+  for (const item of items) {
+    const existing = byFarmer.get(item.farmer_id) || []
+    existing.push(item)
+    byFarmer.set(item.farmer_id, existing)
+  }
+
+  // Fetch all relevant farmers in one query
+  const farmerIds = [...byFarmer.keys()]
+  const { data: farmers } = await supabase
+    .from('farmers')
+    .select('id, business_name, abn, email, suburb, state, commission_rate')
+    .in('id', farmerIds)
+  if (!farmers) return
+
+  // Send one email per farmer
+  await Promise.allSettled(
+    farmers.map(async farmer => {
+      if (!farmer.email) return
+      const farmerItems = byFarmer.get(farmer.id) || []
+
+      await sendPOEmail(farmer.email, {
+        order_number: order.order_number,
+        created_at: order.created_at,
+        grower_fulfillment_date: order.grower_fulfillment_date,
+        fulfillment_type: order.fulfillment_type,
+        hub_address: hubAddress,
+        farmer_business_name: farmer.business_name,
+        farmer_abn: farmer.abn,
+        farmer_suburb: farmer.suburb,
+        farmer_state: farmer.state,
+        commission_rate: farmer.commission_rate ?? 0.10,
+        items: farmerItems.map(i => ({
+          id: i.id,
+          quantity: i.quantity,
+          unit_price_cents: i.unit_price_cents,
+          subtotal_cents: i.subtotal_cents,
+          product_name: (i as any).products?.name ?? '',
+          product_unit: (i as any).products?.unit ?? '',
+        })),
+      })
+    })
+  )
 }

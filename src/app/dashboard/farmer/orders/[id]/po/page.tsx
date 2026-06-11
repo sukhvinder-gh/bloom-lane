@@ -17,20 +17,31 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch the farmer record for this user
   const { data: farmer } = await admin
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state')
+    .select('id, business_name, abn, email, suburb, state, commission_rate')
     .eq('user_id', sessionUser.id)
     .single()
 
   if (!farmer) redirect('/dashboard')
 
-  // Fetch order header
+  // Fetch order header (include hub_id for delivery zone lookup)
   const { data: order } = await admin
     .from('orders')
-    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b')
+    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, hub_id')
     .eq('id', orderId)
     .single()
 
   if (!order) redirect('/dashboard/farmer/orders')
+
+  // Fetch hub details if this is a hub_pickup order
+  let hubZone: { hub_address: string | null; hub_suburb: string | null; hub_state: string | null; hub_postcode: string | null; hub_collection_day: string | null; hub_collection_time_start: string | null; hub_collection_time_end: string | null } | null = null
+  if (order.fulfillment_type === 'hub_pickup' && (order as any).hub_id) {
+    const { data } = await admin
+      .from('delivery_zones')
+      .select('hub_address, hub_suburb, hub_state, hub_postcode, hub_collection_day, hub_collection_time_start, hub_collection_time_end')
+      .eq('id', (order as any).hub_id)
+      .single()
+    hubZone = data
+  }
 
   // Fetch this farmer's items from the order
   const { data: items } = await admin
@@ -49,11 +60,12 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
     .eq('farmer_id', farmer.id)
     .maybeSingle()
 
+  const commissionRate: number = (farmer as any).commission_rate ?? 0.10
   const gross = items.reduce((s, i) => s + i.subtotal_cents, 0)
-  const commission = Math.round(gross * 0.05)
+  const commission = Math.round(gross * commissionRate)
   const net = gross - commission
 
-  const COMMISSION_RATE = 5
+  const COMMISSION_RATE = Math.round(commissionRate * 100)
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '860px', margin: '0 auto' }}>
@@ -119,9 +131,24 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Fulfillment:</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>{order.fulfillment_type === 'hub_pickup' ? 'Deliver to Hub' : 'Direct delivery'}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
+                  {order.fulfillment_type === 'hub_pickup' ? (
+                    hubZone
+                      ? `Hub drop-off — ${[hubZone.hub_address, hubZone.hub_suburb, hubZone.hub_state].filter(Boolean).join(', ')}`
+                      : 'Hub drop-off (admin to confirm location)'
+                  ) : 'Direct delivery to florist'}
+                </span>
               </div>
+              {order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Collection window:</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
+                    {hubZone.hub_collection_day ? `${hubZone.hub_collection_day.charAt(0).toUpperCase()}${hubZone.hub_collection_day.slice(1)}` : ''}{' '}
+                    {hubZone.hub_collection_time_start && hubZone.hub_collection_time_end ? `${hubZone.hub_collection_time_start} – ${hubZone.hub_collection_time_end}` : ''}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
