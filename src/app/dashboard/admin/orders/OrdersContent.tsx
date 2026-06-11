@@ -50,6 +50,7 @@ const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon
 function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: (id: string, status: string) => void; loading: boolean }) {
   const [open, setOpen] = useState(false)
   const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
+  const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
 
@@ -69,8 +70,15 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
       setGenPayoutsMsg(data.created?.length ? `✓ ${data.created.length} payout(s) created` : `Already generated (${data.skipped} skipped)`)
       setTimeout(() => setGenPayoutsMsg(''), 4000)
     } else {
-      onUpdate(order.id, status)
+      const action = actions.find(a => a.status === status)
+      setConfirm({ status, label: action?.label || status, danger: action?.danger })
     }
+  }
+
+  function confirmAction() {
+    if (!confirm) return
+    onUpdate(order.id, confirm.status)
+    setConfirm(null)
   }
 
   if (actions.length === 0 && !genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
@@ -83,46 +91,73 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
   }
 
   return (
-    <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-        disabled={loading}
-        aria-label="Order actions"
-        style={{
-          width: '2rem', height: '2rem', borderRadius: '50%',
-          background: open ? 'var(--navy)' : 'var(--offwhite)',
-          border: '1px solid var(--border)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.1rem', color: open ? 'white' : 'var(--navy)', fontWeight: 700,
-          transition: 'all 0.15s',
-        }}
-      >
-        {loading ? '…' : '⋮'}
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: '2.25rem', right: 0, zIndex: 100,
-          background: 'white', borderRadius: '0.75rem',
-          boxShadow: '0 4px 24px rgba(30,37,53,0.14)',
-          border: '1px solid var(--border-light)',
-          minWidth: '13rem', overflow: 'hidden',
-        }}>
-          {actions.map(action => (
-            <button
-              key={action.status}
-              onClick={() => handleAction(action.status)}
-              style={{ ...menuItemBase, color: action.danger ? 'var(--bloom)' : 'var(--navy)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
-              onMouseLeave={e => (e.currentTarget.style.background = '')}
-            >
-              <span style={{ width: '1.25rem', textAlign: 'center' }}>{action.icon}</span>
-              {action.label}
-            </button>
-          ))}
+    <>
+      {/* Confirmation modal */}
+      {confirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setConfirm(null)}>
+          <div style={{ background: 'white', borderRadius: '1.25rem', padding: '2rem', maxWidth: '22rem', width: '90%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.625rem' }}>Confirm status change</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Change <strong style={{ color: 'var(--forest)' }}>{order.order_number}</strong> to:<br />
+              <strong style={{ color: confirm.danger ? '#b91c1c' : 'var(--navy)', fontSize: '1rem' }}>{confirm.label}</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => setConfirm(null)}
+                style={{ flex: 1, padding: '0.625rem', borderRadius: '99px', border: '1px solid var(--border)', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--moss)', fontFamily: 'var(--font-body)' }}>
+                Cancel
+              </button>
+              <button onClick={confirmAction}
+                style={{ flex: 1, padding: '0.625rem', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700, fontFamily: 'var(--font-body)', background: confirm.danger ? '#b91c1c' : 'var(--navy)', color: 'white' }}>
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+
+      <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
+        <button
+          onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+          disabled={loading}
+          aria-label="Order actions"
+          style={{
+            width: '2rem', height: '2rem', borderRadius: '50%',
+            background: open ? 'var(--navy)' : 'var(--offwhite)',
+            border: '1px solid var(--border)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.1rem', color: open ? 'white' : 'var(--navy)', fontWeight: 700,
+            transition: 'all 0.15s',
+          }}
+        >
+          {loading ? '…' : '⋮'}
+        </button>
+
+        {open && (
+          <div style={{
+            position: 'absolute', top: '2.25rem', right: 0, zIndex: 100,
+            background: 'white', borderRadius: '0.75rem',
+            boxShadow: '0 4px 24px rgba(30,37,53,0.14)',
+            border: '1px solid var(--border-light)',
+            minWidth: '13rem', overflow: 'hidden',
+          }}>
+            {actions.map(action => (
+              <button
+                key={action.status}
+                onClick={() => handleAction(action.status)}
+                style={{ ...menuItemBase, color: action.danger ? 'var(--bloom)' : 'var(--navy)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
+                <span style={{ width: '1.25rem', textAlign: 'center' }}>{action.icon}</span>
+                {action.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
@@ -190,12 +225,17 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
 
   async function updateStatus(orderId: string, status: string) {
     setUpdatingId(orderId)
-    await fetch(`/api/orders/${orderId}/status`, {
+    const res = await fetch(`/api/orders/${orderId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
-    setOrders(os => os.map(o => o.id === orderId ? { ...o, status } : o))
+    if (res.ok) {
+      setOrders(os => os.map(o => o.id === orderId ? { ...o, status } : o))
+    } else {
+      const data = await res.json()
+      alert(`Failed to update status: ${data.error || 'Unknown error'}`)
+    }
     setUpdatingId(null)
   }
 
