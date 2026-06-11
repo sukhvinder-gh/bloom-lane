@@ -6,6 +6,7 @@ import { constructWebhookEvent } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 import QRCode from 'qrcode'
 import { sendPOEmail } from '@/lib/email/sendPOEmail'
+import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderConfirmationEmail'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -66,9 +67,9 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', orderId)
 
-      // Send one PO email per grower (non-blocking — webhook must return quickly)
-      sendPOEmailsForOrder(supabase, orderId).catch(err =>
-        console.error('PO email dispatch failed (non-blocking):', err)
+      // Send buyer confirmation + per-grower PO emails (non-blocking — webhook must return quickly)
+      sendAllOrderEmails(supabase, orderId).catch(err =>
+        console.error('[EMAIL] Order emails failed for order', orderId, err)
       )
 
       break
@@ -149,14 +150,14 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ received: true })
 }
 
-async function sendPOEmailsForOrder(supabase: ReturnType<typeof createAdminClient>, orderId: string) {
-  // Fetch order header
-  const { data: order } = await supabase
+async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>, orderId: string) {
+  // Fetch order header + buyer profile
+  const { data: order, error: orderErr } = await supabase
     .from('orders')
-    .select('order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, hub_id')
+    .select('order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, hub_id, buyer_id, subtotal_cents, gst_cents, delivery_fee_cents, total_cents, delivery_address, delivery_suburb, delivery_state')
     .eq('id', orderId)
     .single()
-  if (!order) return
+  if (orderErr || !order) { console.error('[EMAIL] Order fetch failed:', orderErr); return }
 
   // Fetch hub address if hub_pickup
   let hubAddress: string | null = null
@@ -166,19 +167,56 @@ async function sendPOEmailsForOrder(supabase: ReturnType<typeof createAdminClien
       .select('hub_address, hub_suburb, hub_state')
       .eq('id', (order as any).hub_id)
       .single()
-    if (zone) {
-      hubAddress = [zone.hub_address, zone.hub_suburb, zone.hub_state].filter(Boolean).join(', ')
-    }
+    if (zone) hubAddress = [zone.hub_address, zone.hub_suburb, zone.hub_state].filter(Boolean).join(', ')
   }
 
   // Fetch all items with farmer + product info
-  const { data: items } = await supabase
+  const { data: items, error: itemsErr } = await supabase
     .from('order_items')
-    .select('id, farmer_id, quantity, unit_price_cents, subtotal_cents, products(name, unit)')
+    .select('id, farmer_id, quantity, unit_price_cents, subtotal_cents, is_b2b, products(name, unit, is_gst_free)')
     .eq('order_id', orderId)
-  if (!items || items.length === 0) return
+  if (itemsErr || !items || items.length === 0) { console.error('[EMAIL] Items fetch failed:', itemsErr); return }
 
-  // Group items by farmer_id
+  // Fetch buyer profile for confirmation email
+  const { data: buyerProfile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', (order as any).buyer_id)
+    .single()
+
+  // --- 1. Buyer order confirmation ---
+  if (buyerProfile?.email) {
+    try {
+      await sendOrderConfirmationEmail({
+        order_number: order.order_number,
+        created_at: order.created_at,
+        buyer_email: buyerProfile.email,
+        buyer_name: buyerProfile.full_name || 'Valued Customer',
+        fulfillment_type: order.fulfillment_type,
+        delivery_address: (order as any).delivery_address,
+        delivery_suburb: (order as any).delivery_suburb,
+        delivery_state: (order as any).delivery_state,
+        subtotal_cents: (order as any).subtotal_cents,
+        gst_cents: (order as any).gst_cents ?? 0,
+        delivery_fee_cents: (order as any).delivery_fee_cents ?? 0,
+        total_cents: (order as any).total_cents,
+        items: items.map(i => ({
+          product_name: (i as any).products?.name ?? '',
+          product_unit: (i as any).products?.unit ?? '',
+          quantity: i.quantity,
+          subtotal_cents: i.subtotal_cents,
+          is_gst_free: (i as any).products?.is_gst_free ?? false,
+        })),
+      })
+      console.log('[EMAIL] Buyer confirmation sent to', buyerProfile.email)
+    } catch (err) {
+      console.error('[EMAIL] Buyer confirmation failed for order', order.order_number, err)
+    }
+  } else {
+    console.warn('[EMAIL] No buyer email found for order', order.order_number)
+  }
+
+  // --- 2. Per-grower PO emails ---
   const byFarmer = new Map<string, typeof items>()
   for (const item of items) {
     const existing = byFarmer.get(item.farmer_id) || []
@@ -186,40 +224,42 @@ async function sendPOEmailsForOrder(supabase: ReturnType<typeof createAdminClien
     byFarmer.set(item.farmer_id, existing)
   }
 
-  // Fetch all relevant farmers in one query
   const farmerIds = [...byFarmer.keys()]
   const { data: farmers } = await supabase
     .from('farmers')
     .select('id, business_name, abn, email, suburb, state, commission_rate')
     .in('id', farmerIds)
-  if (!farmers) return
+  if (!farmers) { console.error('[EMAIL] Farmers fetch failed'); return }
 
-  // Send one email per farmer
   await Promise.allSettled(
     farmers.map(async farmer => {
-      if (!farmer.email) return
+      if (!farmer.email) { console.warn('[EMAIL] No email for farmer', farmer.id); return }
       const farmerItems = byFarmer.get(farmer.id) || []
-
-      await sendPOEmail(farmer.email, {
-        order_number: order.order_number,
-        created_at: order.created_at,
-        grower_fulfillment_date: order.grower_fulfillment_date,
-        fulfillment_type: order.fulfillment_type,
-        hub_address: hubAddress,
-        farmer_business_name: farmer.business_name,
-        farmer_abn: farmer.abn,
-        farmer_suburb: farmer.suburb,
-        farmer_state: farmer.state,
-        commission_rate: farmer.commission_rate ?? 0.10,
-        items: farmerItems.map(i => ({
-          id: i.id,
-          quantity: i.quantity,
-          unit_price_cents: i.unit_price_cents,
-          subtotal_cents: i.subtotal_cents,
-          product_name: (i as any).products?.name ?? '',
-          product_unit: (i as any).products?.unit ?? '',
-        })),
-      })
+      try {
+        await sendPOEmail(farmer.email, {
+          order_number: order.order_number,
+          created_at: order.created_at,
+          grower_fulfillment_date: order.grower_fulfillment_date,
+          fulfillment_type: order.fulfillment_type,
+          hub_address: hubAddress,
+          farmer_business_name: farmer.business_name,
+          farmer_abn: farmer.abn,
+          farmer_suburb: farmer.suburb,
+          farmer_state: farmer.state,
+          commission_rate: farmer.commission_rate ?? 0.10,
+          items: farmerItems.map(i => ({
+            id: i.id,
+            quantity: i.quantity,
+            unit_price_cents: i.unit_price_cents,
+            subtotal_cents: i.subtotal_cents,
+            product_name: (i as any).products?.name ?? '',
+            product_unit: (i as any).products?.unit ?? '',
+          })),
+        })
+        console.log('[EMAIL] PO sent to farmer', farmer.email)
+      } catch (err) {
+        console.error('[EMAIL] PO email failed for farmer', farmer.email, err)
+      }
     })
   )
 }
