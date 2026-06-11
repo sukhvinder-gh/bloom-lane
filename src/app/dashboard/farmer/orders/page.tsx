@@ -102,7 +102,7 @@ export default function FarmerOrdersPage() {
                         ) : (
                           <button onClick={() => { setActiveItemId(item.id); fileRef.current?.click() }} disabled={uploadingId === item.id}
                             className="btn btn-sage btn-sm">
-                            {uploadingId === item.id ? '⏳ Uploading…' : '📷 Upload PPOD'}
+                            {uploadingId === item.id ? '⏳ Uploading…' : '📷 Upload Delivery Photo'}
                           </button>
                         )}
                       </div>

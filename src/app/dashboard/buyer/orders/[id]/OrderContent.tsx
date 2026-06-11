@@ -150,7 +150,7 @@ export default function BuyerOrderDetailPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                         <img src={item.ppod_url} alt="Proof of delivery" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover' }} />
                         <div>
-                          <p className="type-label-sm" style={{ color: 'var(--forest)' }}>✓ Delivery photo</p>
+                          <p className="type-label-sm" style={{ color: 'var(--forest)' }}>✓ Delivery photo uploaded</p>
                           {item.ppod_gps_lat && <a href={`https://maps.google.com/?q=${item.ppod_gps_lat},${item.ppod_gps_lng}`} target="_blank" rel="noopener noreferrer" className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>📍 View on map</a>}
                         </div>
                       </div>
