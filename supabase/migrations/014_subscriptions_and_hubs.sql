@@ -38,8 +38,19 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   stripe_customer_id     TEXT,
   amount_cents           INTEGER,
   created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, subscriber_type, plan)
 );
+
+-- Add unique constraint if it doesn't already exist (handles partial prior runs)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_user_id_subscriber_type_plan_key'
+  ) THEN
+    ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_user_id_subscriber_type_plan_key
+      UNIQUE (user_id, subscriber_type, plan);
+  END IF;
+END $$;
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "subs_own"       ON subscriptions;

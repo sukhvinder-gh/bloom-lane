@@ -65,7 +65,7 @@ export default function FloristSubscriptionPage() {
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '52rem' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
-        Florist Subscription
+        Florist Membership
       </h1>
       <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '2rem' }}>
         Choose how you want to source from local growers

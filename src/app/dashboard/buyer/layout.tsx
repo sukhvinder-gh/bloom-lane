@@ -10,7 +10,7 @@ const NAV = [
   { href: '/dashboard/buyer/orders',         label: 'My Orders',    icon: '📋' },
   { href: '/marketplace',                    label: 'Marketplace',  icon: '🛍️' },
   { href: '/growers',                        label: 'Growers',      icon: '🌾' },
-  { href: '/dashboard/buyer/subscription',   label: 'Subscription', icon: '🎫' },
+  { href: '/dashboard/buyer/subscription',   label: 'Membership',   icon: '🎫' },
 ]
 
 function BuyerSidebar() {
