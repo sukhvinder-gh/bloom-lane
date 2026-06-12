@@ -8,10 +8,11 @@ const BILLING_OPTIONS = [
   { value: 'annual',   label: 'Annual',           hint: 'Best value overall' },
 ]
 
-function PriceTag({ cents }: { cents: number }) {
-  if (!cents) return <span style={{ color: 'var(--moss)', fontSize: '0.8rem' }}>Price TBC</span>
+function PriceTag({ cents, selected }: { cents: number; selected?: boolean }) {
+  const color = selected ? 'white' : 'var(--forest)'
+  if (!cents) return <span style={{ color: selected ? 'rgba(255,255,255,0.6)' : 'var(--moss)', fontSize: '0.8rem' }}>Price TBC</span>
   const dollars = (cents / 100).toFixed(0)
-  return <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>${dollars}</span>
+  return <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color, letterSpacing: '-0.03em' }}>${dollars}</span>
 }
 
 export default function GrowerSubscriptionPage() {
@@ -218,7 +219,7 @@ export default function GrowerSubscriptionPage() {
                     }}
                   >
                     <p style={{ fontSize: '0.775rem', fontWeight: 700, color: billing === b.value ? 'var(--cream)' : 'var(--forest)', marginBottom: '0.25rem' }}>{b.label}</p>
-                    <PriceTag cents={price} />
+                    <PriceTag cents={price} selected={billing === b.value} />
                     <p style={{ fontSize: '0.65rem', color: billing === b.value ? 'rgba(255,255,255,0.7)' : 'var(--moss)', marginTop: '0.2rem' }}>{b.hint}</p>
                   </button>
                 )
