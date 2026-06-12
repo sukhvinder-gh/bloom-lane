@@ -14,11 +14,12 @@ type Props = {
 }
 
 const NAV = [
-  { href: '/dashboard/farmer',             label: 'Overview',      icon: '🏠',  exact: true },
-  { href: '/dashboard/farmer/inventory',   label: 'Inventory',     icon: '🌿' },
-  { href: '/dashboard/farmer/orders',      label: 'Orders',        icon: '📋' },
-  { href: '/dashboard/farmer/storefront',  label: 'My Storefront', icon: '🏪' },
-  { href: '/dashboard/farmer/payouts',     label: 'Payouts',       icon: '💳' },
+  { href: '/dashboard/farmer',                label: 'Overview',      icon: '🏠',  exact: true },
+  { href: '/dashboard/farmer/inventory',      label: 'Inventory',     icon: '🌿' },
+  { href: '/dashboard/farmer/orders',         label: 'Orders',        icon: '📋' },
+  { href: '/dashboard/farmer/storefront',     label: 'My Storefront', icon: '🏪' },
+  { href: '/dashboard/farmer/payouts',        label: 'Payouts',       icon: '💳' },
+  { href: '/dashboard/farmer/subscription',   label: 'Subscription',  icon: '🎫' },
 ]
 
 export default function FarmerSidebar({ role, userName, userEmail, businessName, farmerId, farmerStatus }: Props) {

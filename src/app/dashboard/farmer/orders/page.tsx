@@ -21,6 +21,8 @@ const PO_STATUS: Record<string, { label: string; bg: string; color: string }> = 
   rejected:         { label: 'Rejected',      bg: '#FEE2E2', color: '#B91C1C' },
 }
 
+type ConfirmAction = { orderId: string; orderNumber: string; newStatus: 'ready' | 'delivered_to_hub'; label: string }
+
 export default function FarmerOrdersPage() {
   const [orders, setOrders]           = useState<any[]>([])
   const [poStatuses, setPoStatuses]   = useState<Record<string, string>>({})
@@ -30,8 +32,23 @@ export default function FarmerOrdersPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectLoading, setRejectLoading] = useState(false)
+  const [openMenuId, setOpenMenuId]   = useState<string | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
   const fileRef   = useRef<HTMLInputElement>(null)
   const activeRef = useRef<string | null>(null)
+
+  // Close dropdown when clicking outside
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  useEffect(() => {
+    if (!openMenuId) return
+    function onOutside(e: MouseEvent) {
+      const ref = menuRefs.current[openMenuId!]
+      if (ref && !ref.contains(e.target as Node)) setOpenMenuId(null)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [openMenuId])
 
   useEffect(() => {
     fetch('/api/orders?farmer=true')
@@ -99,6 +116,23 @@ export default function FarmerOrdersPage() {
     setRejectReason('')
   }
 
+  async function executeStatusChange(orderId: string, newStatus: 'ready' | 'delivered_to_hub') {
+    setStatusUpdating(orderId)
+    setConfirmAction(null)
+    const res = await fetch(`/api/farmer/orders/${orderId}/po-status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    if (res.ok) {
+      setPoStatuses(s => ({ ...s, [orderId]: newStatus }))
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Status update failed. Please try again.')
+    }
+    setStatusUpdating(null)
+  }
+
   const th: React.CSSProperties = {
     padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700,
     letterSpacing: '0.07em', textTransform: 'uppercase' as const,
@@ -140,6 +174,35 @@ export default function FarmerOrdersPage() {
         }}
       />
 
+      {/* Confirmation modal for status changes */}
+      {confirmAction && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setConfirmAction(null)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: '1.25rem', padding: '2rem', maxWidth: '22rem', width: '90%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.625rem' }}>Confirm status change</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Update order <strong style={{ color: 'var(--forest)' }}>{confirmAction.orderNumber}</strong> to:<br />
+              <strong style={{ color: confirmAction.newStatus === 'delivered_to_hub' ? '#1E40AF' : '#065F46', fontSize: '1rem' }}>{confirmAction.label}</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{ flex: 1, padding: '0.625rem', borderRadius: '99px', border: '1px solid var(--olive)', background: 'white', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--moss)', fontFamily: 'var(--font-body)' }}
+              >Cancel</button>
+              <button
+                onClick={() => executeStatusChange(confirmAction.orderId, confirmAction.newStatus)}
+                style={{ flex: 1, padding: '0.625rem', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700, fontFamily: 'var(--font-body)', background: confirmAction.newStatus === 'delivered_to_hub' ? '#1D4ED8' : '#065F46', color: 'white' }}
+              >Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {orders.length === 0 ? (
         <div style={{ background: 'white', borderRadius: 'var(--r-card)', padding: '5rem', textAlign: 'center', border: '1px solid var(--olive)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📦</div>
@@ -171,8 +234,12 @@ export default function FarmerOrdersPage() {
                 const summary    = (order.order_items?.slice(0, 2) || [])
                   .map((i: any) => `${i.quantity}× ${i.products?.name}`).join(', ')
                   + (itemCount > 2 ? ` +${itemCount - 2} more` : '')
-                const canUpload  = ['payment_confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup'].includes(order.status)
-                const canReject  = poS && ['pending', 'ready'].includes(poS)
+                const canUpload   = ['payment_confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup'].includes(order.status)
+                const canReject   = poS && ['pending', 'ready'].includes(poS)
+                const canMarkReady = poS === 'pending'
+                const canMarkHub   = poS === 'ready'
+                const isMenuOpen   = openMenuId === order.id
+                const isUpdating   = statusUpdating === order.id
 
                 return (
                   <>
@@ -226,23 +293,88 @@ export default function FarmerOrdersPage() {
                         )}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions — three-dot menu */}
                       <td style={{ ...td, textAlign: 'right' as const }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <Link
-                            href={`/dashboard/farmer/orders/${order.id}/po`}
-                            prefetch={false}
-                            style={{ padding: '0.3rem 0.75rem', background: 'var(--forest)', color: 'var(--cream)', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' as const }}
+                        <div
+                          ref={el => { menuRefs.current[order.id] = el }}
+                          style={{ position: 'relative', display: 'inline-block' }}
+                        >
+                          <button
+                            onClick={() => setOpenMenuId(isMenuOpen ? null : order.id)}
+                            disabled={isUpdating}
+                            aria-label="Order actions"
+                            style={{
+                              width: '2rem', height: '2rem', borderRadius: '50%',
+                              background: isMenuOpen ? 'var(--forest)' : 'var(--offwhite, #f5f4ef)',
+                              border: '1px solid var(--olive)', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '1.1rem', color: isMenuOpen ? 'white' : 'var(--forest)',
+                              fontWeight: 700, transition: 'all 0.15s', fontFamily: 'var(--font-body)',
+                            }}
                           >
-                            View PO
-                          </Link>
-                          {canReject && rejectingId !== order.id && (
-                            <button
-                              onClick={() => { setRejectingId(order.id); setRejectReason('') }}
-                              style={{ padding: '0.3rem 0.75rem', background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FECACA', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' as const }}
-                            >
-                              Reject PO
-                            </button>
+                            {isUpdating ? '…' : '⋯'}
+                          </button>
+
+                          {isMenuOpen && (
+                            <div style={{
+                              position: 'absolute', top: '2.25rem', right: 0, zIndex: 200,
+                              background: 'white', borderRadius: '0.75rem',
+                              boxShadow: '0 4px 24px rgba(30,37,53,0.14)',
+                              border: '1px solid var(--olive)',
+                              minWidth: '13rem', overflow: 'hidden',
+                            }}>
+                              {/* View PO — always */}
+                              <Link
+                                href={`/dashboard/farmer/orders/${order.id}/po`}
+                                prefetch={false}
+                                onClick={() => setOpenMenuId(null)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.7rem 1rem', fontSize: '0.85rem', color: 'var(--forest)', textDecoration: 'none', borderBottom: (canMarkReady || canMarkHub || canReject) ? '1px solid var(--olive)' : 'none' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--olive)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}
+                              >
+                                <span style={{ width: '1.25rem', textAlign: 'center' }}>📋</span>
+                                View PO
+                              </Link>
+
+                              {/* Mark as Ready */}
+                              {canMarkReady && (
+                                <button
+                                  onClick={() => { setOpenMenuId(null); setConfirmAction({ orderId: order.id, orderNumber: order.order_number, newStatus: 'ready', label: 'Mark items as ready' }) }}
+                                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.7rem 1rem', fontSize: '0.85rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: '#065F46', fontFamily: 'var(--font-body)' }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = '#D1FAE5')}
+                                  onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                >
+                                  <span style={{ width: '1.25rem', textAlign: 'center' }}>✅</span>
+                                  Mark items ready
+                                </button>
+                              )}
+
+                              {/* Mark as Delivered to Hub */}
+                              {canMarkHub && (
+                                <button
+                                  onClick={() => { setOpenMenuId(null); setConfirmAction({ orderId: order.id, orderNumber: order.order_number, newStatus: 'delivered_to_hub', label: 'Mark as delivered to hub' }) }}
+                                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.7rem 1rem', fontSize: '0.85rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: '#1E40AF', fontFamily: 'var(--font-body)' }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = '#DBEAFE')}
+                                  onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                >
+                                  <span style={{ width: '1.25rem', textAlign: 'center' }}>🏭</span>
+                                  Delivered to hub
+                                </button>
+                              )}
+
+                              {/* Reject PO */}
+                              {canReject && rejectingId !== order.id && (
+                                <button
+                                  onClick={() => { setOpenMenuId(null); setRejectingId(order.id); setRejectReason('') }}
+                                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.7rem 1rem', fontSize: '0.85rem', background: 'none', border: 'none', borderTop: '1px solid var(--olive)', cursor: 'pointer', textAlign: 'left', color: '#B91C1C', fontFamily: 'var(--font-body)' }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = '#FEE2E2')}
+                                  onMouseLeave={e => (e.currentTarget.style.background = '')}
+                                >
+                                  <span style={{ width: '1.25rem', textAlign: 'center' }}>🚫</span>
+                                  Reject PO
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>

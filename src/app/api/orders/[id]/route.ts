@@ -28,5 +28,22 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Annotate items with po_rejected flag (for partial rejection display)
+  // Buyers see "unavailable" without knowing the grower; admins get the same data
+  if ((data as any).has_partial_rejection) {
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const adminClient = createAdminClient()
+    const { data: rejectedPOs } = await adminClient
+      .from('purchase_orders')
+      .select('farmer_id')
+      .eq('order_id', id)
+      .eq('status', 'rejected')
+    const rejectedFarmerIds = new Set((rejectedPOs ?? []).map((p: any) => p.farmer_id))
+    ;(data as any).order_items = (data as any).order_items?.map((item: any) => ({
+      ...item,
+      po_rejected: rejectedFarmerIds.has(item.farmer_id),
+    }))
+  }
+
   return NextResponse.json({ data })
 }

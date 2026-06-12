@@ -16,6 +16,7 @@ const NAV = [
   { href: '/dashboard/admin/farmers',  label: 'Growers',   icon: '🌾' },
   { href: '/dashboard/admin/buyers',   label: 'Buyers',    icon: '👥' },
   { href: '/dashboard/admin/orders',   label: 'Orders',    icon: '📋' },
+  { href: '/dashboard/admin/hubs',     label: 'Hubs',      icon: '🏛' },
   { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '⚖️' },
   { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💳' },
 ]

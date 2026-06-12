@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { sendSubscriptionConfirmation } from '@/lib/email/sendSubscriptionEmail'
+
+// GET — fetch current farmer subscription status
+export async function GET() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: farmer } = await admin
+    .from('farmers')
+    .select('id, subscription_type, subscription_tier, subscription_expires_at, hub_id, gst_registered, rcti_agreed, rcti_agreed_at, rcti_full_name, abn, farm_address, farm_region, hubs(name, region)')
+    .eq('user_id', user.id)
+    .single()
+
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('subscriber_type', 'grower')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  return NextResponse.json({ farmer, subscription: sub || null })
+}
+
+// POST — save/update grower subscription details (pre-payment step)
+export async function POST(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json()
+  const {
+    subscription_type, // 'hub_membership' | 'wholesale_collection'
+    billing_period,    // 'monthly' | 'seasonal' | 'annual' (null for wholesale)
+    hub_id,
+    abn,
+    business_name,
+    gst_registered,
+    rcti_agreed,
+    rcti_full_name,
+    farm_address,
+    farm_region,
+  } = body
+
+  if (!subscription_type || !hub_id || !abn) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  if (subscription_type === 'hub_membership' && !billing_period) {
+    return NextResponse.json({ error: 'Billing period required for Hub Membership' }, { status: 400 })
+  }
+  if (gst_registered && !rcti_agreed) {
+    return NextResponse.json({ error: 'RCTI agreement required for GST-registered growers' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+
+  // Update farmer profile
+  const farmerUpdate: Record<string, any> = {
+    subscription_type,
+    subscription_tier: billing_period || null,
+    hub_id,
+    abn,
+    gst_registered: !!gst_registered,
+    rcti_agreed: !!rcti_agreed,
+    rcti_agreed_at: rcti_agreed ? new Date().toISOString() : null,
+    rcti_full_name: rcti_full_name || null,
+    farm_address: farm_address || null,
+    farm_region: farm_region || null,
+    updated_at: new Date().toISOString(),
+  }
+  if (business_name) farmerUpdate.business_name = business_name
+
+  const { error: farmerErr } = await admin
+    .from('farmers')
+    .update(farmerUpdate)
+    .eq('user_id', user.id)
+
+  if (farmerErr) return NextResponse.json({ error: farmerErr.message }, { status: 500 })
+
+  // For wholesale — activate immediately (no payment)
+  if (subscription_type === 'wholesale_collection') {
+    const { data: sub, error: subErr } = await admin
+      .from('subscriptions')
+      .upsert({
+        user_id: user.id,
+        subscriber_type: 'grower',
+        plan: 'wholesale_collection',
+        billing_period: 'free',
+        status: 'active',
+        starts_at: new Date().toISOString(),
+        expires_at: null,
+        amount_cents: 0,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,subscriber_type,plan' })
+      .select()
+      .single()
+
+    if (subErr) return NextResponse.json({ error: subErr.message }, { status: 500 })
+
+    // Send confirmation email
+    const { data: profile } = await admin.from('profiles').select('email, full_name').eq('id', user.id).single()
+    if (profile?.email) {
+      sendSubscriptionConfirmation({
+        to: profile.email,
+        name: profile.full_name || 'Grower',
+        plan: 'wholesale_collection',
+        billing: 'free',
+        amount_cents: 0,
+        gst_registered: !!gst_registered,
+      }).catch(() => {})
+    }
+
+    return NextResponse.json({ ok: true, subscription: sub, requiresPayment: false })
+  }
+
+  // For hub_membership — get price from config and return for Stripe checkout
+  const { data: configRows } = await admin
+    .from('config')
+    .select('key, value')
+    .in('key', ['hub_membership_monthly_cents', 'hub_membership_seasonal_cents', 'hub_membership_annual_cents'])
+
+  const cfg: Record<string, number> = {}
+  configRows?.forEach((r: any) => { cfg[r.key] = parseInt(r.value) || 0 })
+
+  const priceMap: Record<string, number> = {
+    monthly:  cfg['hub_membership_monthly_cents']  || 6000,
+    seasonal: cfg['hub_membership_seasonal_cents'] || 15000,
+    annual:   cfg['hub_membership_annual_cents']   || 48000,
+  }
+  const amount = priceMap[billing_period] || 6000
+
+  // Create pending subscription record
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .upsert({
+      user_id: user.id,
+      subscriber_type: 'grower',
+      plan: 'hub_membership',
+      billing_period,
+      status: 'pending',
+      amount_cents: amount,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,subscriber_type,plan' })
+    .select()
+    .single()
+
+  return NextResponse.json({ ok: true, subscription: sub, requiresPayment: true, amount_cents: amount })
+}

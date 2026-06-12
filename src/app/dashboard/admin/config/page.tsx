@@ -15,6 +15,32 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Grower Subscriptions',
+    icon: '🌿',
+    items: [
+      { key: 'hub_membership_monthly_cents',  label: 'Hub Membership — Monthly',         hint: 'In cents — 6000 = $60.00',  type: 'number' },
+      { key: 'hub_membership_seasonal_cents', label: 'Hub Membership — Seasonal (3 mo)', hint: 'In cents — 15000 = $150.00', type: 'number' },
+      { key: 'hub_membership_annual_cents',   label: 'Hub Membership — Annual',          hint: 'In cents — 48000 = $480.00', type: 'number' },
+      { key: 'wholesale_commission_pct',      label: 'Wholesale Collection Commission',  hint: 'e.g. 0.15 = 15% per order',  type: 'number' },
+    ],
+  },
+  {
+    title: 'Florist Subscriptions',
+    icon: '💐',
+    items: [
+      { key: 'personal_shopper_weekly_cents',  label: 'Personal Shopper — Weekly',  hint: 'In cents — 0 = not offered', type: 'number' },
+      { key: 'personal_shopper_monthly_cents', label: 'Personal Shopper — Monthly', hint: 'In cents — 0 = not offered', type: 'number' },
+      { key: 'personal_shopper_annual_cents',  label: 'Personal Shopper — Annual',  hint: 'In cents — 0 = not offered', type: 'number' },
+    ],
+  },
+  {
+    title: 'Coordinator',
+    icon: '🏛',
+    items: [
+      { key: 'coordinator_registration_cents', label: 'Hub Registration Fee', hint: 'In cents — 0 = free registration', type: 'number' },
+    ],
+  },
+  {
     title: 'Stock Allocation',
     icon: '📦',
     items: [

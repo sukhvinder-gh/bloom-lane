@@ -59,21 +59,30 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Auto-aggregate: when every PO for this order reaches delivered_to_hub → advance the main order
+  // Auto-aggregate: when every PO reaches delivered_to_hub, advance the order.
+  // Skip if a partial rejection exists — admin must resolve manually first.
   if (newStatus === 'delivered_to_hub') {
-    const { data: allPOs } = await admin
-      .from('purchase_orders')
-      .select('status')
-      .eq('order_id', orderId)
+    const { data: orderRow } = await admin
+      .from('orders')
+      .select('has_partial_rejection')
+      .eq('id', orderId)
+      .single()
 
-    const allDelivered =
-      allPOs && allPOs.length > 0 && allPOs.every(p => p.status === 'delivered_to_hub')
+    if (!orderRow?.has_partial_rejection) {
+      const { data: allPOs } = await admin
+        .from('purchase_orders')
+        .select('status')
+        .eq('order_id', orderId)
 
-    if (allDelivered) {
-      await admin
-        .from('orders')
-        .update({ status: 'ready_for_pickup', updated_at: new Date().toISOString() })
-        .eq('id', orderId)
+      const allDelivered =
+        allPOs && allPOs.length > 0 && allPOs.every(p => p.status === 'delivered_to_hub')
+
+      if (allDelivered) {
+        await admin
+          .from('orders')
+          .update({ status: 'ready_for_pickup', updated_at: new Date().toISOString() })
+          .eq('id', orderId)
+      }
     }
   }
 

@@ -47,10 +47,11 @@ const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon
   ],
 }
 
-function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: (id: string, status: string) => void; loading: boolean }) {
+function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any; onUpdate: (id: string, status: string) => void; onResolved: (id: string) => void; loading: boolean }) {
   const [open, setOpen] = useState(false)
   const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
-  const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean } | null>(null)
+  const [resolveMsg, setResolveMsg] = useState('')
+  const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean; isPartialResolve?: boolean } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
 
@@ -69,20 +70,41 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
       const data = await res.json()
       setGenPayoutsMsg(data.created?.length ? `✓ ${data.created.length} payout(s) created` : `Already generated (${data.skipped} skipped)`)
       setTimeout(() => setGenPayoutsMsg(''), 4000)
+    } else if (status === '_resolve_partial') {
+      setConfirm({ status, label: 'Proceed with partial fill', isPartialResolve: true })
     } else {
       const action = actions.find(a => a.status === status)
       setConfirm({ status, label: action?.label || status, danger: action?.danger })
     }
   }
 
-  function confirmAction() {
+  async function confirmAction() {
     if (!confirm) return
-    onUpdate(order.id, confirm.status)
-    setConfirm(null)
+    if (confirm.isPartialResolve) {
+      setConfirm(null)
+      const res = await fetch(`/api/admin/orders/${order.id}/resolve-partial`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        onResolved(order.id)
+        setResolveMsg(data.advanced ? '✓ Order advanced to Ready' : '✓ Partial rejection cleared')
+        setTimeout(() => setResolveMsg(''), 4000)
+      } else {
+        alert(data.error || 'Could not resolve partial rejection')
+      }
+    } else {
+      onUpdate(order.id, confirm.status)
+      setConfirm(null)
+    }
   }
 
-  if (actions.length === 0 && !genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  const hasPartialReject = !!order.has_partial_rejection
+  const allActions = hasPartialReject
+    ? [...actions, { status: '_resolve_partial', label: 'Proceed (partial fill)', icon: '⚠️' }]
+    : actions
+
+  if (allActions.length === 0 && !genPayoutsMsg && !resolveMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
   if (genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{genPayoutsMsg}</span>
+  if (resolveMsg) return <span style={{ fontSize: '0.75rem', color: '#065F46', fontWeight: 700 }}>{resolveMsg}</span>
 
   const menuItemBase: React.CSSProperties = {
     width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem',
@@ -142,12 +164,12 @@ function OrderActionsMenu({ order, onUpdate, loading }: { order: any; onUpdate: 
             border: '1px solid var(--border-light)',
             minWidth: '13rem', overflow: 'hidden',
           }}>
-            {actions.map(action => (
+            {allActions.map(action => (
               <button
                 key={action.status}
                 onClick={() => handleAction(action.status)}
-                style={{ ...menuItemBase, color: action.danger ? 'var(--bloom)' : 'var(--navy)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
+                style={{ ...menuItemBase, color: action.status === '_resolve_partial' ? '#92400E' : action.danger ? 'var(--bloom)' : 'var(--navy)', borderTop: action.status === '_resolve_partial' ? '1px solid var(--border-light)' : 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.background = action.status === '_resolve_partial' ? '#FEF3C7' : action.danger ? 'var(--bloom-soft)' : 'var(--offwhite)')}
                 onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
                 <span style={{ width: '1.25rem', textAlign: 'center' }}>{action.icon}</span>
@@ -222,6 +244,10 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const [rejectedPOs, setRejectedPOs] = useState<any[]>(initialRejectedPOs)
+
+  function resolvePartialLocally(orderId: string) {
+    setOrders(os => os.map(o => o.id === orderId ? { ...o, has_partial_rejection: false } : o))
+  }
 
   async function updateStatus(orderId: string, status: string) {
     setUpdatingId(orderId)
@@ -331,7 +357,12 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                         </div>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
-                        <AdminStatusBadge status={order.status} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'flex-start' }}>
+                          <AdminStatusBadge status={order.status} />
+                          {order.has_partial_rejection && (
+                            <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '0.65rem', fontWeight: 700, background: '#FEF3C7', color: '#92400E', whiteSpace: 'nowrap' }}>⚠️ Partial rejection</span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span>
@@ -339,7 +370,7 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <DateManager order={order} onUpdate={updateOrderField} />
-                          <OrderActionsMenu order={order} onUpdate={updateStatus} loading={updatingId === order.id} />
+                          <OrderActionsMenu order={order} onUpdate={updateStatus} onResolved={resolvePartialLocally} loading={updatingId === order.id} />
                         </div>
                       </td>
                     </tr>

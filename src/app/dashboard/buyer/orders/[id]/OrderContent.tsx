@@ -136,27 +136,50 @@ export default function BuyerOrderDetailPage() {
             )}
           </div>
 
+          {/* Partial rejection notice */}
+          {order.has_partial_rejection && (
+            <div className="card reveal" style={{ padding: '1.25rem 1.5rem', background: '#FFF7ED', border: '1px solid #FED7AA', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+              <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>⚠️</span>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#C2410C', marginBottom: '0.25rem' }}>Some items need attention</p>
+                <p style={{ fontSize: '0.8rem', color: '#9A3412', lineHeight: 1.5 }}>
+                  One or more items in your order are currently unavailable. Our team is working on a resolution and will be in touch shortly.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Items */}
           <div className="card reveal reveal-d1" style={{ padding: '2rem' }}>
             <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1.5rem' }}>Items</h2>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {order.order_items?.map((item: any) => (
-                <div key={item.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1rem 0' }}>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>🌸</div>
+                <div key={item.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1rem 0', opacity: item.po_rejected ? 0.5 : 1 }}>
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: item.po_rejected ? '#FEE2E2' : 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
+                    {item.po_rejected ? '🚫' : '🌸'}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.2rem' }}>{item.products?.name}</p>
-                    <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_url ? '0.625rem' : 0 }}>{item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
-                    {item.ppod_url && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                        <img src={item.ppod_url} alt="Proof of delivery" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover' }} />
-                        <div>
-                          <p className="type-label-sm" style={{ color: 'var(--forest)' }}>✓ Delivery photo uploaded</p>
-                          {item.ppod_gps_lat && <a href={`https://maps.google.com/?q=${item.ppod_gps_lat},${item.ppod_gps_lng}`} target="_blank" rel="noopener noreferrer" className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>📍 View on map</a>}
-                        </div>
-                      </div>
+                    {item.po_rejected ? (
+                      <p className="type-label-sm" style={{ color: '#B91C1C' }}>Currently unavailable — pending resolution</p>
+                    ) : (
+                      <>
+                        <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_url ? '0.625rem' : 0 }}>{item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
+                        {item.ppod_url && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                            <img src={item.ppod_url} alt="Proof of delivery" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover' }} />
+                            <div>
+                              <p className="type-label-sm" style={{ color: 'var(--forest)' }}>✓ Delivery photo uploaded</p>
+                              {item.ppod_gps_lat && <a href={`https://maps.google.com/?q=${item.ppod_gps_lat},${item.ppod_gps_lng}`} target="_blank" rel="noopener noreferrer" className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>📍 View on map</a>}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', letterSpacing: '-0.02em', flexShrink: 0 }}>{formatPrice(item.subtotal_cents)}</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: item.po_rejected ? 'var(--moss)' : 'var(--forest)', letterSpacing: '-0.02em', flexShrink: 0, textDecoration: item.po_rejected ? 'line-through' : 'none' }}>
+                    {formatPrice(item.subtotal_cents)}
+                  </span>
                 </div>
               ))}
             </div>

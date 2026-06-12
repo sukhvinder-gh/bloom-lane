@@ -9,7 +9,7 @@ export default async function AdminOrdersPage() {
   const [{ data: initialOrders }, { data: rejectedPOs }] = await Promise.all([
     admin
       .from('orders')
-      .select('*, profiles!orders_buyer_id_fkey(full_name), order_items(*, products(name, unit), farmers(business_name, brand_color))')
+      .select('*, has_partial_rejection, profiles!orders_buyer_id_fkey(full_name), order_items(*, products(name, unit), farmers(business_name, brand_color))')
       .order('created_at', { ascending: false })
       .limit(100),
     admin

@@ -46,5 +46,11 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Flag the order so admin knows manual resolution is needed
+  await admin
+    .from('orders')
+    .update({ has_partial_rejection: true, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
   return NextResponse.json({ data })
 }

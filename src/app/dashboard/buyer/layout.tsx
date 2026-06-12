@@ -6,10 +6,11 @@ import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
-  { href: '/dashboard/buyer',        label: 'Overview',    icon: '🏠',  exact: true },
-  { href: '/dashboard/buyer/orders', label: 'My Orders',   icon: '📋' },
-  { href: '/marketplace',            label: 'Marketplace', icon: '🛍️' },
-  { href: '/growers',                label: 'Growers',     icon: '🌾' },
+  { href: '/dashboard/buyer',                label: 'Overview',     icon: '🏠',  exact: true },
+  { href: '/dashboard/buyer/orders',         label: 'My Orders',    icon: '📋' },
+  { href: '/marketplace',                    label: 'Marketplace',  icon: '🛍️' },
+  { href: '/growers',                        label: 'Growers',      icon: '🌾' },
+  { href: '/dashboard/buyer/subscription',   label: 'Subscription', icon: '🎫' },
 ]
 
 function BuyerSidebar() {
