@@ -14,12 +14,12 @@ export async function POST(
   const { id: orderId } = await params
 
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
   const adminForAuth = createAdminClient()
   const { data: profile } = await adminForAuth
-    .from('profiles').select('role').eq('id', session.user.id).single()
+    .from('profiles').select('role').eq('id', _authUser.id).single()
 
   if (!isAdminRole(profile?.role)) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })

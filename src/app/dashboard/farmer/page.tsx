@@ -21,8 +21,9 @@ export default async function FarmerOverviewPage() {
 
   const { count: orderCount } = await admin
     .from('orders')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
+    .select('id, order_items!inner(farmer_id)', { count: 'exact', head: true })
+    .eq('order_items.farmer_id', farmer?.id ?? '')
+    .in('status', ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery'])
 
   const { count: productCount } = await admin
     .from('products')
@@ -68,7 +69,7 @@ export default async function FarmerOverviewPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             {[
               { label: 'Active Products',  value: productCount ?? 0,  icon: '📋', href: '/dashboard/farmer/inventory' },
-              { label: 'Pending Orders',   value: orderCount ?? 0,    icon: '📦', href: '/dashboard/farmer/orders' },
+              { label: 'Active Orders',    value: orderCount ?? 0,    icon: '📦', href: '/dashboard/farmer/orders' },
             ].map(s => (
               <Link key={s.label} href={s.href} style={{ textDecoration: 'none' }}>
                 <div className="card reveal" style={{ padding: '1.25rem 1.5rem', cursor: 'pointer' }}>

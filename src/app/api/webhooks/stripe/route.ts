@@ -67,6 +67,26 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', orderId)
 
+      // Create purchase_orders rows (one per farmer) — idempotent via ignoreDuplicates
+      try {
+        const { data: orderItems } = await supabase
+          .from('order_items')
+          .select('farmer_id')
+          .eq('order_id', orderId)
+
+        if (orderItems && orderItems.length > 0) {
+          const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
+          await supabase
+            .from('purchase_orders')
+            .upsert(
+              farmerIds.map(farmerId => ({ order_id: orderId, farmer_id: farmerId, status: 'pending' })),
+              { onConflict: 'order_id,farmer_id', ignoreDuplicates: true }
+            )
+        }
+      } catch (poErr) {
+        console.error('[PO] purchase_orders upsert failed for order', orderId, poErr)
+      }
+
       // Send buyer confirmation + per-grower PO emails (non-blocking — webhook must return quickly)
       sendAllOrderEmails(supabase, orderId).catch(err =>
         console.error('[EMAIL] Order emails failed for order', orderId, err)

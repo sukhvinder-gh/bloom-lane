@@ -4,12 +4,12 @@ import { isAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return { error: 'Unauthorised', status: 401 as const, userId: null }
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return { error: 'Unauthorised', status: 401 as const, userId: null }
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', _authUser.id).single()
   if (!isAdminRole(profile?.role)) return { error: 'Admin access required', status: 403 as const, userId: null }
-  return { error: null, status: 200 as const, userId: session.user.id }
+  return { error: null, status: 200 as const, userId: _authUser.id }
 }
 
 // PATCH /api/admin/orders/[id]/dates

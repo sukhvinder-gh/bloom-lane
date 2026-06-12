@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
@@ -7,14 +7,14 @@ import { isAdminRole } from '@/lib/utils/permissions'
 // Returns purchase orders filtered by status (for admin dashboard alerts)
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', _authUser.id)
     .single()
 
   if (!isAdminRole(profile?.role)) {

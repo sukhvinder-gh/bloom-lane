@@ -4,12 +4,12 @@ import { isAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return { error: 'Unauthorized', status: 401 as const }
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return { error: 'Unauthorized', status: 401 as const }
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', _authUser.id).single()
   if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const }
-  return { userId: session.user.id }
+  return { userId: _authUser.id }
 }
 
 export async function GET(

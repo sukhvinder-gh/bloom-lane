@@ -1,21 +1,21 @@
-import { createAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+﻿import { createAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return { error: 'Unauthorised', status: 401 }
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return { error: 'Unauthorised', status: 401 }
 
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', _authUser.id)
     .single()
 
   if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 }
-  return { userId: session.user.id }
+  return { userId: _authUser.id }
 }
 
 // GET /api/admin/farmers?filter=pending_approval|approved|suspended
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data)
 }
 
-// PATCH /api/admin/farmers — approve, suspend, or reinstate a farmer
+// PATCH /api/admin/farmers â€” approve, suspend, or reinstate a farmer
 // Body: { farmerId: string, status: 'approved' | 'suspended' }
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin()

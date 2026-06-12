@@ -5,6 +5,7 @@ import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
 import { RejectPOForm } from './RejectPOForm'
+import { POStatusActions } from './POStatusActions'
 
 export default async function FarmerPOPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params
@@ -87,14 +88,20 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '860px', margin: '0 auto' }}>
 
       {/* Action bar (hidden when printing) */}
-      <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <Link href="/dashboard/farmer/orders" className="btn btn-ghost btn-sm">← Orders</Link>
         <span style={{ flex: 1 }} />
-        {(!poRecord || poRecord.status === 'pending') && (
+        {(!poRecord || ['pending', 'ready'].includes(poRecord.status)) && (
           <RejectPOForm orderId={orderId} farmerId={farmer.id} />
         )}
         <PrintButton label="Save as PDF" />
       </div>
+
+      {/* PO status + grower workflow actions */}
+      <POStatusActions
+        orderId={orderId}
+        initialStatus={(poRecord?.status ?? 'pending') as any}
+      />
 
       {/* PO rejection status banner */}
       {poRecord?.status === 'rejected' && (

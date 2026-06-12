@@ -5,10 +5,10 @@ import { z } from 'zod'
 
 async function requireAdmin() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return { error: 'Unauthorized', status: 401 as const, admin: null }
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return { error: 'Unauthorized', status: 401 as const, admin: null }
   const adminClient = createAdminClient()
-  const { data: profile } = await adminClient.from('profiles').select('role').eq('id', session.user.id).single()
+  const { data: profile } = await adminClient.from('profiles').select('role').eq('id', _authUser.id).single()
   if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const, admin: null }
   return { error: null, status: 200 as const, admin: adminClient }
 }

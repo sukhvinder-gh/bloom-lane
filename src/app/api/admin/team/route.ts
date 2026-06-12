@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole, isSuperAdminRole } from '@/lib/utils/permissions'
 
 async function requireAdmin() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return { error: 'Unauthorized', status: 401 as const, userId: null, role: null }
+  const { data: { user: _authUser } } = await supabase.auth.getUser()
+  if (!_authUser) return { error: 'Unauthorized', status: 401 as const, userId: null, role: null }
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', session.user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', _authUser.id).single()
   if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const, userId: null, role: null }
-  return { error: null, status: 200 as const, userId: session.user.id, role: profile?.role || '' }
+  return { error: null, status: 200 as const, userId: _authUser.id, role: profile?.role || '' }
 }
 
 export async function GET() {
