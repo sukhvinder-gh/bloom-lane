@@ -64,15 +64,10 @@ ALTER TABLE farmers
   ADD COLUMN IF NOT EXISTS farm_region           TEXT;
 
 -- ── Profiles: coordinator role ───────────────────────────────────────────────
--- Extend the role check to include 'coordinator' and 'buyer_b2c'
-ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
-ALTER TABLE profiles ADD CONSTRAINT profiles_role_check
-  CHECK (role IN (
-    'buyer','buyer_b2b','buyer_b2c',
-    'farmer',
-    'coordinator',
-    'admin','platform_admin','super_admin'
-  ));
+-- role column is an enum type; add missing values rather than a CHECK constraint
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'coordinator';
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'platform_admin';
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_admin';
 
 -- ── Config: subscription pricing defaults ───────────────────────────────────
 INSERT INTO config (key, value) VALUES
