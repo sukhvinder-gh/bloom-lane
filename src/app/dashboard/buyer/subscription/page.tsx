@@ -17,15 +17,18 @@ export default function FloristSubscriptionPage() {
   const [billing, setBilling] = useState('monthly')
 
   useEffect(() => {
-    fetch('/api/buyer/subscription').then(r => r.json()).then(d => {
-      setConfig(d.config || {})
-      if (d.subscription) {
-        setCurrent(d.subscription)
-        setPlan(d.subscription.plan)
-        setBilling(d.subscription.billing_period || 'monthly')
-      }
-      setLoading(false)
-    })
+    fetch('/api/buyer/subscription')
+      .then(r => r.json())
+      .then(d => {
+        setConfig(d.config || {})
+        if (d.subscription) {
+          setCurrent(d.subscription)
+          setPlan(d.subscription.plan)
+          setBilling(d.subscription.billing_period || 'monthly')
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
   const priceMap: Record<string, number> = {

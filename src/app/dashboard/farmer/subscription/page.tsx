@@ -36,16 +36,17 @@ export default function GrowerSubscriptionPage() {
   const [farmRegion, setFarmRegion]   = useState('')
 
   useEffect(() => {
+    const safe = (p: Promise<any>) => p.catch(() => ({}))
     Promise.all([
-      fetch('/api/hubs').then(r => r.json()),
-      fetch('/api/admin/config').then(r => r.json()),
-      fetch('/api/farmer/subscription').then(r => r.json()),
+      safe(fetch('/api/hubs').then(r => r.json())),
+      safe(fetch('/api/admin/config').then(r => r.json())),
+      safe(fetch('/api/farmer/subscription').then(r => r.json())),
     ]).then(([hubsData, cfgData, subData]) => {
-      setHubs(hubsData.data || [])
+      setHubs(hubsData?.data || [])
       const cfgMap: Record<string, number> = {}
-      ;(cfgData.data || []).forEach((r: any) => { cfgMap[r.key] = parseInt(r.value) || 0 })
+      ;(cfgData?.data || []).forEach((r: any) => { cfgMap[r.key] = parseInt(r.value) || 0 })
       setConfig(cfgMap)
-      if (subData.farmer) {
+      if (subData?.farmer) {
         const f = subData.farmer
         setCurrent(subData.subscription)
         setPlan(f.subscription_type || 'hub_membership')
@@ -59,8 +60,7 @@ export default function GrowerSubscriptionPage() {
         setFarmAddress(f.farm_address || '')
         setFarmRegion(f.farm_region || '')
       }
-      setLoading(false)
-    })
+    }).finally(() => setLoading(false))
   }, [])
 
   const priceMap: Record<string, number> = {
