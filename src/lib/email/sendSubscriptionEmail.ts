@@ -66,7 +66,7 @@ export async function sendSubscriptionExpiryWarning(data: {
       <p style="color:#92400E;font-size:13px;margin:0;font-weight:600">⚠ If your subscription lapses, your product listings will be automatically hidden from buyers.</p>
     </div>
     <div style="text-align:center;margin:24px 0">
-      <a href="${SITE}/dashboard/farmer/subscription" style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">Renew Subscription →</a>
+      <a href="${SITE}/dashboard/farmer/membership" style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">Renew Membership →</a>
     </div>
   `)
 
@@ -103,7 +103,7 @@ export async function sendWeeklyAvailabilityDigest(data: {
     <div style="text-align:center;margin:24px 0">
       <a href="${SITE}/marketplace" style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">View Full Marketplace →</a>
     </div>
-    <p style="color:#9ab0a0;font-size:11px;text-align:center;margin:0">You're receiving this as a Green Guild Florist Mailing List subscriber. <a href="${SITE}/dashboard/buyer/subscription" style="color:#4a7a5a">Manage subscription</a></p>
+    <p style="color:#9ab0a0;font-size:11px;text-align:center;margin:0">You're receiving this as a Green Guild Florist Mailing List subscriber. <a href="${SITE}/dashboard/buyer/membership" style="color:#4a7a5a">Manage membership</a></p>
   `)
 
   await resend.emails.send({ from: FROM, to: data.to, subject: `This week's availability — The Green Guild 🌸`, html })
