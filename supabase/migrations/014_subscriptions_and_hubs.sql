@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS hubs (
 );
 
 ALTER TABLE hubs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "hubs_public_read" ON hubs;
+DROP POLICY IF EXISTS "hubs_admin_all"   ON hubs;
 CREATE POLICY "hubs_public_read"  ON hubs FOR SELECT USING (status = 'active');
 CREATE POLICY "hubs_admin_all"    ON hubs FOR ALL    USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','platform_admin','super_admin'))
@@ -40,6 +42,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "subs_own"       ON subscriptions;
+DROP POLICY IF EXISTS "subs_admin_all" ON subscriptions;
 CREATE POLICY "subs_own"       ON subscriptions FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "subs_admin_all" ON subscriptions FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin','platform_admin','super_admin'))
