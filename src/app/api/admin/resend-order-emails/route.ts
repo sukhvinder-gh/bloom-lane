@@ -16,8 +16,9 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (!isAdminRole(profile?.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { order_number } = await request.json()
+  const { order_number, send_to = 'all' } = await request.json()
   if (!order_number) return NextResponse.json({ error: 'order_number required' }, { status: 400 })
+  // send_to: 'all' | 'buyer' | 'growers'
 
   // Fetch order by order_number
   const { data: order, error: orderErr } = await admin
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
   const results: Record<string, string> = {}
 
   // 1. Buyer order confirmation
-  if (buyerProfile?.email) {
+  if (send_to !== 'growers' && buyerProfile?.email) {
     try {
       await sendOrderConfirmationEmail({
         order_number: order.order_number,
@@ -88,11 +89,16 @@ export async function POST(request: NextRequest) {
     } catch (err: any) {
       results[`buyer (${buyerProfile.email})`] = `FAIL: ${err.message}`
     }
+  } else if (send_to === 'growers') {
+    results['buyer'] = 'SKIP: growers-only send'
   } else {
     results['buyer'] = 'SKIP: no email on profile'
   }
 
   // 2. Per-grower PO emails
+  if (send_to === 'buyer') {
+    return NextResponse.json({ allOk: Object.values(results).every(v => v === 'OK' || v.startsWith('SKIP')), order_number, results })
+  }
   const byFarmer = new Map<string, typeof items>()
   for (const item of items) {
     const existing = byFarmer.get(item.farmer_id) || []

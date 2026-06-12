@@ -52,6 +52,7 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
   const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
   const [resolveMsg, setResolveMsg] = useState('')
   const [resendMsg, setResendMsg] = useState('')
+  const [resendPicker, setResendPicker] = useState(false)
   const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean; isPartialResolve?: boolean } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
@@ -67,16 +68,7 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
   async function handleAction(status: string) {
     setOpen(false)
     if (status === '_resend_emails') {
-      setResendMsg('Sending…')
-      const res = await fetch('/api/admin/resend-order-emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_number: order.order_number }),
-      })
-      const data = await res.json()
-      setResendMsg(data.allOk ? '✓ Emails sent' : '⚠ Some failed — check console')
-      if (!data.allOk) console.error('[resend-emails]', data.results)
-      setTimeout(() => setResendMsg(''), 4000)
+      setResendPicker(true)
     } else if (status === '_gen_payouts') {
       const res = await fetch(`/api/admin/orders/${order.id}/generate-payouts`, { method: 'POST' })
       const data = await res.json()
@@ -88,6 +80,20 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
       const action = actions.find(a => a.status === status)
       setConfirm({ status, label: action?.label || status, danger: action?.danger })
     }
+  }
+
+  async function doResend(sendTo: 'all' | 'buyer' | 'growers') {
+    setResendPicker(false)
+    setResendMsg('Sending…')
+    const res = await fetch('/api/admin/resend-order-emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_number: order.order_number, send_to: sendTo }),
+    })
+    const data = await res.json()
+    setResendMsg(data.allOk ? '✓ Emails sent' : '⚠ Some failed — check console')
+    if (!data.allOk) console.error('[resend-emails]', data.results)
+    setTimeout(() => setResendMsg(''), 4000)
   }
 
   async function confirmAction() {
@@ -128,6 +134,40 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
 
   return (
     <>
+      {/* Resend recipient picker */}
+      {resendPicker && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setResendPicker(false)}>
+          <div style={{ background: 'white', borderRadius: '1.25rem', padding: '2rem', maxWidth: '22rem', width: '90%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>Send confirmation emails</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1.5rem' }}>{order.order_number} — who should receive this?</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {([
+                { key: 'all',     label: 'All parties',   desc: 'Buyer + all growers',  icon: '📧' },
+                { key: 'buyer',   label: 'Buyer only',    desc: 'Order confirmation',   icon: '🛍️' },
+                { key: 'growers', label: 'Growers only',  desc: 'Purchase order (PDF)', icon: '🌿' },
+              ] as const).map(opt => (
+                <button key={opt.key} onClick={() => doResend(opt.key)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-body)', transition: 'all 0.12s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--offwhite)'; e.currentTarget.style.borderColor = 'var(--navy)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                  <span style={{ fontSize: '1.25rem' }}>{opt.icon}</span>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)', margin: 0 }}>{opt.label}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--moss)', margin: 0 }}>{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+              <button onClick={() => setResendPicker(false)}
+                style={{ marginTop: '0.25rem', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--moss)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation modal */}
       {confirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
