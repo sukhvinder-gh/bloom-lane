@@ -139,7 +139,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 </html>`
 
   await resend.emails.send({
-    from: 'The Green Guild <orders@thegreenguild.com.au>',
+    from: 'The Green Guild <onboarding@resend.dev>',
     to: farmerEmail,
     subject: `Purchase Order #${po.order_number} – Please fulfil by ${fmtDate(po.grower_fulfillment_date, 'TBC')}`,
     html,

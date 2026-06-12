@@ -153,7 +153,7 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
 </html>`
 
   await resend.emails.send({
-    from: 'The Green Guild <orders@thegreenguild.com.au>',
+    from: 'The Green Guild <onboarding@resend.dev>',
     to: data.buyer_email,
     subject: `Order confirmed – ${data.order_number}`,
     html,
