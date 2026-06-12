@@ -399,8 +399,10 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                   {orders.map(order => (
                     <tr key={order.id} className="table-row">
                       <td style={{ padding: '0.875rem 1.25rem' }}>
-                        <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', color: 'var(--forest)', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{order.order_number}</p>
-                        <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(order.created_at, 'dd MMM, h:mma')}</p>
+                        <Link href={`/dashboard/admin/orders/${order.id}`} style={{ textDecoration: 'none' }}>
+                          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', color: 'var(--forest)', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{order.order_number}</p>
+                          <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(order.created_at, 'dd MMM, h:mma')}</p>
+                        </Link>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <p style={{ fontWeight: 700, color: 'var(--forest)' }}>{order.profiles?.full_name}</p>
