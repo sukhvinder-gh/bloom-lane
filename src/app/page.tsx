@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { isMarketOpen } from '@/lib/utils/timezone'
+import NewsletterSection from './_components/NewsletterSection'
 
 export default function HomePage() {
   const marketOpen = isMarketOpen()
@@ -354,6 +355,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Newsletter ── */}
+      <NewsletterSection />
 
       {/* ── Footer ── */}
       <footer style={{ background: '#091510', color: 'rgba(255,255,255,0.35)', padding: '3rem 2.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>

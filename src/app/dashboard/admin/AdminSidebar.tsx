@@ -18,7 +18,8 @@ const NAV = [
   { href: '/dashboard/admin/orders',   label: 'Orders',    icon: '📋' },
   { href: '/dashboard/admin/hubs',     label: 'Hubs',      icon: '🏛' },
   { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '⚖️' },
-  { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💳' },
+  { href: '/dashboard/admin/payouts',    label: 'Payouts',    icon: '💳' },
+  { href: '/dashboard/admin/campaigns',  label: 'Campaigns',  icon: '📨' },
 ]
 
 export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccount }: Props) {
