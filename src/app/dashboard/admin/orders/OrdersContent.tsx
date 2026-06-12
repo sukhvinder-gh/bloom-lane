@@ -51,6 +51,7 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
   const [open, setOpen] = useState(false)
   const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
   const [resolveMsg, setResolveMsg] = useState('')
+  const [resendMsg, setResendMsg] = useState('')
   const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean; isPartialResolve?: boolean } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
@@ -65,7 +66,18 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
 
   async function handleAction(status: string) {
     setOpen(false)
-    if (status === '_gen_payouts') {
+    if (status === '_resend_emails') {
+      setResendMsg('Sending…')
+      const res = await fetch('/api/admin/resend-order-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_number: order.order_number }),
+      })
+      const data = await res.json()
+      setResendMsg(data.allOk ? '✓ Emails sent' : '⚠ Some failed — check console')
+      if (!data.allOk) console.error('[resend-emails]', data.results)
+      setTimeout(() => setResendMsg(''), 4000)
+    } else if (status === '_gen_payouts') {
       const res = await fetch(`/api/admin/orders/${order.id}/generate-payouts`, { method: 'POST' })
       const data = await res.json()
       setGenPayoutsMsg(data.created?.length ? `✓ ${data.created.length} payout(s) created` : `Already generated (${data.skipped} skipped)`)
@@ -102,9 +114,11 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
     ? [...actions, { status: '_resolve_partial', label: 'Proceed (partial fill)', icon: '⚠️' }]
     : actions
 
-  if (allActions.length === 0 && !genPayoutsMsg && !resolveMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  const canResend = !['pending_payment', 'cancelled'].includes(order.status)
+  if (allActions.length === 0 && !canResend && !genPayoutsMsg && !resolveMsg && !resendMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
   if (genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{genPayoutsMsg}</span>
   if (resolveMsg) return <span style={{ fontSize: '0.75rem', color: '#065F46', fontWeight: 700 }}>{resolveMsg}</span>
+  if (resendMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{resendMsg}</span>
 
   const menuItemBase: React.CSSProperties = {
     width: '100%', display: 'flex', alignItems: 'center', gap: '0.625rem',
@@ -176,6 +190,17 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
                 {action.label}
               </button>
             ))}
+            {canResend && (
+              <button
+                onClick={() => handleAction('_resend_emails')}
+                style={{ ...menuItemBase, color: '#1d4ed8', borderTop: '1px solid var(--border-light)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
+                <span style={{ width: '1.25rem', textAlign: 'center' }}>📧</span>
+                Send confirmation again
+              </button>
+            )}
           </div>
         )}
       </div>
