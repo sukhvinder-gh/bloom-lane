@@ -39,6 +39,7 @@ export default function FarmerInventoryPage() {
             {listingOpen && <span className="status-dot status-live" />}
             {listingOpen ? 'Window open' : 'Window closed'}
           </span>
+          <Link href="/dashboard/farmer/inventory/bulk-import" className="btn btn-ghost btn-sm">↑ Bulk import</Link>
           <Link href="/dashboard/farmer/inventory/new" className="btn btn-forest btn-sm">+ New product</Link>
         </div>
       </div>

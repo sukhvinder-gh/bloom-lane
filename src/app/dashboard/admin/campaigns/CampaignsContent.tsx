@@ -1,176 +1,163 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 type Campaign = {
   id: string
   subject: string
-  sent_at: string
-  recipient_count: number
+  body: string
+  status: 'draft' | 'sent'
+  sent_at: string | null
+  recipient_count: number | null
+  created_at: string
 }
 
 export default function CampaignsContent() {
   const [activeCount, setActiveCount] = useState<number | null>(null)
+  const [sentCount, setSentCount] = useState<number | null>(null)
+  const [draftCount, setDraftCount] = useState<number | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [sending, setSending] = useState(false)
-  const [result, setResult] = useState('')
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   async function load() {
     try {
       const res = await fetch('/api/admin/campaigns')
       const data = await res.json()
       setActiveCount(data.activeCount ?? 0)
+      setSentCount(data.sentCount ?? 0)
+      setDraftCount(data.draftCount ?? 0)
       setCampaigns(data.campaigns ?? [])
-    } catch {
-      // silent
-    } finally {
+    } catch { /* silent */ } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => { load() }, [])
 
-  async function handleSend() {
-    if (!subject.trim() || !body.trim()) {
-      setResult('Subject and body are required.')
-      return
-    }
-    if (!confirm(`Send "${subject}" to ${activeCount} subscribers?`)) return
-    setSending(true)
-    setResult('')
-    try {
-      const res = await fetch('/api/admin/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: subject.trim(), body: body.trim() }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setResult(`✓ Sent to ${data.sent} subscriber${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}`)
-        setSubject('')
-        setBody('')
-        load()
-      } else {
-        setResult(`⚠ ${data.error || 'Send failed'}`)
-      }
-    } catch {
-      setResult('⚠ Network error. Please try again.')
-    } finally {
-      setSending(false)
-    }
+  async function deleteCampaign(id: string, subject: string) {
+    if (!confirm(`Delete "${subject}"?`)) return
+    setDeleting(id)
+    await fetch(`/api/admin/campaigns/${id}`, { method: 'DELETE' })
+    setCampaigns(cs => cs.filter(c => c.id !== id))
+    setDraftCount(n => (n ?? 1) - 1)
+    setDeleting(null)
   }
 
   function fmtDate(iso: string) {
-    return new Date(iso).toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Sydney' })
+    return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' })
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.25rem' }}>Campaigns</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Send email campaigns to newsletter subscribers</p>
-      </div>
-
-      {/* Subscriber count */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '10px', background: 'var(--bloom-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>📬</div>
+    <div style={{ padding: '2rem 2.5rem', maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--navy)', lineHeight: 1 }}>
-            {loading ? '—' : activeCount?.toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginTop: '0.15rem' }}>Active subscribers</div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.25rem' }}>Campaigns</h1>
+          <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>
+            Send newsletters and offers to your {loading ? '…' : activeCount} active subscribers
+          </p>
         </div>
+        <Link
+          href="/dashboard/admin/campaigns/new"
+          style={{ background: 'var(--navy)', color: 'white', textDecoration: 'none', padding: '0.625rem 1.25rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          + New Campaign
+        </Link>
       </div>
 
-      {/* Compose */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '1.25rem' }}>Compose campaign</h2>
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Subject line
-          </label>
-          <input
-            type="text"
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            placeholder="This week's availability at The Green Guild 🌸"
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '0.75rem 1rem', borderRadius: '8px',
-              border: '1px solid var(--border-light)', fontSize: '0.9rem',
-              color: 'var(--text-1)', background: 'var(--bg)',
-              outline: 'none',
-            }}
-          />
-        </div>
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.375rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Body (one paragraph per line)
-          </label>
-          <textarea
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            rows={8}
-            placeholder="Hi there,&#10;&#10;This week the market is packed with gorgeous spring blooms..."
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '0.75rem 1rem', borderRadius: '8px',
-              border: '1px solid var(--border-light)', fontSize: '0.9rem',
-              color: 'var(--text-1)', background: 'var(--bg)',
-              outline: 'none', resize: 'vertical', lineHeight: 1.7,
-              fontFamily: 'inherit',
-            }}
-          />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          {result && (
-            <span style={{ fontSize: '0.875rem', color: result.startsWith('✓') ? 'var(--green)' : 'var(--terracotta)', fontWeight: 600 }}>
-              {result}
-            </span>
-          )}
-          <button
-            onClick={handleSend}
-            disabled={sending || !subject.trim() || !body.trim()}
-            style={{
-              marginLeft: 'auto',
-              background: sending || !subject.trim() || !body.trim() ? 'var(--border-light)' : 'var(--navy)',
-              color: sending || !subject.trim() || !body.trim() ? 'var(--text-3)' : 'white',
-              border: 'none', borderRadius: '8px',
-              padding: '0.75rem 1.5rem', fontWeight: 700,
-              fontSize: '0.875rem', cursor: sending ? 'wait' : 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {sending ? 'Sending…' : `Send to ${activeCount ?? '…'} subscribers`}
-          </button>
-        </div>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+        {[
+          { label: 'Active Subscribers', value: activeCount },
+          { label: 'Sent', value: sentCount },
+          { label: 'Drafts', value: draftCount },
+        ].map(s => (
+          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '1.25rem 1.5rem', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 700, color: s.label === 'Drafts' ? 'var(--amber-new)' : s.label === 'Sent' ? 'var(--green)' : 'var(--navy)', lineHeight: 1 }}>
+              {loading ? '—' : (s.value ?? 0)}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginTop: '0.375rem' }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Campaign history */}
-      <div>
-        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '1rem' }}>Campaign history</h2>
-        {loading ? (
-          <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Loading…</p>
-        ) : campaigns.length === 0 ? (
-          <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>No campaigns sent yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {campaigns.map(c => (
-              <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.subject}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>{fmtDate(c.sent_at)}</div>
-                </div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-2)', flexShrink: 0 }}>
-                  {c.recipient_count} sent
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Campaign table */}
+      {loading ? (
+        <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>Loading…</p>
+      ) : campaigns.length === 0 ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '4rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📨</div>
+          <p style={{ color: 'var(--text-2)', fontWeight: 600, marginBottom: '0.5rem' }}>No campaigns yet</p>
+          <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>Create your first newsletter campaign to get started.</p>
+          <Link href="/dashboard/admin/campaigns/new" style={{ background: 'var(--navy)', color: 'white', textDecoration: 'none', padding: '0.625rem 1.25rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem' }}>
+            + New Campaign
+          </Link>
+        </div>
+      ) : (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
+                {['SUBJECT', 'STATUS', 'RECIPIENTS', 'DATE', ''].map(h => (
+                  <th key={h} style={{ padding: '0.875rem 1.25rem', textAlign: h === 'RECIPIENTS' || h === 'DATE' ? 'center' : 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map(c => (
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <td style={{ padding: '1rem 1.25rem', maxWidth: '320px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.subject || <em style={{ color: 'var(--text-3)' }}>No subject</em>}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '0.2rem 0.625rem',
+                      borderRadius: '99px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      background: c.status === 'sent' ? 'var(--green-soft)' : 'var(--amber-soft)',
+                      color: c.status === 'sent' ? 'var(--green)' : 'var(--amber-new)',
+                    }}>
+                      {c.status === 'sent' ? 'Sent' : 'Draft'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', textAlign: 'center', color: c.recipient_count != null ? 'var(--text-1)' : 'var(--text-3)', fontWeight: c.recipient_count != null ? 600 : 400 }}>
+                    {c.recipient_count != null ? c.recipient_count : '—'}
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', textAlign: 'center', color: 'var(--text-3)' }}>
+                    {fmtDate(c.sent_at ?? c.created_at)}
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                    {c.status === 'draft' && (
+                      <>
+                        <Link href={`/dashboard/admin/campaigns/${c.id}/edit`} style={{ color: 'var(--navy)', textDecoration: 'none', fontWeight: 600, fontSize: '0.8rem', marginRight: '1rem' }}>
+                          Edit
+                        </Link>
+                        <Link href={`/dashboard/admin/campaigns/${c.id}/send`} style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 700, fontSize: '0.8rem', marginRight: '1rem' }}>
+                          Send Now →
+                        </Link>
+                        <button
+                          onClick={() => deleteCampaign(c.id, c.subject)}
+                          disabled={deleting === c.id}
+                          style={{ color: 'var(--terracotta)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', padding: 0 }}
+                        >
+                          {deleting === c.id ? '…' : 'Delete'}
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
