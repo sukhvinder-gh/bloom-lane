@@ -88,7 +88,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) return (
+  if (items.length === 0 && !loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
       <div className="card-forest reveal" style={{ padding: '4rem', textAlign: 'center', maxWidth: '26rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🛒</div>
