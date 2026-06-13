@@ -311,7 +311,7 @@ export default function MarketplacePage() {
           {authLoaded && !userRole && (
             <Link href="/auth/login" className="btn btn-ghost btn-sm">Sign in</Link>
           )}
-          <Link href="/checkout" className="btn btn-forest btn-sm" style={{ position: 'relative' }}>
+          <Link href="/cart" className="btn btn-forest btn-sm" style={{ position: 'relative' }}>
             Cart
             {totalItems() > 0 && <span style={{ position: 'absolute', top: '-0.5rem', right: '-0.5rem', width: '1.25rem', height: '1.25rem', borderRadius: '50%', background: 'var(--sage)', color: 'var(--forest)', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{totalItems()}</span>}
           </Link>
