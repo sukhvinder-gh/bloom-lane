@@ -89,6 +89,7 @@ export interface Product {
   is_active: boolean
   is_listed_this_week: boolean
   image_url?: string
+  image_urls?: string[]
   created_at: string
   updated_at: string
 }
