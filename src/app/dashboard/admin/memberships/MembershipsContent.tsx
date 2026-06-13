@@ -66,26 +66,39 @@ function exportCSV(rows: MemberRow[], type: 'grower' | 'florist') {
 
 function ActionsMenu({ row, onAction }: { row: MemberRow; onAction: (action: string) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + window.scrollY + 4, right: window.innerWidth - r.right })
+    }
+    setOpen(o => !o)
+  }
 
   useEffect(() => {
     if (!open) return
-    function handle(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    function handle(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) && btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false)
+    }
     document.addEventListener('mousedown', handle)
     return () => document.removeEventListener('mousedown', handle)
   }, [open])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={toggle}
         style={{ background: 'none', border: '1px solid var(--border-light)', borderRadius: '6px', cursor: 'pointer', padding: '0.3rem 0.6rem', fontSize: '1rem', color: 'var(--text-2)', lineHeight: 1 }}
         title="Actions"
       >
         ⋯
       </button>
       {open && (
-        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)', zIndex: 50, minWidth: '180px', overflow: 'hidden' }}>
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, right: pos.right, background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', zIndex: 1000, minWidth: '190px', overflow: 'hidden' }}>
           <button onClick={() => { onAction('extend'); setOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-1)', borderBottom: '1px solid var(--border-light)' }}>
             ⏱ Extend 30 days
           </button>
@@ -99,7 +112,7 @@ function ActionsMenu({ row, onAction }: { row: MemberRow; onAction: (action: str
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 

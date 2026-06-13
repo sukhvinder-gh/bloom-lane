@@ -72,7 +72,7 @@ export default function GrowerSubscriptionPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Growing Group' }); return }
+    if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Growing Group' }); return }
     if (gstRegistered && !rctiAgreed) { setMsg({ type: 'err', text: 'Please agree to the RCTI terms to continue' }); return }
     if (gstRegistered && !rctiFullName.trim()) { setMsg({ type: 'err', text: 'Please enter your full name to sign the RCTI agreement' }); return }
 
@@ -251,16 +251,24 @@ export default function GrowerSubscriptionPage() {
           </div>
         </div>
 
-        {/* Hub selection */}
+        {/* Hub selection — only required for Hub Membership */}
         <div className="card" style={{ padding: '1.5rem' }}>
-          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Hub / Growing Group *</p>
+          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
+            Hub / Growing Group {plan === 'hub_membership' ? '*' : <span style={{ fontWeight: 400, color: 'var(--moss)' }}>(optional)</span>}
+          </p>
           <p style={{ fontSize: '0.775rem', color: 'var(--moss)', marginBottom: '0.875rem' }}>Select the hub or collective you belong to</p>
           {hubs.length === 0 ? (
             <div style={{ padding: '1rem', background: '#FEF3C7', borderRadius: '0.75rem', fontSize: '0.8rem', color: '#92400E' }}>
               No hubs registered yet. Please contact your group coordinator or The Green Guild admin.
             </div>
           ) : (
-            <select className="input" value={hubId} onChange={e => setHubId(e.target.value)} required style={{ width: '100%' }}>
+            <select
+              className="input"
+              value={hubId}
+              onChange={e => setHubId(e.target.value)}
+              required={plan === 'hub_membership'}
+              style={{ width: '100%' }}
+            >
               <option value="">— Select your hub —</option>
               {hubs.map((h: any) => (
                 <option key={h.id} value={h.id}>{h.name}{h.region ? ` (${h.region})` : ''}</option>
@@ -325,7 +333,7 @@ export default function GrowerSubscriptionPage() {
 
         <button
           type="submit"
-          disabled={saving || (hubs.length === 0)}
+          disabled={saving}
           className="btn btn-forest"
           style={{ padding: '0.875rem', fontSize: '1rem', borderRadius: '0.875rem' }}
         >
