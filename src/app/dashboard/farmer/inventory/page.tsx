@@ -205,8 +205,8 @@ export default function FarmerInventoryPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-                {['Product', 'Category', 'Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Listed', ''].map(h => (
-                  <th key={h} className="type-label-sm" style={{ textAlign: ['Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left'].includes(h) ? 'right' : h === 'Listed' ? 'center' : 'left', padding: '1rem 1.25rem', color: 'var(--moss)', letterSpacing: '0.15em' }}>{h}</th>
+                {['Product', 'Category', 'Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Sold', 'Listed', ''].map(h => (
+                  <th key={h} className="type-label-sm" style={{ textAlign: ['Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Sold'].includes(h) ? 'right' : h === 'Listed' ? 'center' : 'left', padding: '1rem 1.25rem', color: 'var(--moss)', letterSpacing: '0.15em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -246,6 +246,14 @@ export default function FarmerInventoryPage() {
                     <span style={{ fontWeight: 700, color: 'var(--forest)' }}>{p.b2b_available}</span>
                     <span style={{ color: 'var(--moss)' }}> / </span>
                     <span style={{ fontWeight: 700, color: 'var(--moss)' }}>{p.b2c_available}</span>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
+                    {(() => {
+                      const sold = Math.max(0, (p.stock_total || 0) - (p.b2b_available || 0) - (p.b2c_available || 0))
+                      return sold > 0
+                        ? <span style={{ fontWeight: 700, color: '#065F46', background: '#D1FAE5', padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.8rem' }}>{sold} sold</span>
+                        : <span style={{ color: 'var(--moss)', opacity: 0.45, fontSize: '0.8rem' }}>—</span>
+                    })()}
                   </td>
                   <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
                     <button
