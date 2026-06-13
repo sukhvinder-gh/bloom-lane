@@ -105,3 +105,32 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, subscription: sub, requiresPayment: true, amount_cents: amount })
 }
+
+// DELETE — cancel the florist's active subscription
+export async function DELETE() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+
+  const { data: sub } = await admin
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('subscriber_type', 'florist')
+    .in('status', ['active', 'pending'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!sub) return NextResponse.json({ error: 'No active subscription found' }, { status: 404 })
+
+  const { error } = await admin
+    .from('subscriptions')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', sub.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

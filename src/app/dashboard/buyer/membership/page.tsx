@@ -11,10 +11,12 @@ export default function FloristSubscriptionPage() {
   const [config, setConfig]   = useState<Record<string, number>>({})
   const [current, setCurrent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [msg, setMsg]         = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
-  const [plan, setPlan]       = useState<'mailing_list' | 'personal_shopper'>('mailing_list')
-  const [billing, setBilling] = useState('monthly')
+  const [saving, setSaving]       = useState(false)
+  const [msg, setMsg]             = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [plan, setPlan]           = useState<'mailing_list' | 'personal_shopper'>('mailing_list')
+  const [billing, setBilling]     = useState('monthly')
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [cancelling, setCancelling]       = useState(false)
 
   useEffect(() => {
     fetch('/api/buyer/subscription')
@@ -58,6 +60,20 @@ export default function FloristSubscriptionPage() {
     setSaving(false)
   }
 
+  async function executeCancel() {
+    setCancelConfirm(false)
+    setCancelling(true); setMsg(null)
+    const res  = await fetch('/api/buyer/subscription', { method: 'DELETE' })
+    const data = await res.json()
+    if (!res.ok) {
+      setMsg({ type: 'err', text: data.error || 'Failed to cancel membership' })
+    } else {
+      setCurrent(null)
+      setMsg({ type: 'ok', text: 'Your membership has been cancelled.' })
+    }
+    setCancelling(false)
+  }
+
   if (loading) return <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--moss)', opacity: 0.5 }}>Loading…</div>
 
   const isActive = current?.status === 'active'
@@ -74,9 +90,16 @@ export default function FloristSubscriptionPage() {
       {isActive && (
         <div style={{ padding: '1rem 1.25rem', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: '0.875rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.25rem' }}>✅</span>
-          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#065F46' }}>
+          <p style={{ flex: 1, fontWeight: 700, fontSize: '0.875rem', color: '#065F46' }}>
             Active — {current.plan === 'mailing_list' ? 'Florist Mailing List' : `Personal Shopper (${current.billing_period})`}
           </p>
+          <button
+            onClick={() => setCancelConfirm(true)}
+            disabled={cancelling}
+            style={{ padding: '0.35rem 0.875rem', background: 'none', border: '1.5px solid #B91C1C', borderRadius: '99px', color: '#B91C1C', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0, fontFamily: 'var(--font-body)' }}
+          >
+            {cancelling ? 'Cancelling…' : 'Cancel Membership'}
+          </button>
         </div>
       )}
 
@@ -184,6 +207,32 @@ export default function FloristSubscriptionPage() {
           {saving ? 'Saving…' : plan === 'mailing_list' ? 'Join Mailing List — Free' : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
+
+      {cancelConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={() => setCancelConfirm(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
+          <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '26rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+            <div style={{ padding: '1.75rem 1.5rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⛔</div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#B91C1C', fontWeight: 700, marginBottom: '0.5rem' }}>Cancel Membership?</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                You're about to cancel your <strong>{current?.plan === 'mailing_list' ? 'Florist Mailing List' : 'Personal Shopper'}</strong> membership.
+                You'll stop receiving weekly availability emails and lose access to delivery services.
+              </p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--moss)' }}>You can rejoin at any time from this page.</p>
+            </div>
+            <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button onClick={() => setCancelConfirm(false)} className="btn btn-ghost btn-sm" style={{ minWidth: '7rem' }}>Go Back</button>
+              <button
+                onClick={executeCancel}
+                style={{ minWidth: '9rem', padding: '0.55rem 1.5rem', background: '#B91C1C', color: 'white', border: 'none', borderRadius: '99px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
+              >
+                Yes, Cancel It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
