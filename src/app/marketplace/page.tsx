@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCart } from '@/hooks/useCart'
@@ -14,21 +14,241 @@ const CATEGORIES = [
   { id: 'honey', label: '🍯 Honey' },
 ]
 
-const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
+const CATEGORY_LABEL: Record<string, string> = {
+  flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', foliage: 'Foliage',
+  vegetables: 'Vegetables', herbs: 'Herbs', fruit: 'Fruit', eggs: 'Eggs', honey: 'Honey', other: 'Other',
+}
 
+const EMOJI: Record<string, string> = {
+  flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
+  herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
+}
+
+function productImages(p: any): string[] {
+  const all: string[] = []
+  if (p.image_url) all.push(p.image_url)
+  if (Array.isArray(p.image_urls)) {
+    for (const u of p.image_urls) {
+      if (u && !all.includes(u)) all.push(u)
+    }
+  }
+  return all
+}
+
+// ── Product detail drawer ────────────────────────────────────────────────────
+function ProductDrawer({
+  product, isB2B, isAdminOrFarmer, authLoaded, marketOpen, cartQty,
+  onAdd, onUpdateQty, onClose,
+}: {
+  product: any; isB2B: boolean; isAdminOrFarmer: boolean; authLoaded: boolean;
+  marketOpen: boolean; cartQty: number;
+  onAdd: () => void; onUpdateQty: (qty: number) => void; onClose: () => void;
+}) {
+  const images = productImages(product)
+  const [imgIdx, setImgIdx] = useState(0)
+  const available = isB2B ? product.b2b_available : product.b2c_available
+  const displayPrice = isB2B
+    ? (product.b2b_display_price || product.wholesale_price)
+    : (product.b2c_display_price || product.buyer_unit_price || product.wholesale_price)
+  const priceLabel = isB2B
+    ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
+    : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
+
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  // Prevent body scroll while open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)', animation: 'fadeIn 0.2s ease' }}
+      />
+      {/* Drawer */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 301,
+        width: '100%', maxWidth: '32rem',
+        background: 'white', overflowY: 'auto',
+        boxShadow: '-8px 0 40px rgba(0,0,0,0.18)',
+        animation: 'slideInRight 0.25s cubic-bezier(.16,1,.3,1)',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10, width: '2.25rem', height: '2.25rem', borderRadius: '50%', border: '1px solid var(--olive)', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'var(--moss)', fontFamily: 'var(--font-body)' }}
+          aria-label="Close"
+        >✕</button>
+
+        {/* Main image */}
+        <div style={{ flexShrink: 0, height: '20rem', background: 'var(--olive)', overflow: 'hidden', position: 'relative' }}>
+          {images.length > 0 ? (
+            <img
+              key={images[imgIdx]}
+              src={images[imgIdx]}
+              alt={product.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>
+              {EMOJI[product.category] || '🌿'}
+            </div>
+          )}
+          {product.is_gst_free && (
+            <span className="badge badge-sage" style={{ position: 'absolute', top: '0.875rem', left: '0.875rem', fontSize: '0.75rem' }}>GST Free</span>
+          )}
+        </div>
+
+        {/* Image thumbnails strip */}
+        {images.length > 1 && (
+          <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem 1.5rem', overflowX: 'auto', background: 'var(--offwhite, #fafaf7)', borderBottom: '1px solid var(--olive)', scrollbarWidth: 'none' }}>
+            {images.map((url, i) => (
+              <button
+                key={i}
+                onClick={() => setImgIdx(i)}
+                style={{
+                  flexShrink: 0, width: '3.5rem', height: '3.5rem', borderRadius: '0.5rem', overflow: 'hidden',
+                  border: imgIdx === i ? '2px solid var(--forest)' : '2px solid transparent',
+                  padding: 0, cursor: 'pointer', background: 'none',
+                  transition: 'border-color 0.15s',
+                }}
+              >
+                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Product info */}
+        <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Name + category */}
+          <div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.375rem' }}>
+              {EMOJI[product.category]} {CATEGORY_LABEL[product.category] || product.category}
+            </p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', lineHeight: 1.1, marginBottom: '0.25rem' }}>
+              {product.name}
+            </h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--moss)' }}>per {product.unit}</p>
+          </div>
+
+          {/* Price */}
+          <div style={{ background: 'var(--olive)', borderRadius: '1rem', padding: '1rem 1.25rem' }}>
+            {!authLoaded ? (
+              <div style={{ width: '6rem', height: '2rem', borderRadius: '0.5rem', background: 'rgba(0,0,0,0.08)' }} />
+            ) : isAdminOrFarmer ? (
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>
+                  {formatPrice(product.b2b_display_price || product.wholesale_price)}
+                  <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginLeft: '0.4rem', opacity: 0.6 }}>wholesale</span>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
+                  {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
+                  {' · '}Retail: {formatPrice(product.b2c_display_price || product.buyer_unit_price || Math.round((product.wholesale_price || 0) * 1.1))}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>
+                  {formatPrice(displayPrice)}
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
+                  {priceLabel}
+                  {isB2B && !product.is_gst_free && (
+                    <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
+                      · {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          {product.description && (
+            <p style={{ fontSize: '0.875rem', color: 'var(--forest)', lineHeight: 1.7 }}>{product.description}</p>
+          )}
+
+          {/* Grower */}
+          {product.farmers?.business_name && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <div style={{ width: '2rem', height: '2rem', borderRadius: '50%', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>🌾</div>
+              <div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--moss)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Grown by</p>
+                <Link href={`/growers/${product.farmer_id}`} style={{ fontSize: '0.875rem', color: 'var(--forest)', fontWeight: 700, textDecoration: 'none' }}>
+                  {product.farmers.business_name}
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Stock */}
+          <p style={{ fontSize: '0.78rem', color: available <= 5 ? '#B91C1C' : 'var(--moss)' }}>
+            {available <= 0 ? '✕ Out of stock' : available <= 5 ? `⚠ Only ${available} left` : `${available} available`}
+          </p>
+
+          {/* Add to cart */}
+          <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
+            {!marketOpen ? (
+              <div style={{ padding: '0.875rem', background: 'var(--olive)', borderRadius: '1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--moss)', fontWeight: 600 }}>🕐 Market closed — opens Wednesday</p>
+              </div>
+            ) : available === 0 ? (
+              <div style={{ padding: '0.875rem', background: 'var(--olive)', borderRadius: '1rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.82rem', color: 'var(--moss)', fontWeight: 600 }}>Sold out this week</p>
+              </div>
+            ) : cartQty === 0 ? (
+              <button
+                onClick={onAdd}
+                className="btn btn-forest"
+                style={{ width: '100%', padding: '0.875rem', fontSize: '0.95rem', borderRadius: '1rem' }}
+              >
+                Add to cart
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'var(--forest)', borderRadius: '1rem', padding: '0.625rem 1rem' }}>
+                <button
+                  onClick={() => onUpdateQty(cartQty - 1)}
+                  style={{ width: '2.25rem', height: '2.25rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.18)', color: 'white', cursor: 'pointer', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontFamily: 'var(--font-body)' }}
+                >−</button>
+                <span style={{ flex: 1, textAlign: 'center', color: 'white', fontWeight: 700, fontSize: '1.1rem' }}>{cartQty} in cart</span>
+                <button
+                  onClick={onAdd}
+                  disabled={cartQty >= available}
+                  style={{ width: '2.25rem', height: '2.25rem', borderRadius: '50%', border: 'none', background: cartQty >= available ? 'rgba(255,247,249,0.08)' : 'rgba(255,247,249,0.18)', color: 'white', cursor: cartQty >= available ? 'not-allowed' : 'pointer', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontFamily: 'var(--font-body)' }}
+                >+</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
 export default function MarketplacePage() {
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [category, setCategory] = useState('')
-  const [isB2B, setIsB2B] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [products, setProducts]   = useState<any[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [category, setCategory]   = useState('')
+  const [isB2B, setIsB2B]         = useState(false)
+  const [userRole, setUserRole]   = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
-  const [marketOpen] = useState(isMarketOpen())
-  const [search, setSearch] = useState('')
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [marketOpen]              = useState(isMarketOpen())
+  const [search, setSearch]       = useState('')
+  const [selected, setSelected]   = useState<any>(null)
   const { addItem, updateQuantity, items, totalItems } = useCart()
 
-  // Detect user role to control price visibility
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -44,7 +264,6 @@ export default function MarketplacePage() {
     })
   }, [])
 
-  const isBuyer = userRole === 'buyer_b2b' || userRole === 'buyer_b2c'
   const isAdminOrFarmer = userRole === 'farmer' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'platform_admin'
 
   useEffect(() => {
@@ -55,20 +274,24 @@ export default function MarketplacePage() {
 
   function handleAdd(product: any) {
     addItem(product, 1, isB2B)
-    setAddedIds(s => new Set([...s, product.id]))
-    setTimeout(() => setAddedIds(s => { const n = new Set(s); n.delete(product.id); return n }), 1200)
   }
 
   function getCartQty(productId: string) {
     return items.find(i => i.product_id === productId)?.quantity || 0
   }
 
-  const filtered = products.filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.farmers?.business_name?.toLowerCase().includes(search.toLowerCase()))
+  const filtered = products.filter(p =>
+    !search ||
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.farmers?.business_name?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const closeDrawer = useCallback(() => setSelected(null), [])
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
 
-      {/* ── Top nav ── */}
+      {/* Top nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none', flexShrink: 0 }}>
           <span style={{ fontSize: '1.1rem' }}>🌸</span>
@@ -82,12 +305,7 @@ export default function MarketplacePage() {
           {authLoaded && userRole && (
             <>
               <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => fetch('/api/auth/signout', { method: 'POST' }).then(() => { window.location.href = '/auth/login' })}
-              >
-                Sign out
-              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => fetch('/api/auth/signout', { method: 'POST' }).then(() => { window.location.href = '/auth/login' })}>Sign out</button>
             </>
           )}
           {authLoaded && !userRole && (
@@ -100,9 +318,8 @@ export default function MarketplacePage() {
         </div>
       </nav>
 
-      {/* ── Mobile controls (hidden on desktop) ── */}
+      {/* Mobile controls */}
       <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
-        {/* B2B/B2C toggle — admin/farmer only */}
         {isAdminOrFarmer && (
           <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
             <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>View as</span>
@@ -117,7 +334,6 @@ export default function MarketplacePage() {
             </div>
           </div>
         )}
-        {/* Category pills */}
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.75rem 1rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
             <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
@@ -146,10 +362,8 @@ export default function MarketplacePage() {
 
       <div className="market-layout" style={{ display: 'flex' }}>
 
-        {/* Sidebar — hidden on mobile */}
+        {/* Sidebar */}
         <aside className="market-sidebar" style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
-
-          {/* B2B/B2C toggle — admin/farmer only */}
           {isAdminOrFarmer && (
             <div style={{ marginBottom: '1.75rem' }}>
               <p className="label" style={{ marginBottom: '0.75rem' }}>View as</p>
@@ -164,7 +378,6 @@ export default function MarketplacePage() {
               </div>
             </div>
           )}
-          {/* Category */}
           <p className="label">Category</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             {CATEGORIES.map(cat => (
@@ -200,19 +413,37 @@ export default function MarketplacePage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(14rem, 1fr))', gap: '1.25rem' }}>
               {filtered.map((product, i) => {
-                const available = isB2B ? product.b2b_available : product.b2c_available
+                const available   = isB2B ? product.b2b_available : product.b2c_available
                 const displayPrice = isB2B
                   ? (product.b2b_display_price || product.wholesale_price)
                   : (product.b2c_display_price || product.buyer_unit_price || product.wholesale_price)
-                const priceLabel = isB2B
+                const priceLabel  = isB2B
                   ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
                   : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
+                const imgs        = productImages(product)
+                const cartQty     = getCartQty(product.id)
+
                 return (
-                  <div key={product.id} className="card card-hover reveal" style={{ display: 'flex', flexDirection: 'column', animationDelay: `${i * 40}ms` }}>
+                  <div
+                    key={product.id}
+                    className="card card-hover reveal"
+                    style={{ display: 'flex', flexDirection: 'column', animationDelay: `${i * 40}ms`, cursor: 'pointer' }}
+                    onClick={() => setSelected(product)}
+                  >
+                    {/* Image / thumbnail */}
                     <div style={{ height: '9rem', background: 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', position: 'relative', flexShrink: 0, overflow: 'hidden', borderRadius: 'var(--r-card) var(--r-card) 0 0' }}>
-                      {product.image_url ? <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : EMOJI[product.category] || '🌿'}
+                      {imgs.length > 0
+                        ? <img src={imgs[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : EMOJI[product.category] || '🌿'
+                      }
                       {product.is_gst_free && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
+                      {imgs.length > 1 && (
+                        <span style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.55)', color: 'white', borderRadius: '99px', fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.45rem' }}>
+                          +{imgs.length - 1} photo{imgs.length > 2 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
+
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>per {product.unit} · {available} left</p>
@@ -221,7 +452,6 @@ export default function MarketplacePage() {
                           {!authLoaded ? (
                             <div style={{ width: '4rem', height: '1.4rem', borderRadius: '0.4rem', background: 'var(--offwhite)' }} />
                           ) : isAdminOrFarmer ? (
-                            // Admin/Farmer: show both wholesale and retail
                             <>
                               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
                                 {formatPrice(product.b2b_display_price || product.wholesale_price)}
@@ -233,7 +463,6 @@ export default function MarketplacePage() {
                               </div>
                             </>
                           ) : (
-                            // B2B buyer, B2C buyer, or not logged in (retail)
                             <>
                               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
@@ -245,30 +474,28 @@ export default function MarketplacePage() {
                             </>
                           )}
                         </div>
-                        {!marketOpen ? (
-                          <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Closed</span>
-                        ) : available === 0 ? (
-                          <span className="type-label-sm" style={{ color: '#b91c1c' }}>Sold out</span>
-                        ) : getCartQty(product.id) === 0 ? (
-                          <button onClick={() => handleAdd(product)} className="btn btn-forest btn-sm">Add</button>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--forest)', borderRadius: '99px', padding: '0.2rem 0.25rem' }}>
-                            <button onClick={() => updateQuantity(product.id, getCartQty(product.id) - 1)}
-                              style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={getCartQty(product.id)}
-                              onChange={e => {
-                                const v = parseInt(e.target.value)
-                                if (!isNaN(v) && v >= 0) updateQuantity(product.id, Math.min(v, available))
-                              }}
-                              style={{ width: '2.25rem', background: 'transparent', border: 'none', color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', textAlign: 'center', outline: 'none' }}
-                            />
-                            <button onClick={() => handleAdd(product)} disabled={getCartQty(product.id) >= available}
-                              style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: getCartQty(product.id) >= available ? 'rgba(255,247,249,0.1)' : 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: getCartQty(product.id) >= available ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                          </div>
-                        )}
+                        {/* Intercept click so Add/qty buttons don't open drawer */}
+                        <div onClick={e => e.stopPropagation()}>
+                          {!marketOpen ? (
+                            <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Closed</span>
+                          ) : available === 0 ? (
+                            <span className="type-label-sm" style={{ color: '#b91c1c' }}>Sold out</span>
+                          ) : cartQty === 0 ? (
+                            <button onClick={() => handleAdd(product)} className="btn btn-forest btn-sm">Add</button>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--forest)', borderRadius: '99px', padding: '0.2rem 0.25rem' }}>
+                              <button onClick={() => updateQuantity(product.id, cartQty - 1)}
+                                style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                              <input
+                                type="text" inputMode="numeric" value={cartQty}
+                                onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) updateQuantity(product.id, Math.min(v, available)) }}
+                                style={{ width: '2.25rem', background: 'transparent', border: 'none', color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', textAlign: 'center', outline: 'none' }}
+                              />
+                              <button onClick={() => handleAdd(product)} disabled={cartQty >= available}
+                                style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: cartQty >= available ? 'rgba(255,247,249,0.1)' : 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: cartQty >= available ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -278,6 +505,21 @@ export default function MarketplacePage() {
           )}
         </main>
       </div>
+
+      {/* Product detail drawer */}
+      {selected && (
+        <ProductDrawer
+          product={selected}
+          isB2B={isB2B}
+          isAdminOrFarmer={isAdminOrFarmer}
+          authLoaded={authLoaded}
+          marketOpen={marketOpen}
+          cartQty={getCartQty(selected.id)}
+          onAdd={() => handleAdd(selected)}
+          onUpdateQty={qty => updateQuantity(selected.id, qty)}
+          onClose={closeDrawer}
+        />
+      )}
     </div>
   )
 }

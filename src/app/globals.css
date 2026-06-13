@@ -403,6 +403,10 @@ body {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
 }
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
 
 .reveal { animation: fadeUp 0.45s ease both; }
 .reveal-d1 { animation-delay: 0.08s; }
