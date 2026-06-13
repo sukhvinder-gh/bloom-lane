@@ -121,12 +121,54 @@ function ActionsMenu({ row, onAction }: { row: MemberRow; onAction: (action: str
   )
 }
 
+// ── ConfirmModal ──────────────────────────────────────────────────────────────
+function ConfirmModal({ memberName, action, onConfirm, onCancel }: {
+  memberName: string
+  action: 'approve' | 'cancel'
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const isCancel = action === 'cancel'
+  const actionLabel = isCancel ? 'Cancel Membership' : 'Approve Membership'
+  const confirmBg   = isCancel ? '#C0392B' : 'var(--green)'
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '22rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', padding: '1.75rem 1.5rem 1.5rem', textAlign: 'center' }}>
+        <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--navy)', marginBottom: '0.875rem' }}>Confirm status change</p>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
+          Change <strong>{memberName}</strong> to:
+        </p>
+        <p style={{ fontWeight: 700, fontSize: '0.95rem', color: isCancel ? '#C0392B' : 'var(--green)', marginBottom: '1.75rem' }}>
+          {actionLabel}
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <button
+            onClick={onCancel}
+            style={{ flex: 1, padding: '0.75rem', background: 'none', border: '1px solid var(--border-light)', borderRadius: '99px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-2)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ flex: 1, padding: '0.75rem', background: confirmBg, border: 'none', borderRadius: '99px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, color: 'white' }}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function MembershipsContent() {
   const [tab, setTab] = useState<'grower' | 'florist'>('grower')
   const [rows, setRows] = useState<MemberRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [actionState, setActionState] = useState<Record<string, { loading: boolean; msg: string }>>({})
+  const [confirmPending, setConfirmPending] = useState<{ rowId: string; action: 'approve' | 'cancel'; name: string } | null>(null)
 
   async function load(type: 'grower' | 'florist') {
     setLoading(true)
@@ -140,8 +182,16 @@ export default function MembershipsContent() {
   useEffect(() => { load(tab) }, [tab])
 
   async function handleAction(rowId: string, action: string) {
-    if (action === 'cancel' && !confirm('Cancel this membership? The member will lose access.')) return
+    if (action === 'approve' || action === 'cancel') {
+      const row = rows.find(r => r.id === rowId)
+      setConfirmPending({ rowId, action: action as 'approve' | 'cancel', name: row?.name ?? 'this member' })
+      return
+    }
+    await executeAction(rowId, action)
+  }
 
+  async function executeAction(rowId: string, action: string) {
+    setConfirmPending(null)
     setActionState(s => ({ ...s, [rowId]: { loading: true, msg: '' } }))
     try {
       let res: Response
@@ -316,6 +366,15 @@ export default function MembershipsContent() {
             <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
+      )}
+
+      {confirmPending && (
+        <ConfirmModal
+          memberName={confirmPending.name}
+          action={confirmPending.action}
+          onConfirm={() => executeAction(confirmPending.rowId, confirmPending.action)}
+          onCancel={() => setConfirmPending(null)}
+        />
       )}
     </div>
   )
