@@ -131,55 +131,70 @@ export default function AdminInventoryPage() {
         </div>
       )}
 
-      {/* Filters — row 1: search + category + sort */}
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.625rem', alignItems: 'center' }}>
-        <input
-          className="input"
-          placeholder="Search product, grower, or hub…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ flex: '1 1 200px', minWidth: '160px' }}
-        />
-        <select
-          className="input"
-          value={category}
-          onChange={e => setCategory(e.target.value)}
-          style={{ flex: '0 0 auto' }}
-        >
-          <option value="all">All categories</option>
-          {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{CATEGORY_EMOJI[k]} {v}</option>
-          ))}
-        </select>
-        <select
-          className="input"
-          value={sort}
-          onChange={e => setSort(e.target.value as SortOption)}
-          style={{ flex: '0 0 auto' }}
-        >
-          {SORT_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </div>
+      {/* Compact filter toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: 'white', border: '1px solid var(--olive)',
+        borderRadius: '0.75rem', marginBottom: '1.25rem',
+        overflow: 'hidden', flexWrap: 'wrap',
+      }}>
+        {/* Search */}
+        <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 160px', minWidth: '140px', padding: '0 0.875rem', gap: '0.5rem', borderRight: '1px solid var(--olive)' }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--moss)', flexShrink: 0 }}>🔍</span>
+          <input
+            placeholder="Search product, grower or hub…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.825rem', color: 'var(--navy)', width: '100%', padding: '0.65rem 0', fontFamily: 'var(--font-body)' }}
+          />
+        </div>
 
-      {/* Filters — row 2: status tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-        <div style={{ display: 'flex', border: '1px solid var(--olive)', borderRadius: '0.625rem', overflow: 'hidden' }}>
-          {(['all', 'listed', 'unlisted'] as StatusFilter[]).map(s => (
+        {/* Category */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.875rem', borderRight: '1px solid var(--olive)', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Category</span>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.825rem', color: 'var(--navy)', cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.65rem 0' }}
+          >
+            <option value="all">All</option>
+            {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{CATEGORY_EMOJI[k]} {v}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sort */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.875rem', borderRight: '1px solid var(--olive)', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Sort</span>
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value as SortOption)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.825rem', color: 'var(--navy)', cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.65rem 0' }}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status tabs */}
+        <div style={{ display: 'flex', flexShrink: 0 }}>
+          {(['all', 'listed', 'unlisted'] as StatusFilter[]).map((s, i) => (
             <button
               key={s}
               onClick={() => setStatus(s)}
               style={{
-                padding: '0.4rem 1rem',
-                background: status === s ? 'var(--forest)' : 'white',
+                padding: '0.65rem 0.875rem',
+                background: status === s ? 'var(--forest)' : 'transparent',
                 color: status === s ? 'white' : 'var(--moss)',
                 border: 'none',
+                borderLeft: i > 0 ? '1px solid var(--olive)' : 'none',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 fontFamily: 'var(--font-body)',
-                borderRight: s !== 'unlisted' ? '1px solid var(--olive)' : 'none',
+                whiteSpace: 'nowrap',
               }}
             >
               {s === 'all' ? `All (${products.length})` : s === 'listed' ? `Listed (${listedCount})` : `Unlisted (${products.length - listedCount})`}
