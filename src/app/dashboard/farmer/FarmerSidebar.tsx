@@ -20,6 +20,7 @@ const NAV = [
   { href: '/dashboard/farmer/storefront',     label: 'My Storefront', icon: '🏪' },
   { href: '/dashboard/farmer/payouts',        label: 'Payouts',       icon: '💳' },
   { href: '/dashboard/farmer/membership',     label: 'Membership',    icon: '🎫' },
+  { href: '/dashboard/farmer/reports',        label: 'Reports',       icon: '📊' },
 ]
 
 export default function FarmerSidebar({ role, userName, userEmail, businessName, farmerId, farmerStatus }: Props) {
