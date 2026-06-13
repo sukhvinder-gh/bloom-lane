@@ -1,6 +1,102 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+// ── Confirmation modal ────────────────────────────────────────────────────────
+type ConfirmScenario = 'new' | 'plan_change' | 'billing_change'
+
+function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilling, priceCents, onConfirm, onCancel }: {
+  scenario: ConfirmScenario
+  currentPlan: string
+  currentBilling: string
+  newPlan: string
+  newBilling: string
+  priceCents: number
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const planLabel = (p: string) =>
+    p === 'mailing_list' ? 'Florist Mailing List' : p === 'personal_shopper' ? 'Personal Shopper' : p
+  const billingLabel = (b: string) =>
+    b === 'weekly' ? 'weekly' : b === 'monthly' ? 'monthly' : b === 'annual' ? 'annual' : b
+
+  const isAmber = scenario === 'plan_change' || scenario === 'billing_change'
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '27rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+        <div style={{ padding: '1.5rem 1.5rem 1rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>
+            {scenario === 'new' ? '✅' : '🔄'}
+          </div>
+
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: isAmber ? '#92400E' : 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
+            {scenario === 'new'          && 'Confirm Membership'}
+            {scenario === 'plan_change'  && 'Switch Membership Plan?'}
+            {scenario === 'billing_change' && 'Change Billing Period?'}
+          </h2>
+
+          {scenario === 'new' && (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '0.4rem' }}>You're signing up for</p>
+              <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                {planLabel(newPlan)}{newPlan === 'personal_shopper' ? ` — ${billingLabel(newBilling)}` : ''}
+              </p>
+              {newPlan === 'personal_shopper' && priceCents > 0 && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>
+                  ${(priceCents / 100).toFixed(0)} / {newBilling === 'annual' ? 'year' : newBilling === 'weekly' ? 'week' : 'month'}
+                </p>
+              )}
+              {newPlan === 'mailing_list' && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>Free, always</p>
+              )}
+            </>
+          )}
+
+          {scenario === 'plan_change' && (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                Switching from <strong>{planLabel(currentPlan)}</strong> to <strong>{planLabel(newPlan)}</strong>
+                {newPlan === 'personal_shopper' ? ` (${billingLabel(newBilling)})` : ''}.
+              </p>
+              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1rem', textAlign: 'left' }}>
+                ⚠ Your current {planLabel(currentPlan)} subscription will be replaced. This cannot be undone.
+              </div>
+            </>
+          )}
+
+          {scenario === 'billing_change' && (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                Changing Personal Shopper billing from <strong>{billingLabel(currentBilling)}</strong> to <strong>{billingLabel(newBilling)}</strong>.
+                {priceCents > 0 && ` New amount: $${(priceCents / 100).toFixed(0)}/${newBilling === 'annual' ? 'yr' : newBilling === 'weekly' ? 'wk' : 'mo'}.`}
+              </p>
+              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1rem', textAlign: 'left' }}>
+                ⚠ Your billing period will change from your next payment cycle.
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <button onClick={onCancel} className="btn btn-ghost btn-sm" style={{ minWidth: '7rem' }}>Go Back</button>
+          <button
+            onClick={onConfirm}
+            style={{
+              minWidth: '9rem', padding: '0.55rem 1.5rem',
+              background: isAmber ? '#92400E' : 'var(--forest)',
+              color: 'white', border: 'none', borderRadius: '99px',
+              fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+            }}
+          >
+            {scenario === 'new' ? 'Confirm & Continue' : scenario === 'plan_change' ? 'Yes, Switch Plan' : 'Yes, Change Billing'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const FLORIST_BILLING = [
   { value: 'weekly',  label: 'Weekly',  hint: 'Flexible, week by week' },
   { value: 'monthly', label: 'Monthly', hint: 'Save vs weekly' },
@@ -15,8 +111,9 @@ export default function FloristSubscriptionPage() {
   const [msg, setMsg]             = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [plan, setPlan]           = useState<'mailing_list' | 'personal_shopper'>('mailing_list')
   const [billing, setBilling]     = useState('monthly')
-  const [cancelConfirm, setCancelConfirm] = useState(false)
-  const [cancelling, setCancelling]       = useState(false)
+  const [cancelConfirm, setCancelConfirm]   = useState(false)
+  const [cancelling, setCancelling]         = useState(false)
+  const [pendingConfirm, setPendingConfirm] = useState(false)
 
   useEffect(() => {
     fetch('/api/buyer/subscription')
@@ -39,8 +136,13 @@ export default function FloristSubscriptionPage() {
     annual:  config['personal_shopper_annual_cents']  || 0,
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setPendingConfirm(true)
+  }
+
+  async function executeSubmit() {
+    setPendingConfirm(false)
     setSaving(true); setMsg(null)
     const res = await fetch('/api/buyer/subscription', {
       method: 'POST',
@@ -207,6 +309,24 @@ export default function FloristSubscriptionPage() {
           {saving ? 'Saving…' : plan === 'mailing_list' ? 'Join Mailing List — Free' : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
+
+      {pendingConfirm && (() => {
+        const isChangingPlan    = isActive && current?.plan !== plan
+        const isChangingBilling = isActive && current?.plan === 'personal_shopper' && plan === 'personal_shopper' && current?.billing_period !== billing
+        const scenario: ConfirmScenario = isChangingPlan ? 'plan_change' : isChangingBilling ? 'billing_change' : 'new'
+        return (
+          <ConfirmModal
+            scenario={scenario}
+            currentPlan={current?.plan ?? ''}
+            currentBilling={current?.billing_period ?? ''}
+            newPlan={plan}
+            newBilling={billing}
+            priceCents={plan === 'personal_shopper' ? (priceMap[billing] || 0) : 0}
+            onConfirm={executeSubmit}
+            onCancel={() => setPendingConfirm(false)}
+          />
+        )
+      })()}
 
       {cancelConfirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
