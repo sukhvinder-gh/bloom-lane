@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { createFarmerPayout } from '@/lib/stripe'
 import { calculateFarmerPayout } from '@/lib/utils/pricing'
 import { getThisWeekMarketWindow } from '@/lib/utils/timezone'
+import { sendWeeklyAvailabilityDigest, sendMarketOpenNotification } from '@/lib/email/sendSubscriptionEmail'
 
 export const inngest = new Inngest({ id: 'agri-marketplace' })
 
@@ -61,12 +62,68 @@ export const wednesdayMarketOpen = inngest.createFunction(
   { id: 'wednesday-market-open', name: 'Wednesday Market Opens' },
   { cron: '0 22 * * 2' },
   async ({ step }) => {
-    await step.run('notify-buyers-market-open', async () => {
-      // TODO: Send Resend email to all active buyers with this week's listings
-      return { notified: true }
+    const supabase = createAdminClient()
+
+    const { notified } = await step.run('notify-buyers-market-open', async () => {
+      // Fetch products listed this week
+      const { data: products } = await supabase
+        .from('products')
+        .select('name, unit, wholesale_price_cents, category, farmers(business_name)')
+        .eq('is_listed_this_week', true)
+        .eq('is_active', true)
+        .order('category', { ascending: true })
+
+      if (!products || products.length === 0) return { notified: 0, reason: 'No products listed this week' }
+
+      const productList = products.map((p: any) => ({
+        name: p.name,
+        farmer: (p.farmers as any)?.business_name || 'Unknown',
+        unit: p.unit,
+        b2b_price: p.wholesale_price_cents,
+        category: p.category ?? '',
+      }))
+
+      // Mailing list subscriber IDs — get the full weekly digest
+      const { data: mailingListSubs } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('plan', 'mailing_list')
+        .eq('status', 'active')
+
+      const mailingListIds = new Set((mailingListSubs || []).map((s: any) => s.user_id as string))
+
+      // All active buyers
+      const { data: buyers } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('role', ['buyer_b2b', 'buyer_b2c'])
+
+      let notified = 0
+      for (const buyer of (buyers || [])) {
+        if (!buyer.email) continue
+        try {
+          if (mailingListIds.has(buyer.id)) {
+            await sendWeeklyAvailabilityDigest({
+              to: buyer.email,
+              name: buyer.full_name || 'Valued Customer',
+              products: productList,
+            })
+          } else {
+            await sendMarketOpenNotification({
+              to: buyer.email,
+              name: buyer.full_name || 'Valued Customer',
+              productCount: productList.length,
+            })
+          }
+          notified++
+        } catch {
+          // One failed send doesn't stop the rest
+        }
+      }
+      return { notified }
     })
 
-    return { marketOpen: true, openedAt: new Date().toISOString() }
+    return { marketOpen: true, openedAt: new Date().toISOString(), notified }
   }
 )
 

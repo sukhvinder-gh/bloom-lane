@@ -158,6 +158,14 @@ export default function BuyerOrdersPage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--forest)', opacity: 0.5 }}>{displayOrders.length} {tab === 'orders' ? 'orders' : 'invoices'}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {displayOrders.length > 0 && (
+            <button
+              onClick={() => exportCSV(displayOrders, tab === 'invoices' ? 'harvest-invoices.csv' : 'harvest-orders.csv')}
+              style={{ padding: '0.5rem 1.25rem', background: 'var(--olive)', color: 'var(--forest)', border: '1px solid var(--sage)', borderRadius: '99px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+            >
+              ⬇ Export CSV
+            </button>
+          )}
           <Link href="/marketplace"
             style={{ padding: '0.5rem 1.25rem', background: 'var(--forest)', color: 'var(--cream)', borderRadius: '99px', textDecoration: 'none', fontWeight: 700, fontSize: '0.8rem' }}>
             + New Order

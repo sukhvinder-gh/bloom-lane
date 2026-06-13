@@ -109,6 +109,29 @@ export async function sendWeeklyAvailabilityDigest(data: {
   await resend.emails.send({ from: FROM, to: data.to, subject: `This week's availability — The Green Guild 🌸`, html })
 }
 
+// ── Market open notification (all buyers) ───────────────────────────────────
+export async function sendMarketOpenNotification(data: {
+  to: string; name: string; productCount: number
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const html = baseLayout(`
+    <p style="color:#1a3a2a;font-size:16px;margin:0 0 8px">Hi ${data.name},</p>
+    <p style="color:#4a7a5a;font-size:14px;margin:0 0 24px;line-height:1.6">
+      The Green Guild market is now open. <strong>${data.productCount} product${data.productCount !== 1 ? 's' : ''}</strong> from local growers are available this week.
+      Orders close tonight at 8pm AEST.
+    </p>
+    <div style="background:#f5f9f5;border-radius:10px;padding:18px 24px;margin-bottom:24px;text-align:center">
+      <p style="color:#1a3a2a;font-size:13px;margin:0 0 4px;font-weight:700">Wednesday Market Window</p>
+      <p style="color:#4a7a5a;font-size:12px;margin:0">8:00am – 8:00pm AEST</p>
+    </div>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${SITE}/marketplace" style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">Browse This Week's Products →</a>
+    </div>
+    <p style="color:#9ab0a0;font-size:11px;text-align:center;margin:0">You're receiving this as a registered Green Guild buyer.</p>
+  `)
+  await resend.emails.send({ from: FROM, to: data.to, subject: `The market is open — shop this week's fresh produce 🌿`, html })
+}
+
 // ── PO notification to grower ────────────────────────────────────────────────
 export async function sendPONotification(data: {
   to: string; grower_name: string; order_number: string; order_id: string;

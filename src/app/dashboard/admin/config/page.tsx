@@ -423,6 +423,16 @@ export default function AdminConfigPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Market Schedule — cron alignment warning */}
+              {section.title === 'Market Schedule' && (
+                <div style={{ padding: '0.875rem 1.25rem', background: '#FEF3C7', borderTop: '1px solid #FDE68A', display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                  <p style={{ fontSize: '0.78rem', color: '#92400E', lineHeight: 1.55, margin: 0 }}>
+                    <strong>These values update the marketplace UI display only.</strong> The automated jobs that lock listings on Tuesday and send buyer notifications on Wednesday run on fixed cron schedules in code. To change when automation fires, a developer must update the Inngest cron expressions and redeploy.
+                  </p>
+                </div>
+              )}
             </div>
           )
         })}
