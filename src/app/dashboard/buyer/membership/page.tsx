@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ── Confirmation modal ────────────────────────────────────────────────────────
 type ConfirmScenario = 'new' | 'plan_change' | 'billing_change'
@@ -17,7 +17,7 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
   const planLabel = (p: string) =>
     p === 'mailing_list' ? 'Florist Mailing List' : p === 'personal_shopper' ? 'Personal Shopper' : p
   const billingLabel = (b: string) =>
-    b === 'weekly' ? 'weekly' : b === 'monthly' ? 'monthly' : b === 'annual' ? 'annual' : b
+    b === 'weekly' ? 'Weekly' : b === 'monthly' ? 'Monthly' : b === 'annual' ? 'Annual' : b
 
   const isAmber = scenario === 'plan_change' || scenario === 'billing_change'
 
@@ -31,8 +31,8 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
           </div>
 
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: isAmber ? '#92400E' : 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            {scenario === 'new'          && 'Confirm Membership'}
-            {scenario === 'plan_change'  && 'Switch Membership Plan?'}
+            {scenario === 'new'            && 'Confirm Membership'}
+            {scenario === 'plan_change'    && 'Switch Membership Plan?'}
             {scenario === 'billing_change' && 'Change Billing Period?'}
           </h2>
 
@@ -97,6 +97,122 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
   )
 }
 
+// ── Current subscription row ──────────────────────────────────────────────────
+function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos]   = useState({ top: 0, right: 0 })
+  const btnRef          = useRef<HTMLButtonElement>(null)
+
+  function toggle() {
+    if (!open) {
+      const r = btnRef.current?.getBoundingClientRect()
+      if (r) setPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    }
+    setOpen(v => !v)
+  }
+
+  const planName = sub.plan === 'mailing_list'
+    ? 'Florist Mailing List'
+    : `Personal Shopper — ${sub.billing_period === 'weekly' ? 'Weekly' : sub.billing_period === 'annual' ? 'Annual' : 'Monthly'}`
+
+  const isPending   = sub.status === 'pending'
+  const statusBg    = isPending ? '#FEF3C7' : '#D1FAE5'
+  const statusColor = isPending ? '#92400E' : '#065F46'
+  const borderColor = isPending ? '#FDE68A' : '#6EE7B7'
+
+  return (
+    <>
+      <div style={{
+        padding: '0.875rem 1.25rem',
+        background: statusBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: '0.875rem',
+        marginBottom: '1.75rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.875rem',
+      }}>
+        <span style={{ fontSize: '1.125rem' }}>{isPending ? '⏳' : '✅'}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: statusColor }}>{planName}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-block', padding: '1px 8px',
+              background: isPending ? '#FDE68A' : '#A7F3D0',
+              color: statusColor, borderRadius: '99px',
+              fontSize: '0.7rem', fontWeight: 700,
+            }}>
+              {isPending ? 'PENDING PAYMENT' : 'ACTIVE'}
+            </span>
+            {sub.expires_at && (
+              <span style={{ fontSize: '0.75rem', color: statusColor, opacity: 0.75 }}>
+                Renews {new Date(sub.expires_at).toLocaleDateString('en-AU')}
+              </span>
+            )}
+            {sub.amount_cents > 0 && sub.billing_period && sub.billing_period !== 'free' && (
+              <span style={{ fontSize: '0.75rem', color: statusColor, opacity: 0.75 }}>
+                ${(sub.amount_cents / 100).toFixed(0)}/{sub.billing_period === 'annual' ? 'yr' : sub.billing_period === 'weekly' ? 'wk' : 'mo'}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          ref={btnRef}
+          onClick={toggle}
+          style={{
+            width: '2rem', height: '2rem', borderRadius: '99px',
+            border: `1px solid ${borderColor}`,
+            background: 'transparent',
+            color: statusColor,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.1rem', fontWeight: 700, flexShrink: 0,
+            fontFamily: 'var(--font-body)',
+          }}
+          aria-label="Subscription actions"
+        >
+          ⋯
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1998 }} />
+          <div style={{
+            position: 'fixed',
+            top: pos.top,
+            right: pos.right,
+            zIndex: 1999,
+            background: 'var(--surface)',
+            border: '1px solid var(--olive)',
+            borderRadius: '0.75rem',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+            minWidth: '12rem',
+            overflow: 'hidden',
+          }}>
+            <button
+              onClick={() => {
+                setOpen(false)
+                document.getElementById('florist-membership-form')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
+            >
+              ✏️ Change Plan
+            </button>
+            <div style={{ height: '1px', background: 'var(--olive)' }} />
+            <button
+              onClick={() => { setOpen(false); onCancel() }}
+              style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
+            >
+              ✕ Cancel Membership
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
 const FLORIST_BILLING = [
   { value: 'weekly',  label: 'Weekly',  hint: 'Flexible, week by week' },
   { value: 'monthly', label: 'Monthly', hint: 'Save vs weekly' },
@@ -107,12 +223,12 @@ export default function FloristSubscriptionPage() {
   const [config, setConfig]   = useState<Record<string, number>>({})
   const [current, setCurrent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]       = useState(false)
-  const [msg, setMsg]             = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
-  const [plan, setPlan]           = useState<'mailing_list' | 'personal_shopper'>('mailing_list')
-  const [billing, setBilling]     = useState('monthly')
-  const [cancelConfirm, setCancelConfirm]   = useState(false)
-  const [cancelling, setCancelling]         = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [msg, setMsg]               = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [plan, setPlan]             = useState<'mailing_list' | 'personal_shopper'>('mailing_list')
+  const [billing, setBilling]       = useState('monthly')
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [cancelling, setCancelling]       = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState(false)
 
   useEffect(() => {
@@ -155,6 +271,7 @@ export default function FloristSubscriptionPage() {
     } else if (data.requiresPayment) {
       const price = priceMap[billing]
       setMsg({ type: 'ok', text: `Subscription saved. Payment of $${(price / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
+      if (data.subscription) setCurrent(data.subscription)
     } else {
       setMsg({ type: 'ok', text: "You're on the Mailing List! Expect your first availability email next Tuesday." })
       setCurrent(data.subscription)
@@ -178,7 +295,7 @@ export default function FloristSubscriptionPage() {
 
   if (loading) return <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--moss)', opacity: 0.5 }}>Loading…</div>
 
-  const isActive = current?.status === 'active'
+  const hasExistingSub = current?.status === 'active' || current?.status === 'pending'
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '52rem' }}>
@@ -189,20 +306,8 @@ export default function FloristSubscriptionPage() {
         Choose how you want to source from local growers
       </p>
 
-      {isActive && (
-        <div style={{ padding: '1rem 1.25rem', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: '0.875rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.25rem' }}>✅</span>
-          <p style={{ flex: 1, fontWeight: 700, fontSize: '0.875rem', color: '#065F46' }}>
-            Active — {current.plan === 'mailing_list' ? 'Florist Mailing List' : `Personal Shopper (${current.billing_period})`}
-          </p>
-          <button
-            onClick={() => setCancelConfirm(true)}
-            disabled={cancelling}
-            style={{ padding: '0.35rem 0.875rem', background: 'none', border: '1.5px solid #B91C1C', borderRadius: '99px', color: '#B91C1C', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0, fontFamily: 'var(--font-body)' }}
-          >
-            {cancelling ? 'Cancelling…' : 'Cancel Membership'}
-          </button>
-        </div>
+      {hasExistingSub && (
+        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} />
       )}
 
       {/* Plan cards */}
@@ -260,7 +365,7 @@ export default function FloristSubscriptionPage() {
         })}
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <form id="florist-membership-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Billing period (personal_shopper only) */}
         {plan === 'personal_shopper' && (
           <div className="card" style={{ padding: '1.5rem' }}>
@@ -311,8 +416,8 @@ export default function FloristSubscriptionPage() {
       </form>
 
       {pendingConfirm && (() => {
-        const isChangingPlan    = isActive && current?.plan !== plan
-        const isChangingBilling = isActive && current?.plan === 'personal_shopper' && plan === 'personal_shopper' && current?.billing_period !== billing
+        const isChangingPlan    = hasExistingSub && current?.plan !== plan
+        const isChangingBilling = hasExistingSub && current?.plan === 'personal_shopper' && plan === 'personal_shopper' && current?.billing_period !== billing
         const scenario: ConfirmScenario = isChangingPlan ? 'plan_change' : isChangingBilling ? 'billing_change' : 'new'
         return (
           <ConfirmModal

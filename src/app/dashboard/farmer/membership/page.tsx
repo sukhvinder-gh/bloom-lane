@@ -1,13 +1,16 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 // ── Confirmation modal ────────────────────────────────────────────────────────
-function ConfirmModal({ isChange, currentPlan, newPlan, billing, priceCents, onConfirm, onCancel }: {
-  isChange: boolean
+type ConfirmScenario = 'new' | 'plan_change' | 'billing_change'
+
+function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilling, priceCents, onConfirm, onCancel }: {
+  scenario: ConfirmScenario
   currentPlan: string
+  currentBilling: string
   newPlan: string
-  billing: string
+  newBilling: string
   priceCents: number
   onConfirm: () => void
   onCancel: () => void
@@ -15,45 +18,65 @@ function ConfirmModal({ isChange, currentPlan, newPlan, billing, priceCents, onC
   const planLabel = (p: string) =>
     p === 'hub_membership' ? 'Hub Membership' : p === 'wholesale_collection' ? 'Wholesale Collection' : p
   const billingLabel = (b: string) =>
-    b === 'monthly' ? 'monthly' : b === 'seasonal' ? 'seasonal (3 mo)' : b === 'annual' ? 'annual' : b
+    b === 'monthly' ? 'Monthly' : b === 'seasonal' ? 'Seasonal (3 mo)' : b === 'annual' ? 'Annual' : b
+
+  const isAmber = scenario === 'plan_change' || scenario === 'billing_change'
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
       <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '26rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
         <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{isChange ? '🔄' : '✅'}</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            {isChange ? 'Change Membership?' : 'Confirm Membership'}
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>
+            {scenario === 'new' ? '✅' : '🔄'}
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: isAmber ? '#92400E' : 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
+            {scenario === 'new'            && 'Confirm Membership'}
+            {scenario === 'plan_change'    && 'Switch Membership Plan?'}
+            {scenario === 'billing_change' && 'Change Billing Period?'}
           </h2>
 
-          {isChange ? (
-            <>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
-                You're switching from <strong>{planLabel(currentPlan)}</strong> to <strong>{planLabel(newPlan)}</strong>.
-                {newPlan === 'hub_membership' && ` Billing: ${billingLabel(billing)}.`}
-              </p>
-              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                ⚠ Your current subscription will be replaced. This action cannot be undone.
-              </div>
-            </>
-          ) : (
+          {scenario === 'new' && (
             <>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '0.5rem' }}>
                 You're signing up for
               </p>
               <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '1rem', marginBottom: '0.25rem' }}>
                 {planLabel(newPlan)}
-                {newPlan === 'hub_membership' && ` — ${billingLabel(billing)}`}
+                {newPlan === 'hub_membership' && ` — ${billingLabel(newBilling)}`}
               </p>
               {newPlan === 'hub_membership' && priceCents > 0 && (
                 <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>
-                  ${(priceCents / 100).toFixed(0)} / {billing === 'seasonal' ? 'season' : billing === 'annual' ? 'year' : 'month'}
+                  ${(priceCents / 100).toFixed(0)} / {newBilling === 'seasonal' ? 'season' : newBilling === 'annual' ? 'year' : 'month'}
                 </p>
               )}
               {newPlan === 'wholesale_collection' && (
                 <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>No membership fee</p>
               )}
+            </>
+          )}
+
+          {scenario === 'plan_change' && (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                Switching from <strong>{planLabel(currentPlan)}</strong> to <strong>{planLabel(newPlan)}</strong>
+                {newPlan === 'hub_membership' ? ` (${billingLabel(newBilling)})` : ''}.
+              </p>
+              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1.25rem', textAlign: 'left' }}>
+                ⚠ Your current {planLabel(currentPlan)} subscription will be replaced. This cannot be undone.
+              </div>
+            </>
+          )}
+
+          {scenario === 'billing_change' && (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                Changing Hub Membership billing from <strong>{billingLabel(currentBilling)}</strong> to <strong>{billingLabel(newBilling)}</strong>.
+                {priceCents > 0 && ` New amount: $${(priceCents / 100).toFixed(0)}/${newBilling === 'annual' ? 'yr' : newBilling === 'seasonal' ? 'season' : 'mo'}.`}
+              </p>
+              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1.25rem', textAlign: 'left' }}>
+                ⚠ Your billing period will change from your next payment cycle.
+              </div>
             </>
           )}
         </div>
@@ -62,13 +85,134 @@ function ConfirmModal({ isChange, currentPlan, newPlan, billing, priceCents, onC
           <button onClick={onCancel} className="btn btn-ghost btn-sm" style={{ minWidth: '7rem' }}>Go Back</button>
           <button
             onClick={onConfirm}
-            style={{ minWidth: '9rem', padding: '0.55rem 1.5rem', background: isChange ? '#92400E' : 'var(--forest)', color: 'white', border: 'none', borderRadius: '99px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
+            style={{
+              minWidth: '9rem', padding: '0.55rem 1.5rem',
+              background: isAmber ? '#92400E' : 'var(--forest)',
+              color: 'white', border: 'none', borderRadius: '99px',
+              fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+            }}
           >
-            {isChange ? 'Yes, Switch Plan' : 'Confirm & Continue'}
+            {scenario === 'new' ? 'Confirm & Continue' : scenario === 'plan_change' ? 'Yes, Switch Plan' : 'Yes, Change Billing'}
           </button>
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Current subscription row ──────────────────────────────────────────────────
+function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos]   = useState({ top: 0, right: 0 })
+  const btnRef          = useRef<HTMLButtonElement>(null)
+
+  function toggle() {
+    if (!open) {
+      const r = btnRef.current?.getBoundingClientRect()
+      if (r) setPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    }
+    setOpen(v => !v)
+  }
+
+  const planName = sub.plan === 'hub_membership'
+    ? `Hub Membership — ${sub.billing_period === 'seasonal' ? 'Seasonal' : sub.billing_period === 'annual' ? 'Annual' : 'Monthly'}`
+    : 'Wholesale Collection'
+
+  const isPending   = sub.status === 'pending'
+  const statusBg    = isPending ? '#FEF3C7' : '#D1FAE5'
+  const statusColor = isPending ? '#92400E' : '#065F46'
+  const borderColor = isPending ? '#FDE68A' : '#6EE7B7'
+
+  return (
+    <>
+      <div style={{
+        padding: '0.875rem 1.25rem',
+        background: statusBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: '0.875rem',
+        marginBottom: '1.75rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.875rem',
+      }}>
+        <span style={{ fontSize: '1.125rem' }}>{isPending ? '⏳' : '✅'}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: statusColor }}>{planName}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-block', padding: '1px 8px',
+              background: isPending ? '#FDE68A' : '#A7F3D0',
+              color: statusColor, borderRadius: '99px',
+              fontSize: '0.7rem', fontWeight: 700,
+            }}>
+              {isPending ? 'PENDING PAYMENT' : 'ACTIVE'}
+            </span>
+            {sub.expires_at && (
+              <span style={{ fontSize: '0.75rem', color: statusColor, opacity: 0.75 }}>
+                Renews {new Date(sub.expires_at).toLocaleDateString('en-AU')}
+              </span>
+            )}
+            {sub.amount_cents > 0 && sub.billing_period && sub.billing_period !== 'free' && (
+              <span style={{ fontSize: '0.75rem', color: statusColor, opacity: 0.75 }}>
+                ${(sub.amount_cents / 100).toFixed(0)}/{sub.billing_period === 'annual' ? 'yr' : sub.billing_period === 'seasonal' ? 'season' : 'mo'}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          ref={btnRef}
+          onClick={toggle}
+          style={{
+            width: '2rem', height: '2rem', borderRadius: '99px',
+            border: `1px solid ${borderColor}`,
+            background: 'transparent',
+            color: statusColor,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.1rem', fontWeight: 700, flexShrink: 0,
+            fontFamily: 'var(--font-body)',
+          }}
+          aria-label="Subscription actions"
+        >
+          ⋯
+        </button>
+      </div>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1998 }} />
+          <div style={{
+            position: 'fixed',
+            top: pos.top,
+            right: pos.right,
+            zIndex: 1999,
+            background: 'var(--surface)',
+            border: '1px solid var(--olive)',
+            borderRadius: '0.75rem',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+            minWidth: '12rem',
+            overflow: 'hidden',
+          }}>
+            <button
+              onClick={() => {
+                setOpen(false)
+                document.getElementById('grower-membership-form')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
+            >
+              ✏️ Change Plan
+            </button>
+            <div style={{ height: '1px', background: 'var(--olive)' }} />
+            <button
+              onClick={() => { setOpen(false); onCancel() }}
+              style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
+            >
+              ✕ Cancel Membership
+            </button>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -148,7 +292,6 @@ export default function GrowerSubscriptionPage() {
     if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Growing Group' }); return }
     if (gstRegistered && !rctiAgreed) { setMsg({ type: 'err', text: 'Please agree to the RCTI terms to continue' }); return }
     if (gstRegistered && !rctiFullName.trim()) { setMsg({ type: 'err', text: 'Please enter your full name to sign the RCTI agreement' }); return }
-    // Show confirmation modal — actual submit happens in executeSubmit
     setPendingConfirm(true)
   }
 
@@ -177,8 +320,8 @@ export default function GrowerSubscriptionPage() {
       setSaving(false)
       return
     }
+    if (data.subscription) setCurrent(data.subscription)
     if (data.requiresPayment) {
-      // TODO: redirect to Stripe checkout
       setMsg({ type: 'ok', text: `Subscription saved. Payment of $${((data.amount_cents || 0) / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
     } else {
       setMsg({ type: 'ok', text: 'Wholesale Collection registration complete! Your listings are now active.' })
@@ -205,7 +348,7 @@ export default function GrowerSubscriptionPage() {
     <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--moss)', opacity: 0.5 }}>Loading…</div>
   )
 
-  const isActive = current?.status === 'active'
+  const hasExistingSub = current?.status === 'active' || current?.status === 'pending'
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '52rem' }}>
@@ -216,27 +359,8 @@ export default function GrowerSubscriptionPage() {
         Choose how you participate in The Green Guild
       </p>
 
-      {isActive && (
-        <div style={{ padding: '1rem 1.25rem', background: '#D1FAE5', border: '1px solid #6EE7B7', borderRadius: '0.875rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.25rem' }}>✅</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#065F46' }}>
-              Active — {current.plan === 'hub_membership' ? `Hub Membership (${current.billing_period})` : 'Wholesale Collection'}
-            </p>
-            {current.expires_at && (
-              <p style={{ fontSize: '0.8rem', color: '#065F46', opacity: 0.7 }}>
-                Renews {new Date(current.expires_at).toLocaleDateString('en-AU')}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => setCancelConfirm(true)}
-            disabled={cancelling}
-            style={{ padding: '0.35rem 0.875rem', background: 'none', border: '1.5px solid #B91C1C', borderRadius: '99px', color: '#B91C1C', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0, fontFamily: 'var(--font-body)' }}
-          >
-            {cancelling ? 'Cancelling…' : 'Cancel Membership'}
-          </button>
-        </div>
+      {hasExistingSub && (
+        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} />
       )}
 
       {/* Plan selector */}
@@ -296,7 +420,7 @@ export default function GrowerSubscriptionPage() {
         })}
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <form id="grower-membership-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* Billing period (hub_membership only) */}
         {plan === 'hub_membership' && (
@@ -440,17 +564,23 @@ export default function GrowerSubscriptionPage() {
         </button>
       </form>
 
-      {pendingConfirm && (
-        <ConfirmModal
-          isChange={isActive && current?.plan !== plan}
-          currentPlan={current?.plan ?? ''}
-          newPlan={plan}
-          billing={billing}
-          priceCents={priceMap[billing] || 0}
-          onConfirm={executeSubmit}
-          onCancel={() => setPendingConfirm(false)}
-        />
-      )}
+      {pendingConfirm && (() => {
+        const isChangingPlan    = hasExistingSub && current?.plan !== plan
+        const isChangingBilling = hasExistingSub && current?.plan === 'hub_membership' && plan === 'hub_membership' && current?.billing_period !== billing
+        const scenario: ConfirmScenario = isChangingPlan ? 'plan_change' : isChangingBilling ? 'billing_change' : 'new'
+        return (
+          <ConfirmModal
+            scenario={scenario}
+            currentPlan={current?.plan ?? ''}
+            currentBilling={current?.billing_period ?? ''}
+            newPlan={plan}
+            newBilling={billing}
+            priceCents={plan === 'hub_membership' ? (priceMap[billing] || 0) : 0}
+            onConfirm={executeSubmit}
+            onCancel={() => setPendingConfirm(false)}
+          />
+        )
+      })()}
 
       {cancelConfirm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
