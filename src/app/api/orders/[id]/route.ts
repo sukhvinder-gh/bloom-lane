@@ -16,7 +16,7 @@ export async function GET(
     .select(`
       *,
       profiles(full_name, email),
-      order_items(*, products(name, unit, category, image_url), farmers(business_name, brand_color))
+      order_items(*, products(name, unit, category, image_url, image_urls), farmers(business_name, brand_color))
     `)
     .eq('id', id)
     .single()

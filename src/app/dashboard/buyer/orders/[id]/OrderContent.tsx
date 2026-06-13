@@ -163,8 +163,8 @@ export default function BuyerOrderDetailPage() {
                   <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: item.po_rejected ? '#FEE2E2' : 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0, overflow: 'hidden' }}>
                     {item.po_rejected
                       ? '🚫'
-                      : item.products?.image_url
-                        ? <img src={item.products.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (item.products?.image_url || item.products?.image_urls?.[0])
+                        ? <img src={item.products.image_url || item.products.image_urls[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : CATEGORY_EMOJI[item.products?.category] || '🌿'
                     }
                   </div>
