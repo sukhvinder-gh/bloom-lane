@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
+  herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
+}
+
 // Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal)
 const BUYER_STATUS: Record<string, [string, string]> = {
   pending_payment:   ['badge-cream',   'Submitted'],
@@ -155,8 +160,13 @@ export default function BuyerOrderDetailPage() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {order.order_items?.map((item: any) => (
                 <div key={item.id} className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1rem 0', opacity: item.po_rejected ? 0.5 : 1 }}>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: item.po_rejected ? '#FEE2E2' : 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
-                    {item.po_rejected ? '🚫' : '🌸'}
+                  <div style={{ width: '3rem', height: '3rem', borderRadius: '1rem', background: item.po_rejected ? '#FEE2E2' : 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0, overflow: 'hidden' }}>
+                    {item.po_rejected
+                      ? '🚫'
+                      : item.products?.image_url
+                        ? <img src={item.products.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : CATEGORY_EMOJI[item.products?.category] || '🌿'
+                    }
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.2rem' }}>{item.products?.name}</p>
