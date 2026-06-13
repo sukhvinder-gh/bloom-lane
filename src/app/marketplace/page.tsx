@@ -164,18 +164,6 @@ export default function MarketplacePage() {
               </div>
             </div>
           )}
-          {/* Buyer type indicator */}
-          {isBuyer && (
-            <div style={{ marginBottom: '1.75rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '1rem' }}>
-              <p className="type-label-sm" style={{ color: 'var(--forest)', fontWeight: 700 }}>
-                {isB2B ? 'Wholesale pricing' : 'Retail pricing'}
-              </p>
-              <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.2rem' }}>
-                {isB2B ? 'Ex-GST · ABN required' : 'Inc-GST'}
-              </p>
-            </div>
-          )}
-
           {/* Category */}
           <p className="label">Category</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
