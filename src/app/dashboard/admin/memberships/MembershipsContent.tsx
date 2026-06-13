@@ -317,7 +317,7 @@ export default function MembershipsContent() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-light)', background: 'var(--bg)' }}>
-                {['Name / Business', 'Email', 'Plan', 'Billing', 'Amount', 'Status', 'Expires', ''].map(h => (
+                {['Name / Business', 'Email', 'Plan', 'Billing', 'Amount', 'Status', 'Expires', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '0.75rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
@@ -353,9 +353,9 @@ export default function MembershipsContent() {
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>…</span>
                       ) : aState?.msg ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: aState.msg.startsWith('✓') ? 'var(--green)' : 'var(--terracotta)' }}>{aState.msg}</span>
-                      ) : tab === 'grower' ? (
+                      ) : (
                         <ActionsMenu row={r} onAction={action => handleAction(r.id, action)} />
-                      ) : null}
+                      )}
                     </td>
                   </tr>
                 )

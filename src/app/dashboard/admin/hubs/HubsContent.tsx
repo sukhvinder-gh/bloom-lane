@@ -276,7 +276,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-              {['Hub / Group', 'Region', 'Coordinator', 'Registered', 'Status', ''].map((h, i) => (
+              {['Hub / Group', 'Region', 'Coordinator', 'Registered', 'Status', 'Actions'].map((h, i) => (
                 <th key={i} className="type-label-sm" style={{ padding: '1rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.15em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
