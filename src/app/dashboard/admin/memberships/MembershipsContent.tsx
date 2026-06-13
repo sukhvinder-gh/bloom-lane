@@ -99,6 +99,11 @@ function ActionsMenu({ row, onAction }: { row: MemberRow; onAction: (action: str
       </button>
       {open && (
         <div ref={menuRef} style={{ position: 'fixed', top: pos.top, right: pos.right, background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', zIndex: 1000, minWidth: '190px', overflow: 'hidden' }}>
+          {row.status === 'pending' && (
+            <button onClick={() => { onAction('approve'); setOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--green)', fontWeight: 700, borderBottom: '1px solid var(--border-light)' }}>
+              ✓ Approve membership
+            </button>
+          )}
           <button onClick={() => { onAction('extend'); setOpen(false) }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.75rem 1rem', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-1)', borderBottom: '1px solid var(--border-light)' }}>
             ⏱ Extend 30 days
           </button>
@@ -135,7 +140,7 @@ export default function MembershipsContent() {
   useEffect(() => { load(tab) }, [tab])
 
   async function handleAction(rowId: string, action: string) {
-    if (action === 'cancel' && !confirm('Cancel this membership? The grower will lose access.')) return
+    if (action === 'cancel' && !confirm('Cancel this membership? The member will lose access.')) return
 
     setActionState(s => ({ ...s, [rowId]: { loading: true, msg: '' } }))
     try {
@@ -151,7 +156,7 @@ export default function MembershipsContent() {
       }
       const data = await res.json()
       if (res.ok) {
-        const msg = action === 'extend' ? '✓ Extended 30 days' : action === 'cancel' ? '✓ Cancelled' : '✓ Reminder sent'
+        const msg = action === 'approve' ? '✓ Approved' : action === 'extend' ? '✓ Extended 30 days' : action === 'cancel' ? '✓ Cancelled' : '✓ Reminder sent'
         setActionState(s => ({ ...s, [rowId]: { loading: false, msg } }))
         if (action !== 'remind') {
           setRows(prev => prev.map(r => r.id === rowId

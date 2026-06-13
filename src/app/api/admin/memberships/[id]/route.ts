@@ -34,6 +34,32 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ subscription: data })
   }
 
+  if (action === 'approve') {
+    const { data: sub } = await auth.admin.from('subscriptions')
+      .select('starts_at, billing_period')
+      .eq('id', id).single()
+    if (!sub) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const startsAt = sub.starts_at ? new Date(sub.starts_at) : new Date()
+    const DAYS: Record<string, number> = { weekly: 7, monthly: 30, seasonal: 90, annual: 365 }
+    const daysToAdd = sub.billing_period ? (DAYS[sub.billing_period] ?? null) : null
+    const expiresAt = daysToAdd
+      ? new Date(startsAt.getTime() + daysToAdd * 86400000).toISOString()
+      : null
+
+    const { data, error } = await auth.admin.from('subscriptions')
+      .update({
+        status: 'active',
+        starts_at: startsAt.toISOString(),
+        expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id).select().single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ subscription: data })
+  }
+
   if (action === 'cancel') {
     const { data, error } = await auth.admin.from('subscriptions')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
