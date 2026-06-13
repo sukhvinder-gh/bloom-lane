@@ -4,18 +4,41 @@ import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 
 const CATEGORY_LABELS: Record<string, string> = {
-  flowers_cut:   '✿ Cut Flowers',
-  flowers_dried: '🌾 Dried Flowers',
-  foliage:       '🍃 Foliage',
-  vegetables:    '🥦 Vegetables',
-  herbs:         '🌿 Herbs',
-  fruit:         '🍓 Fruit',
-  eggs:          '🥚 Eggs',
-  honey:         '🍯 Honey',
-  other:         '📦 Other',
+  flowers_cut:   'Cut Flowers',
+  flowers_dried: 'Dried Flowers',
+  foliage:       'Foliage',
+  vegetables:    'Vegetables',
+  herbs:         'Herbs',
+  fruit:         'Fruit',
+  eggs:          'Eggs',
+  honey:         'Honey',
+  other:         'Other',
+}
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  flowers_cut:   '🌸',
+  flowers_dried: '🌾',
+  foliage:       '🍃',
+  vegetables:    '🥦',
+  herbs:         '🌿',
+  fruit:         '🍓',
+  eggs:          '🥚',
+  honey:         '🍯',
+  other:         '📦',
 }
 
 type StatusFilter = 'all' | 'listed' | 'unlisted'
+type SortOption   = 'newest' | 'name_asc' | 'grower_asc' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc'
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest',     label: 'Recently added' },
+  { value: 'name_asc',   label: 'Name A–Z' },
+  { value: 'grower_asc', label: 'Grower A–Z' },
+  { value: 'price_asc',  label: 'Price ↑' },
+  { value: 'price_desc', label: 'Price ↓' },
+  { value: 'stock_asc',  label: 'Stock ↑' },
+  { value: 'stock_desc', label: 'Stock ↓' },
+]
 
 export default function AdminInventoryPage() {
   const [products, setProducts] = useState<any[]>([])
@@ -23,6 +46,7 @@ export default function AdminInventoryPage() {
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState('all')
   const [status, setStatus]     = useState<StatusFilter>('all')
+  const [sort, setSort]         = useState<SortOption>('newest')
   const [toggling, setToggling] = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,7 +73,8 @@ export default function AdminInventoryPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return products.filter(p => {
+
+    const base = products.filter(p => {
       if (category !== 'all' && p.category !== category) return false
       if (status === 'listed'   && !p.is_listed_this_week) return false
       if (status === 'unlisted' &&  p.is_listed_this_week) return false
@@ -60,10 +85,22 @@ export default function AdminInventoryPage() {
       }
       return true
     })
-  }, [products, search, category, status])
 
-  const listedCount  = products.filter(p => p.is_listed_this_week).length
-  const growerCount  = new Set(products.map(p => p.farmer_id)).size
+    return [...base].sort((a, b) => {
+      switch (sort) {
+        case 'name_asc':   return a.name.localeCompare(b.name)
+        case 'grower_asc': return (a.farmers?.business_name || '').localeCompare(b.farmers?.business_name || '')
+        case 'price_asc':  return a.wholesale_price - b.wholesale_price
+        case 'price_desc': return b.wholesale_price - a.wholesale_price
+        case 'stock_asc':  return a.stock_total - b.stock_total
+        case 'stock_desc': return b.stock_total - a.stock_total
+        default:           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+  }, [products, search, category, status, sort])
+
+  const listedCount = products.filter(p => p.is_listed_this_week).length
+  const growerCount = new Set(products.map(p => p.farmer_id)).size
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '68rem' }}>
@@ -82,9 +119,9 @@ export default function AdminInventoryPage() {
       {!loading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
           {[
-            { label: 'Total products', value: products.length, color: 'var(--navy)' },
-            { label: 'Listed this week', value: listedCount, color: '#065F46' },
-            { label: 'Growers with stock', value: growerCount, color: 'var(--moss)' },
+            { label: 'Total products',    value: products.length, color: 'var(--navy)' },
+            { label: 'Listed this week',  value: listedCount,     color: '#065F46' },
+            { label: 'Growers with stock',value: growerCount,     color: 'var(--moss)' },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding: '1rem 1.25rem' }}>
               <p style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', color: s.color, fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
@@ -94,14 +131,14 @@ export default function AdminInventoryPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
+      {/* Filters — row 1: search + category + sort */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.625rem', alignItems: 'center' }}>
         <input
           className="input"
           placeholder="Search product, grower, or hub…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: '1 1 220px', minWidth: '180px', maxWidth: '300px' }}
+          style={{ flex: '1 1 200px', minWidth: '160px' }}
         />
         <select
           className="input"
@@ -111,17 +148,30 @@ export default function AdminInventoryPage() {
         >
           <option value="all">All categories</option>
           {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
+            <option key={k} value={k}>{CATEGORY_EMOJI[k]} {v}</option>
           ))}
         </select>
+        <select
+          className="input"
+          value={sort}
+          onChange={e => setSort(e.target.value as SortOption)}
+          style={{ flex: '0 0 auto' }}
+        >
+          {SORT_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
 
-        <div style={{ display: 'flex', border: '1px solid var(--olive)', borderRadius: '0.625rem', overflow: 'hidden', flexShrink: 0 }}>
+      {/* Filters — row 2: status tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', border: '1px solid var(--olive)', borderRadius: '0.625rem', overflow: 'hidden' }}>
           {(['all', 'listed', 'unlisted'] as StatusFilter[]).map(s => (
             <button
               key={s}
               onClick={() => setStatus(s)}
               style={{
-                padding: '0.45rem 0.875rem',
+                padding: '0.4rem 1rem',
                 background: status === s ? 'var(--forest)' : 'white',
                 color: status === s ? 'white' : 'var(--moss)',
                 border: 'none',
@@ -132,13 +182,13 @@ export default function AdminInventoryPage() {
                 borderRight: s !== 'unlisted' ? '1px solid var(--olive)' : 'none',
               }}
             >
-              {s === 'all' ? 'All' : s === 'listed' ? 'Listed' : 'Unlisted'}
+              {s === 'all' ? `All (${products.length})` : s === 'listed' ? `Listed (${listedCount})` : `Unlisted (${products.length - listedCount})`}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
+      {/* Product list */}
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -159,9 +209,9 @@ export default function AdminInventoryPage() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {filtered.map(p => {
-              const farmer  = p.farmers
-              const hub     = farmer?.hubs
-              const thumb   = p.image_url || (p.image_urls && p.image_urls[0])
+              const farmer = p.farmers
+              const hub    = farmer?.hubs
+              const thumb  = p.image_url || (p.image_urls && p.image_urls[0])
 
               return (
                 <div
@@ -171,11 +221,19 @@ export default function AdminInventoryPage() {
                 >
                   {/* Thumbnail */}
                   {thumb ? (
-                    <img src={thumb} alt={p.name}
-                      style={{ width: '3rem', height: '3rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 }} />
+                    <img
+                      src={thumb}
+                      alt={p.name}
+                      style={{ width: '3rem', height: '3rem', borderRadius: '0.5rem', objectFit: 'cover', flexShrink: 0 }}
+                    />
                   ) : (
-                    <div style={{ width: '3rem', height: '3rem', borderRadius: '0.5rem', background: 'var(--green-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
-                      {CATEGORY_LABELS[p.category]?.split(' ')[0] || '🌿'}
+                    <div style={{
+                      width: '3rem', height: '3rem', borderRadius: '0.5rem',
+                      background: 'var(--green-soft)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.4rem', flexShrink: 0,
+                    }}>
+                      {CATEGORY_EMOJI[p.category] || '🌿'}
                     </div>
                   )}
 
@@ -185,7 +243,7 @@ export default function AdminInventoryPage() {
                       {p.name}
                     </p>
                     <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>
-                      {CATEGORY_LABELS[p.category] || p.category} · {p.unit}
+                      {CATEGORY_EMOJI[p.category]} {CATEGORY_LABELS[p.category] || p.category} · {p.unit}
                     </p>
                   </div>
 
@@ -209,33 +267,32 @@ export default function AdminInventoryPage() {
                     <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--navy)' }}>
                       {formatPrice(p.wholesale_price)}
                     </p>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--moss)' }}>
-                      {p.stock_total} {p.unit}s
+                    <p style={{ fontSize: '0.72rem', color: p.stock_total <= 5 ? '#B91C1C' : 'var(--moss)' }}>
+                      {p.stock_total} {p.unit}s{p.stock_total <= 5 ? ' ⚠' : ''}
                     </p>
                   </div>
 
                   {/* Listed toggle */}
-                  <div style={{ flex: '0 0 auto' }}>
-                    <button
-                      onClick={() => toggleListed(p)}
-                      disabled={toggling === p.id}
-                      style={{
-                        padding: '0.3rem 0.875rem',
-                        borderRadius: '99px',
-                        border: `1.5px solid ${p.is_listed_this_week ? '#6EE7B7' : 'var(--olive)'}`,
-                        background: p.is_listed_this_week ? '#D1FAE5' : 'white',
-                        color: p.is_listed_this_week ? '#065F46' : 'var(--moss)',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        cursor: toggling === p.id ? 'default' : 'pointer',
-                        opacity: toggling === p.id ? 0.5 : 1,
-                        fontFamily: 'var(--font-body)',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {toggling === p.id ? '…' : p.is_listed_this_week ? '✓ Listed' : 'Unlisted'}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => toggleListed(p)}
+                    disabled={toggling === p.id}
+                    style={{
+                      padding: '0.3rem 0.875rem',
+                      borderRadius: '99px',
+                      border: `1.5px solid ${p.is_listed_this_week ? '#6EE7B7' : 'var(--olive)'}`,
+                      background: p.is_listed_this_week ? '#D1FAE5' : 'white',
+                      color: p.is_listed_this_week ? '#065F46' : 'var(--moss)',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      cursor: toggling === p.id ? 'default' : 'pointer',
+                      opacity: toggling === p.id ? 0.5 : 1,
+                      fontFamily: 'var(--font-body)',
+                      transition: 'all 0.15s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {toggling === p.id ? '…' : p.is_listed_this_week ? '✓ Listed' : 'Unlisted'}
+                  </button>
 
                   {/* Edit link */}
                   <Link
