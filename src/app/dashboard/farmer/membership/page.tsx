@@ -2,6 +2,76 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+// ── Confirmation modal ────────────────────────────────────────────────────────
+function ConfirmModal({ isChange, currentPlan, newPlan, billing, priceCents, onConfirm, onCancel }: {
+  isChange: boolean
+  currentPlan: string
+  newPlan: string
+  billing: string
+  priceCents: number
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const planLabel = (p: string) =>
+    p === 'hub_membership' ? 'Hub Membership' : p === 'wholesale_collection' ? 'Wholesale Collection' : p
+  const billingLabel = (b: string) =>
+    b === 'monthly' ? 'monthly' : b === 'seasonal' ? 'seasonal (3 mo)' : b === 'annual' ? 'annual' : b
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={onCancel} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '26rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+        <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{isChange ? '🔄' : '✅'}</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
+            {isChange ? 'Change Membership?' : 'Confirm Membership'}
+          </h2>
+
+          {isChange ? (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+                You're switching from <strong>{planLabel(currentPlan)}</strong> to <strong>{planLabel(newPlan)}</strong>.
+                {newPlan === 'hub_membership' && ` Billing: ${billingLabel(billing)}.`}
+              </p>
+              <div style={{ padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '8px', fontSize: '0.8rem', color: '#92400E', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                ⚠ Your current subscription will be replaced. This action cannot be undone.
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '0.5rem' }}>
+                You're signing up for
+              </p>
+              <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                {planLabel(newPlan)}
+                {newPlan === 'hub_membership' && ` — ${billingLabel(billing)}`}
+              </p>
+              {newPlan === 'hub_membership' && priceCents > 0 && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>
+                  ${(priceCents / 100).toFixed(0)} / {billing === 'seasonal' ? 'season' : billing === 'annual' ? 'year' : 'month'}
+                </p>
+              )}
+              {newPlan === 'wholesale_collection' && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1rem' }}>No membership fee</p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+          <button onClick={onCancel} className="btn btn-ghost btn-sm" style={{ minWidth: '7rem' }}>Go Back</button>
+          <button
+            onClick={onConfirm}
+            style={{ minWidth: '9rem', padding: '0.55rem 1.5rem', background: isChange ? '#92400E' : 'var(--forest)', color: 'white', border: 'none', borderRadius: '99px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
+          >
+            {isChange ? 'Yes, Switch Plan' : 'Confirm & Continue'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const BILLING_OPTIONS = [
   { value: 'monthly',  label: 'Monthly',         hint: 'Month to month, cancel any time' },
   { value: 'seasonal', label: 'Seasonal (3 mo)',  hint: 'Best value per season' },
@@ -21,8 +91,9 @@ export default function GrowerSubscriptionPage() {
   const [config, setConfig]     = useState<Record<string, number>>({})
   const [current, setCurrent]   = useState<any>(null)
   const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-  const [msg, setMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [saving, setSaving]       = useState(false)
+  const [msg, setMsg]             = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [pendingConfirm, setPendingConfirm] = useState(false)
 
   // Form state
   const [plan, setPlan]               = useState<'hub_membership' | 'wholesale_collection'>('hub_membership')
@@ -70,12 +141,17 @@ export default function GrowerSubscriptionPage() {
     annual:   config['hub_membership_annual_cents']   || 48000,
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Growing Group' }); return }
     if (gstRegistered && !rctiAgreed) { setMsg({ type: 'err', text: 'Please agree to the RCTI terms to continue' }); return }
     if (gstRegistered && !rctiFullName.trim()) { setMsg({ type: 'err', text: 'Please enter your full name to sign the RCTI agreement' }); return }
+    // Show confirmation modal — actual submit happens in executeSubmit
+    setPendingConfirm(true)
+  }
 
+  async function executeSubmit() {
+    setPendingConfirm(false)
     setSaving(true); setMsg(null)
     const res = await fetch('/api/farmer/subscription', {
       method: 'POST',
@@ -340,6 +416,18 @@ export default function GrowerSubscriptionPage() {
           {saving ? 'Saving…' : plan === 'wholesale_collection' ? 'Register for Wholesale Collection' : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
+
+      {pendingConfirm && (
+        <ConfirmModal
+          isChange={isActive && current?.plan !== plan}
+          currentPlan={current?.plan ?? ''}
+          newPlan={plan}
+          billing={billing}
+          priceCents={priceMap[billing] || 0}
+          onConfirm={executeSubmit}
+          onCancel={() => setPendingConfirm(false)}
+        />
+      )}
     </div>
   )
 }
