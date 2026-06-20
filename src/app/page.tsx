@@ -237,20 +237,20 @@ export default function HomePage() {
           {P('M336 618 Q300 598 276 568 Q256 540 262 510 Q270 484 296 482 Q324 482 336 508 Q346 534 344 576Z', 1.1)}
           {PF('M336 618 Q302 590 278 560 Q260 530 266 506')}
 
-          {/* ── GARLIC BULB — center (172,748), left of compound leaves, below stem leaf ── */}
-          <path d="M107 790 Q101 738 120 706 Q144 676 172 670 Q202 667 224 696 Q241 726 237 788 Q225 838 172 846 Q110 840 107 790Z" stroke={INK} strokeWidth="1.8" fill={INK} fillOpacity="0.04"/>
-          {PF('M144 678 Q138 764 146 840', 1.3)}
-          {PF('M172 670 Q172 760 172 846', 1.3)}
-          {PF('M200 678 Q206 764 198 840', 1.3)}
-          {PF('M114 760 Q144 740 172 737 Q202 737 228 757', 1.0)}
-          {PF('M130 792 Q172 778 214 792', 0.8)}
+          {/* ── GARLIC BULB — center (220,735), below compound leaves, prominent ── */}
+          <path d="M148 768 Q142 714 162 680 Q188 648 220 642 Q254 639 278 670 Q298 702 294 766 Q282 820 220 828 Q150 822 148 768Z" stroke={INK} strokeWidth="2.2" fill={INK} fillOpacity="0.07"/>
+          {PF('M188 650 Q182 736 190 826', 1.6)}
+          {PF('M220 642 Q220 734 220 828', 1.6)}
+          {PF('M252 650 Q258 736 250 826', 1.6)}
+          {PF('M156 740 Q188 718 220 716 Q252 716 282 736', 1.2)}
+          {PF('M170 772 Q220 758 270 772', 1.0)}
           {/* garlic scapes */}
-          {P('M172 670 Q169 640 172 620', 1.3)}
-          {PF('M150 673 Q138 645 136 622')}
-          {PF('M194 673 Q206 645 208 622')}
-          <circle cx="172" cy="618" r="2.5" stroke={INK} strokeWidth="0.9" fill="none"/>
-          <circle cx="136" cy="620" r="2.0" stroke={INK} strokeWidth="0.8" fill="none"/>
-          <circle cx="208" cy="620" r="2.0" stroke={INK} strokeWidth="0.8" fill="none"/>
+          {P('M220 642 Q217 612 220 592', 1.5)}
+          {PF('M196 645 Q184 615 180 594', 0.9)}
+          {PF('M244 645 Q256 615 260 594', 0.9)}
+          <circle cx="220" cy="590" r="3.0" stroke={INK} strokeWidth="1.0" fill="none"/>
+          <circle cx="179" cy="592" r="2.2" stroke={INK} strokeWidth="0.9" fill="none"/>
+          <circle cx="261" cy="592" r="2.2" stroke={INK} strokeWidth="0.9" fill="none"/>
 
           {/* ── BEET — r=52, center (370,718), subtle fill for visibility ── */}
           <circle cx="370" cy="718" r="52" stroke={INK} strokeWidth="1.8" fill={INK} fillOpacity="0.04"/>
