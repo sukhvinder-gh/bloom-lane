@@ -105,7 +105,7 @@ export default function HomePage() {
           HERO
       ════════════════════════════════ */}
       <section style={{
-        minHeight: '680px',
+        minHeight: '505px',
         background: BG, position: 'relative',
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
       }}>
@@ -265,7 +265,7 @@ export default function HomePage() {
               Direct. Local. Seasonal.
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', paddingTop: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', paddingTop: '0.15rem' }}>
             <Link href="#how-it-works" style={{ color: FG, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, padding: '0.5rem 1rem' }}>
               How the Green Guild works
             </Link>
@@ -282,7 +282,7 @@ export default function HomePage() {
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', zIndex: 10,
-          padding: '1rem 2rem 3rem', textAlign: 'center',
+          padding: '0rem 1rem 3rem', textAlign: 'center',
         }}>
           <div style={{ maxWidth: '860px' }}>
             <h1 style={{
@@ -327,8 +327,8 @@ export default function HomePage() {
           COMMUNITY
       ════════════════════════════════ */}
       <section style={{ background: FG }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '4rem 2rem 0', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 2.5vw, 1.875rem)', fontWeight: 500, color: BG, letterSpacing: '-0.01em', marginBottom: '3.5rem' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0rem 1rem 0', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 2.5vw, 1.875rem)', fontWeight: 500, color: BG, letterSpacing: '-0.01em', marginBottom: '1.5rem' }}>
             Join the Green Guild community
           </h2>
 
