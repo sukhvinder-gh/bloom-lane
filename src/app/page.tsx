@@ -105,7 +105,7 @@ export default function HomePage() {
           HERO
       ════════════════════════════════ */}
       <section style={{
-        height: '100vh', minHeight: '680px',
+        minHeight: '680px',
         background: BG, position: 'relative',
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
       }}>
@@ -282,12 +282,12 @@ export default function HomePage() {
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', zIndex: 10,
-          padding: '0 2rem 4vh', textAlign: 'center',
+          padding: '1rem 2rem 3rem', textAlign: 'center',
         }}>
           <div style={{ maxWidth: '860px' }}>
             <h1 style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2rem, 3.8vw, 4rem)',
+              fontSize: 'clamp(2.5rem, 5.5vw, 4.5rem)',
               fontWeight: 400, color: FG,
               lineHeight: 1.12, letterSpacing: '-0.02em',
               marginBottom: '1rem',
