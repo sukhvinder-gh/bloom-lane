@@ -245,53 +245,57 @@ export default function HomePage() {
         {/* ── HERO TEXT ── */}
         <div style={{
           flex: 1,
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', zIndex: 10,
-          paddingTop: 'clamp(3.5rem, 16vh, 8rem)',
-          padding: 'clamp(3.5rem, 16vh, 8rem) 2rem 0',
+          padding: '0 2rem 4vh',
           textAlign: 'center',
         }}>
-          <div style={{ maxWidth: '680px' }}>
-            {marketOpen && (
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, color: INK, letterSpacing: '0.04em', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'pulse-dot 1.8s ease infinite' }} />
-                Market open · Order now
-              </p>
-            )}
-
+          <div style={{ maxWidth: '860px' }}>
             <h1 style={{
               fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.8rem, 5.5vw, 4.75rem)',
+              fontSize: 'clamp(2rem, 3.8vw, 4rem)',
               fontWeight: 400,
               color: FG,
-              lineHeight: 1.1,
-              letterSpacing: '-0.025em',
-              marginBottom: '1.75rem',
+              lineHeight: 1.12,
+              letterSpacing: '-0.02em',
+              marginBottom: '1rem',
             }}>
               Fresh harvest,<br />
               direct from the growers
             </h1>
 
             {/* ── Leaf divider ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
-              <div style={{ height: '1px', width: '72px', background: INK, opacity: 0.5 }} />
-              <svg width="28" height="24" viewBox="0 0 28 24" fill="none">
-                <path d="M14 3 Q10 12 6 22 Q10 12 14 3 Q18 12 22 22 Q18 12 14 3Z" stroke={INK} strokeWidth="1.1" fill="none"/>
-                <line x1="14" y1="3" x2="14" y2="22" stroke={INK} strokeWidth="0.75"/>
-                <path d="M8 13 Q11 11 14 13 Q17 11 20 13" stroke={INK} strokeWidth="0.7"/>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ height: '1px', width: '68px', background: INK, opacity: 0.45 }} />
+              <svg width="32" height="26" viewBox="0 0 32 26" fill="none">
+                {/* stem */}
+                <line x1="16" y1="2" x2="16" y2="24" stroke={INK} strokeWidth="0.9"/>
+                {/* left leaf */}
+                <path d="M16 8 Q9 5 7 2 Q9 0 14 5 Q16 8 16 8Z" stroke={INK} strokeWidth="0.9" fill="none"/>
+                {/* right leaf */}
+                <path d="M16 13 Q23 10 25 7 Q23 5 18 10 Q16 13 16 13Z" stroke={INK} strokeWidth="0.9" fill="none"/>
+                {/* tiny top buds */}
+                <path d="M16 4 Q13 1 12 0" stroke={INK} strokeWidth="0.7"/>
+                <path d="M16 4 Q19 1 20 0" stroke={INK} strokeWidth="0.7"/>
               </svg>
-              <div style={{ height: '1px', width: '72px', background: INK, opacity: 0.5 }} />
+              <div style={{ height: '1px', width: '68px', background: INK, opacity: 0.45 }} />
             </div>
 
             <p style={{
-              fontSize: 'clamp(1rem, 1.8vw, 1.2rem)',
+              fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
               color: '#6B7252',
-              lineHeight: 1.7,
-              fontStyle: 'italic',
-              letterSpacing: '0.005em',
+              lineHeight: 1.6,
+              letterSpacing: '0.01em',
             }}>
               From farm to buyer, made simple.
             </p>
+
+            {marketOpen && (
+              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: INK, letterSpacing: '0.05em', marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }} />
+                Market open · Order now
+              </p>
+            )}
           </div>
         </div>
       </section>
