@@ -28,9 +28,9 @@ export default function HomePage() {
         {/* ── LEFT botanical ── */}
         <svg
           aria-hidden="true"
-          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '42%', pointerEvents: 'none' }}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '42%', pointerEvents: 'none', zIndex: 0 }}
           viewBox="0 0 520 900"
-          preserveAspectRatio="xMinYMax meet"
+          preserveAspectRatio="xMinYMid meet"
           fill="none"
         >
           {/* ── Umbel stem A (far left) ── */}
@@ -131,9 +131,9 @@ export default function HomePage() {
         {/* ── RIGHT botanical ── */}
         <svg
           aria-hidden="true"
-          style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '38%', pointerEvents: 'none' }}
+          style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '38%', pointerEvents: 'none', zIndex: 0 }}
           viewBox="0 0 480 900"
-          preserveAspectRatio="xMaxYMax meet"
+          preserveAspectRatio="xMaxYMid meet"
           fill="none"
         >
           {/* ── TALL STEM (far right) ── */}
@@ -203,8 +203,8 @@ export default function HomePage() {
 
         {/* ── NAV ── */}
         <nav style={{
-          position: 'relative', zIndex: 10,
-          padding: '1.125rem 2.5rem',
+          position: 'relative', zIndex: 20, flexShrink: 0,
+          padding: '1rem 2.5rem',
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
         }}>
           <div>
@@ -245,9 +245,10 @@ export default function HomePage() {
         {/* ── HERO TEXT ── */}
         <div style={{
           flex: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           position: 'relative', zIndex: 10,
-          padding: '2rem',
+          paddingTop: 'clamp(3.5rem, 16vh, 8rem)',
+          padding: 'clamp(3.5rem, 16vh, 8rem) 2rem 0',
           textAlign: 'center',
         }}>
           <div style={{ maxWidth: '680px' }}>
