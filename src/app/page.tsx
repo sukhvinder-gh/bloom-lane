@@ -14,18 +14,18 @@ export default function HomePage() {
   const marketOpen = isMarketOpen()
 
   /* ─ umbellate top helper: draws 3-level branching from a stem tip ─ */
-  function Umbel({ cx, cy, primary }: {
+  function Umbel({ cx, cy, primary, dr = 1.8 }: {
     cx: number; cy: number;
     primary: [number, number][];
+    dr?: number;
   }) {
     return (
       <>
         {primary.map(([dx, dy], pi) => {
           const ex = cx + dx, ey = cy + dy
-          /* direction of primary branch → secondary branches perpendicular */
           const len = Math.sqrt(dx*dx+dy*dy)
           const ux = dx/len, uy = dy/len
-          const px = -uy, py = ux   /* perpendicular */
+          const px = -uy, py = ux
           const secondaries: [number,number][] = [
             [ux*22+px*12, uy*22+py*12],
             [ux*26,        uy*26       ],
@@ -33,7 +33,7 @@ export default function HomePage() {
           ]
           return (
             <g key={pi}>
-              <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={INK} strokeWidth="0.82"/>
+              <line x1={cx} y1={cy} x2={ex} y2={ey} stroke={INK} strokeWidth="0.9"/>
               {secondaries.map(([sdx, sdy], si) => {
                 const sx = ex+sdx, sy = ey+sdy
                 const tertiaries: [number,number][] = [
@@ -43,11 +43,11 @@ export default function HomePage() {
                 ]
                 return (
                   <g key={si}>
-                    <line x1={ex} y1={ey} x2={sx} y2={sy} stroke={INK} strokeWidth="0.65"/>
+                    <line x1={ex} y1={ey} x2={sx} y2={sy} stroke={INK} strokeWidth="0.72"/>
                     {tertiaries.map(([tdx, tdy], ti) => (
                       <g key={ti}>
-                        <line x1={sx} y1={sy} x2={sx+tdx} y2={sy+tdy} stroke={INK} strokeWidth="0.5"/>
-                        <circle cx={sx+tdx} cy={sy+tdy} r="1.8" stroke={INK} strokeWidth="0.5" fill="none"/>
+                        <line x1={sx} y1={sy} x2={sx+tdx} y2={sy+tdy} stroke={INK} strokeWidth="0.55"/>
+                        <circle cx={sx+tdx} cy={sy+tdy} r={dr} stroke={INK} strokeWidth="0.55" fill="none"/>
                       </g>
                     ))}
                   </g>
@@ -116,17 +116,17 @@ export default function HomePage() {
           viewBox="0 0 520 900" preserveAspectRatio="xMinYMid meet">
 
           {/* ── Umbellate stem A ── */}
-          {P('M22 900 Q26 760 20 600 Q14 450 22 300 Q28 180 18 80 Q14 40 16 10', 1.2)}
-          <Umbel cx={16} cy={10} primary={[
-            [-68,-28],[-45,-48],[-18,-60],[8,-65],[34,-58],[58,-44],[76,-26],
+          {P('M22 900 Q26 760 20 600 Q14 450 22 300 Q32 180 50 85', 1.2)}
+          <Umbel cx={50} cy={85} dr={3.5} primary={[
+            [-40,-35],[-18,-52],[8,-65],[32,-62],[55,-52],[72,-38],[84,-20],
           ]}/>
           {/* small leaf off stem A */}
           {P('M20 320 Q-5 298 -12 272 Q-14 250 2 244 Q20 240 28 260 Q32 280 24 308Z')}
           {PF('M20 320 Q0 282 -5 258 Q-10 244 2 244')}
 
           {/* ── Umbellate stem B ── */}
-          {P('M75 900 Q80 780 74 640 Q68 508 78 368 Q86 250 75 140 Q70 75 72 22', 1.1)}
-          <Umbel cx={72} cy={22} primary={[
+          {P('M75 900 Q80 780 74 640 Q68 508 78 368 Q86 250 85 95', 1.1)}
+          <Umbel cx={85} cy={95} dr={3.5} primary={[
             [-58,-25],[-35,-46],[-10,-58],[18,-62],[42,-54],[65,-38],[80,-20],
           ]}/>
           {/* leaf off stem B */}
@@ -139,25 +139,25 @@ export default function HomePage() {
             [-30,-20],[-8,-30],[16,-28],[36,-16],
           ]}/>
 
-          {/* ── SUNFLOWER center (248, 375) ── */}
-          <SunflowerPetals cx={248} cy={375} n={20} r={28} petalL={34} petalW={10}/>
+          {/* ── SUNFLOWER center (248, 275) ── */}
+          <SunflowerPetals cx={248} cy={275} n={20} r={28} petalL={34} petalW={10}/>
           {/* inner row of petals (between outer and disk) */}
-          <SunflowerPetals cx={248} cy={375} n={20} r={22} petalL={14} petalW={6}/>
+          <SunflowerPetals cx={248} cy={275} n={20} r={22} petalL={14} petalW={6}/>
           {/* disk rings */}
-          <circle cx="248" cy="375" r="21" stroke={INK} strokeWidth="1.2" fill="none"/>
-          <circle cx="248" cy="375" r="14" stroke={INK} strokeWidth="0.9" fill="none"/>
+          <circle cx="248" cy="275" r="21" stroke={INK} strokeWidth="1.2" fill="none"/>
+          <circle cx="248" cy="275" r="14" stroke={INK} strokeWidth="0.9" fill="none"/>
           {/* seed dots at r=5, r=9, r=13 */}
           {[5,9,13].map(r => Array.from({length: Math.round(2*Math.PI*r/4.5)}).map((_,i) => {
             const a = (i / Math.round(2*Math.PI*r/4.5)) * 2 * Math.PI
-            return <circle key={`${r}-${i}`} cx={248+r*Math.cos(a)} cy={375+r*Math.sin(a)} r="1.2" fill={INK} opacity="0.65"/>
+            return <circle key={`${r}-${i}`} cx={248+r*Math.cos(a)} cy={275+r*Math.sin(a)} r="1.2" fill={INK} opacity="0.65"/>
           }))}
           {/* sunflower stem */}
-          {P('M248 403 Q242 468 235 540 Q228 610 222 682 Q215 755 208 830 Q203 868 198 900', 1.4)}
+          {P('M248 303 Q242 368 235 440 Q228 510 222 582 Q215 655 208 730 Q203 768 198 800', 1.4)}
           {/* stem leaves */}
-          {P('M238 490 Q202 468 185 442 Q172 420 185 406 Q200 395 220 408 Q238 424 238 462Z', 1.1)}
-          {PF('M238 490 Q208 462 192 436 Q178 414 186 405')}
-          {P('M228 572 Q262 552 278 524 Q288 504 278 488 Q264 476 246 490 Q232 506 228 545Z', 1.1)}
-          {PF('M228 572 Q262 550 278 524 Q286 508 276 490')}
+          {P('M238 390 Q202 368 185 342 Q172 320 185 306 Q200 295 220 308 Q238 324 238 362Z', 1.1)}
+          {PF('M238 390 Q208 362 192 336 Q178 314 186 305')}
+          {P('M228 472 Q262 452 278 424 Q288 404 278 388 Q264 376 246 390 Q232 406 228 445Z', 1.1)}
+          {PF('M228 472 Q262 450 278 424 Q286 408 276 390')}
 
           {/* ── LARGE PUMPKIN LEAVES ── */}
           {/* Leaf 1 — sweeping upper-left, 5 lobes */}
