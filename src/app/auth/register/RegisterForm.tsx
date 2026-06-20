@@ -98,7 +98,7 @@ export default function RegisterForm() {
   ]
 
   if (step === 'done') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
       <div className="card-forest reveal" style={{ padding: '4rem', textAlign: 'center', maxWidth: '28rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🌱</div>
         <h2 className="type-subheading" style={{ color: 'var(--cream)', marginBottom: '1rem' }}>You're in!</h2>
@@ -113,7 +113,7 @@ export default function RegisterForm() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--cream)', padding: '3rem 1.5rem' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', padding: '3rem 1.5rem' }}>
       <div className="reveal" style={{ width: '100%', maxWidth: '30rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '2rem' }}>

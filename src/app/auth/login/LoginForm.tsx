@@ -24,7 +24,7 @@ export default function LoginForm() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--cream)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', background: 'transparent' }}>
       {/* Left — forest panel */}
       <div className="section-forest" style={{
         display: 'none', flex: '0 0 48%',
