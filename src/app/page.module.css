@@ -1,0 +1,271 @@
+:root {
+  --green: #173a33;
+  --light: #f7f5ef;
+  --gold: #b8ab8c;
+}
+
+.page {
+  min-height: 100vh;
+  background: var(--light);
+  color: var(--green);
+  overflow-x: hidden;
+}
+
+/* ---------------- */
+/* Header */
+/* ---------------- */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 42px 70px;
+}
+
+.logo {
+  font-size: 5rem;
+  line-height: 1;
+  font-family: Georgia, serif;
+  font-weight: 500;
+  margin: 0;
+}
+
+.tagline {
+  letter-spacing: 8px;
+  font-size: 1rem;
+  margin-top: 20px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  margin-top: 10px;
+}
+
+.nav a {
+  color: var(--green);
+  text-decoration: none;
+  font-size: 1.15rem;
+}
+
+.shopBtn {
+  border: 1px solid var(--green);
+  background: transparent;
+  color: var(--green);
+  padding: 18px 42px;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.shopBtn:hover {
+  background: var(--green);
+  color: white;
+}
+
+/* ---------------- */
+/* Hero */
+/* ---------------- */
+
+.hero {
+  position: relative;
+  padding: 60px 20px 100px;
+  text-align: center;
+}
+
+.heroContent {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.hero h2 {
+  font-size: clamp(4rem, 8vw, 7rem);
+  line-height: 1.05;
+  font-family: Georgia, serif;
+  font-weight: 500;
+  margin: 0;
+}
+
+.hero p {
+  margin-top: 30px;
+  font-size: 2rem;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 42px;
+}
+
+.divider span {
+  width: 140px;
+  height: 1px;
+  background: rgba(23, 58, 51, 0.3);
+}
+
+.leaf {
+  font-size: 2rem;
+}
+
+/* Decorative */
+
+.leftIllustration,
+.rightIllustration {
+  position: absolute;
+  font-size: 12rem;
+  opacity: 0.25;
+}
+
+.leftIllustration {
+  left: 50px;
+  bottom: -20px;
+}
+
+.rightIllustration {
+  right: 50px;
+  bottom: -20px;
+}
+
+/* ---------------- */
+/* Community */
+/* ---------------- */
+
+.community {
+  background: radial-gradient(
+      circle at center,
+      rgba(8, 115, 79, 0.25),
+      transparent 50%
+    ),
+    linear-gradient(180deg, #0f2d28 0%, #123730 100%);
+  color: white;
+  padding: 50px 60px 40px;
+}
+
+.community h3 {
+  text-align: center;
+  font-size: 3rem;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  margin-bottom: 50px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 40px;
+}
+
+.card {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 20px 40px;
+}
+
+.card:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.icon {
+  width: 90px;
+  height: 90px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.card h4 {
+  margin: 0 0 12px;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.card p {
+  margin: 0;
+  font-size: 1.3rem;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  margin-top: 35px;
+}
+
+.footerLinks a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.15rem;
+}
+
+/* ---------------- */
+/* Responsive */
+/* ---------------- */
+
+@media (max-width: 1024px) {
+  .header {
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .nav {
+    flex-wrap: wrap;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .card:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .hero h2 {
+    font-size: 4rem;
+  }
+
+  .hero p {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 30px;
+  }
+
+  .logo {
+    font-size: 3rem;
+  }
+
+  .tagline {
+    letter-spacing: 4px;
+    font-size: 0.85rem;
+  }
+
+  .community {
+    padding: 40px 20px;
+  }
+
+  .card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .leftIllustration,
+  .rightIllustration {
+    display: none;
+  }
+}
