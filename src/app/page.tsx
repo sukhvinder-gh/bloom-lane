@@ -254,23 +254,63 @@ export default function HomePage() {
         <h3>Join the Green Guild community</h3>
 
         <div className={styles.cards}>
-          {[
-            { icon: '🌱', title: 'Register – Grower',      desc: 'Join our network of trusted growers.',          href: '/auth/register?role=farmer' },
-            { icon: '🏚️', title: 'Register – Hub',          desc: 'Become a hub and connect your region.',         href: '/auth/register?role=coordinator' },
-            { icon: '🛒', title: 'Register – Buyer (free)', desc: 'Source fresh produce direct from growers.',     href: '/auth/register' },
-          ].map((item, idx) => (
-            <Link key={idx} href={item.href} className={styles.card} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className={styles.icon}>{item.icon}</div>
-              <div>
-                <h4>{item.title}</h4>
-                <p>{item.desc}</p>
-              </div>
-            </Link>
-          ))}
+
+          {/* Grower */}
+          <Link href="/auth/register?role=farmer" className={styles.card} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className={styles.icon}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <line x1="22" y1="38" x2="22" y2="18" stroke="white" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M22 18 Q14 11 8 14 Q11 21 18 23 Q20 23 22 22" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 18 Q30 11 36 14 Q33 21 26 23 Q24 23 22 22" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 27 Q14 20 8 23 Q11 30 18 32 Q20 32 22 31" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M22 27 Q30 20 36 23 Q33 30 26 32 Q24 32 22 31" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Register – Grower</h4>
+              <p>Join our network of trusted growers.</p>
+            </div>
+          </Link>
+
+          {/* Hub */}
+          <Link href="/auth/register?role=coordinator" className={styles.card} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className={styles.icon}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <path d="M6 20 L22 8 L38 20" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="9" y="20" width="26" height="16" stroke="white" strokeWidth="1.4"/>
+                <path d="M18 36 L18 28 Q18 24 22 24 Q26 24 26 28 L26 36" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+                <line x1="13" y1="24" x2="16" y2="24" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+                <line x1="13" y1="28" x2="16" y2="28" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Register – Hub</h4>
+              <p>Become a hub and connect your region.</p>
+            </div>
+          </Link>
+
+          {/* Buyer */}
+          <Link href="/auth/register" className={styles.card} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className={styles.icon}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <path d="M8 18 L36 18 L32 34 L12 34 Z" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 18 Q14 10 22 10 Q30 10 30 18" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
+                <line x1="17" y1="22" x2="16" y2="32" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+                <line x1="22" y1="22" x2="22" y2="32" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+                <line x1="27" y1="22" x2="28" y2="32" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Register – Buyer (free)</h4>
+              <p>Source fresh produce direct from growers.</p>
+            </div>
+          </Link>
+
         </div>
 
         <div className={styles.footerLinks}>
           <Link href="/privacy">Privacy Policy</Link>
+          <span style={{ color: 'rgba(255,255,255,0.35)' }}>|</span>
           <Link href="/terms">Terms &amp; Conditions</Link>
         </div>
       </section>
