@@ -65,8 +65,9 @@ export default function NewsletterSection() {
             {msg}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.75rem', maxWidth: '480px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <form suppressHydrationWarning onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.75rem', maxWidth: '480px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
             <input
+              suppressHydrationWarning
               type="email"
               required
               placeholder="your@email.com"
@@ -86,6 +87,7 @@ export default function NewsletterSection() {
               }}
             />
             <button
+              suppressHydrationWarning
               type="submit"
               disabled={status === 'loading'}
               style={{
