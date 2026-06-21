@@ -1,19 +1,17 @@
 import Link from 'next/link'
 import { isMarketOpen } from '@/lib/utils/timezone'
 import NewsletterSection from './_components/NewsletterSection'
+import styles from './page.module.css'
 
-const BG  = '#EDE9DF'
-const FG  = '#1B3A2D'
+const FG  = '#173a33'
 const INK = '#898C62'
 
-/* ─── tiny helpers that keep JSX readable ─── */
 const P  = (d: string, w = 1.1) => <path d={d} stroke={INK} strokeWidth={w} fill="none"/>
 const PF = (d: string, w = 0.7) => <path d={d} stroke={INK} strokeWidth={w} fill="none"/>
 
 export default function HomePage() {
   const marketOpen = isMarketOpen()
 
-  /* ─ umbellate top helper: draws 3-level branching from a stem tip ─ */
   function Umbel({ cx, cy, primary, dr = 1.8 }: {
     cx: number; cy: number;
     primary: [number, number][];
@@ -60,7 +58,6 @@ export default function HomePage() {
     )
   }
 
-  /* ─ sunflower petal ring ─ */
   function SunflowerPetals({ cx, cy, n=20, r=30, petalL=36, petalW=9 }: {
     cx: number; cy: number; n?: number; r?: number; petalL?: number; petalW?: number
   }) {
@@ -78,7 +75,6 @@ export default function HomePage() {
     )
   }
 
-  /* ─ dandelion seed head ─ */
   function Dandelion({ cx, cy, spokes=26, r=55 }: {
     cx: number; cy: number; spokes?: number; r?: number
   }) {
@@ -99,139 +95,144 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ fontFamily: 'var(--font-body)', background: BG }}>
+    <main className={styles.page}>
 
-      {/* ════════════════════════════════
-          HERO
-      ════════════════════════════════ */}
-      <section style={{
-        minHeight: '505px',
-        background: BG, position: 'relative',
-        overflow: 'hidden', display: 'flex', flexDirection: 'column',
-      }}>
+      {/* ── HEADER ── */}
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.logo}>The Green Guild</h1>
+          <p className={styles.tagline}>DIRECT. LOCAL. SEASONAL.</p>
+        </div>
+        <nav className={styles.nav}>
+          <Link href="#how-it-works">How the Green Guild works</Link>
+          <Link href="/marketplace" className={styles.shopBtn} style={{ textDecoration: 'none', display: 'inline-block' }}>
+            Shop Now
+          </Link>
+          <Link href="/auth/login">Login</Link>
+        </nav>
+      </header>
 
-        {/* ── LEFT botanical ── */}
+      {/* ── HERO ── */}
+      <section className={styles.hero}>
+
+        {/* LEFT botanical */}
         <svg aria-hidden="true" fill="none"
-          style={{ position:'absolute', left:0, top:0, bottom:0, width:'42%', pointerEvents:'none', zIndex:0 }}
+          style={{ position:'absolute', left:0, top:0, bottom:0, width:'36%', pointerEvents:'none', zIndex:0 }}
           viewBox="0 0 520 900" preserveAspectRatio="xMinYMid meet">
 
-          {/* ── Umbellate stem A ── */}
           {P('M22 900 Q26 760 20 600 Q14 450 22 300 Q32 180 50 85', 1.2)}
           <Umbel cx={50} cy={85} dr={3.5} primary={[
             [-40,-35],[-18,-52],[8,-65],[32,-62],[55,-52],[72,-38],[84,-20],
           ]}/>
-          {/* small leaf off stem A */}
           {P('M20 320 Q-5 298 -12 272 Q-14 250 2 244 Q20 240 28 260 Q32 280 24 308Z')}
           {PF('M20 320 Q0 282 -5 258 Q-10 244 2 244')}
 
-          {/* ── Umbellate stem B ── */}
           {P('M75 900 Q80 780 74 640 Q68 508 78 368 Q86 250 85 95', 1.1)}
           <Umbel cx={85} cy={95} dr={3.5} primary={[
             [-58,-25],[-35,-46],[-10,-58],[18,-62],[42,-54],[65,-38],[80,-20],
           ]}/>
-          {/* leaf off stem B */}
           {P('M76 400 Q105 378 115 352 Q120 330 108 320 Q92 312 80 330 Q70 350 74 378Z')}
           {PF('M76 400 Q102 370 110 344 Q114 326 104 318')}
 
-          {/* ── Umbellate stem C (minor) ── */}
           {P('M46 900 Q50 820 44 720 Q38 620 46 520 Q52 440 44 360', 0.9)}
-          <Umbel cx={44} cy={360} primary={[
-            [-30,-20],[-8,-30],[16,-28],[36,-16],
-          ]}/>
+          <Umbel cx={44} cy={360} primary={[[-30,-20],[-8,-30],[16,-28],[36,-16]]}/>
 
-          {/* ── SUNFLOWER center (248, 275) ── */}
           <SunflowerPetals cx={248} cy={275} n={20} r={28} petalL={34} petalW={10}/>
-          {/* inner row of petals (between outer and disk) */}
           <SunflowerPetals cx={248} cy={275} n={20} r={22} petalL={14} petalW={6}/>
-          {/* disk rings */}
           <circle cx="248" cy="275" r="21" stroke={INK} strokeWidth="1.2" fill="none"/>
           <circle cx="248" cy="275" r="14" stroke={INK} strokeWidth="0.9" fill="none"/>
-          {/* seed dots at r=5, r=9, r=13 */}
           {[5,9,13].map(r => Array.from({length: Math.round(2*Math.PI*r/4.5)}).map((_,i) => {
             const a = (i / Math.round(2*Math.PI*r/4.5)) * 2 * Math.PI
             return <circle key={`${r}-${i}`} cx={248+r*Math.cos(a)} cy={275+r*Math.sin(a)} r="1.2" fill={INK} opacity="0.65"/>
           }))}
-          {/* sunflower stem */}
           {P('M248 303 Q242 368 235 440 Q228 510 222 582 Q215 655 208 730 Q203 768 198 800', 1.4)}
-          {/* stem leaves */}
           {P('M238 390 Q202 368 185 342 Q172 320 185 306 Q200 295 220 308 Q238 324 238 362Z', 1.1)}
           {PF('M238 390 Q208 362 192 336 Q178 314 186 305')}
           {P('M228 472 Q262 452 278 424 Q288 404 278 388 Q264 376 246 390 Q232 406 228 445Z', 1.1)}
           {PF('M228 472 Q262 450 278 424 Q286 408 276 390')}
 
-          {/* ── LARGE PUMPKIN LEAVES ── */}
-          {/* Leaf 1 — sweeping upper-left, 5 lobes */}
           {P('M196 638 Q162 616 128 582 Q96 550 78 515 Q64 485 74 462 Q86 443 108 453 Q132 466 144 495 Q158 528 160 570 Q174 604 196 638Z', 1.2)}
           {PF('M196 638 Q158 602 116 558 Q84 524 76 488')}
           {PF('M108 453 Q128 485 138 522 Q148 558 158 598')}
           {PF('M78 520 Q105 508 130 522')}
-          {/* Lobe sub-veins */}
           {PF('M90 478 Q82 462 85 448')}
           {PF('M120 455 Q118 440 122 428')}
 
-          {/* Leaf 2 — sweeping upper-right */}
           {P('M198 638 Q228 598 258 562 Q282 528 294 490 Q302 458 286 434 Q268 412 244 424 Q222 438 216 475 Q210 512 204 558 Q198 596 198 638Z', 1.2)}
           {PF('M198 638 Q230 588 258 548 Q282 518 290 482 Q298 452 282 432')}
           {PF('M244 424 Q232 462 232 500')}
           {PF('M260 432 Q274 450 276 476')}
 
-          {/* Leaf 3 — behind */}
           {P('M192 628 Q168 602 155 568 Q144 536 156 506 Q170 478 196 482 Q220 488 224 516 Q228 548 212 582Z', 0.95)}
 
-          {/* ── PUMPKIN ── */}
           {P('M60 760 Q54 716 66 692 Q80 668 112 664 Q144 662 162 686 Q176 710 172 758 Q162 790 115 796 Q68 792 60 760Z', 1.35)}
-          {/* ribs */}
           {PF('M114 664 Q120 730 116 796', 0.9)}
           {PF('M90 668 Q90 732 90 792', 0.85)}
           {PF('M138 668 Q140 732 138 792', 0.85)}
           {PF('M70 700 Q66 756 72 778', 0.75)}
           {PF('M158 700 Q162 756 158 776', 0.75)}
-          {/* stem + tendril */}
           {P('M114 664 Q112 642 115 628 Q118 618 114 608', 1.15)}
           {PF('M115 628 Q133 616 148 604 Q160 594 158 580')}
           {PF('M114 630 Q96 618 82 606 Q70 594 73 578')}
         </svg>
 
-        {/* ── RIGHT botanical ── */}
+        {/* HERO TEXT */}
+        <div className={styles.heroContent}>
+          <h2>
+            Fresh harvest,<br />
+            direct from the growers
+          </h2>
+
+          <div className={styles.divider}>
+            <span />
+            <svg width="32" height="26" viewBox="0 0 32 26" fill="none">
+              <line x1="16" y1="2" x2="16" y2="24" stroke={INK} strokeWidth="0.9"/>
+              <path d="M16 8 Q9 5 7 2 Q9 0 14 5 Q16 8 16 8Z" stroke={INK} strokeWidth="0.9" fill="none"/>
+              <path d="M16 13 Q23 10 25 7 Q23 5 18 10 Q16 13 16 13Z" stroke={INK} strokeWidth="0.9" fill="none"/>
+            </svg>
+            <span />
+          </div>
+
+          <p>From farm to buyer, made simple.</p>
+
+          {marketOpen && (
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: INK, letterSpacing: '0.05em', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }} />
+              Market open · Order now
+            </p>
+          )}
+        </div>
+
+        {/* RIGHT botanical */}
         <svg aria-hidden="true" fill="none"
-          style={{ position:'absolute', right:0, top:0, bottom:0, width:'38%', pointerEvents:'none', zIndex:0 }}
+          style={{ position:'absolute', right:0, top:0, bottom:0, width:'34%', pointerEvents:'none', zIndex:0 }}
           viewBox="0 0 480 900" preserveAspectRatio="xMaxYMid meet">
 
-          {/* ── Far-right stem + DANDELION ── */}
           {P('M418 900 Q416 800 420 700 Q424 600 418 490 Q414 390 418 290 Q420 200 416 135', 1.2)}
           <Dandelion cx={418} cy={72} spokes={26} r={58}/>
 
-          {/* ── Main centre stem: flows from bottom through beet up to garlic ── */}
           {P('M278 900 Q276 840 278 780 Q280 730 294 692 Q312 656 330 624 Q338 614 342 612', 1.3)}
 
-          {/* ── GARLIC BULB — dominant hero element, center ~(342,490) ── */}
           <path d="M258 518 Q252 458 276 418 Q306 374 342 368 Q380 370 408 410 Q432 450 426 518 Q414 576 386 596 Q366 608 342 610 Q318 608 298 596 Q266 572 258 518Z" stroke={INK} strokeWidth="2.4" fill={INK} fillOpacity="0.06"/>
-          {/* 5 clove rib lines */}
           {PF('M282 384 Q274 490 284 608', 1.6)}
           {PF('M308 372 Q302 490 306 608', 1.6)}
           {PF('M342 368 Q342 490 342 610', 1.6)}
           {PF('M376 372 Q382 490 378 608', 1.6)}
           {PF('M402 384 Q410 490 400 608', 1.6)}
-          {/* Upper papery girdle — shows clove division */}
           {PF('M264 480 Q304 456 342 452 Q380 456 420 478', 1.3)}
-          {/* Lower girdle */}
           {PF('M266 562 Q342 544 418 562', 1.0)}
-          {/* Garlic scape curling up from crown */}
           {P('M342 370 Q336 334 328 302 Q318 268 324 244 Q332 220 350 216 Q368 212 378 228', 1.3)}
           <circle cx="378" cy="230" r="4" stroke={INK} strokeWidth="1.1" fill="none"/>
 
-          {/* ── BEET — center (278,800) ── */}
           <circle cx="278" cy="800" r="62" stroke={INK} strokeWidth="2.0" fill={INK} fillOpacity="0.05"/>
           {PF('M218 790 Q278 774 338 790', 1.1)}
           {PF('M216 812 Q278 796 340 812', 0.9)}
           {PF('M220 832 Q278 816 336 832', 0.75)}
-          {/* Taproot + root hairs */}
           {P('M278 862 Q276 878 278 892', 1.1)}
           {PF('M262 872 Q252 886 246 898')}
           {PF('M278 882 Q270 894 266 902')}
           {PF('M294 876 Q304 888 310 898')}
 
-          {/* ── Herb leaf stems from beet ── */}
           {P('M290 740 Q310 704 324 664 Q334 628 332 598 Q330 572 322 548', 1.0)}
           {P('M322 548 Q348 530 360 506 Q368 486 356 474 Q344 464 330 478 Q320 496 324 528Z', 0.95)}
           {PF('M322 548 Q348 528 362 504 Q368 486 354 474')}
@@ -246,169 +247,42 @@ export default function HomePage() {
           {P('M254 740 Q240 700 232 660 Q224 622 228 590 Q232 562 238 536', 0.9)}
           {P('M238 536 Q214 518 204 494 Q196 474 210 464 Q226 456 238 474 Q248 494 242 528Z', 0.9)}
         </svg>
-
-        {/* ── NAV ── */}
-        <nav style={{
-          position: 'relative', zIndex: 20, flexShrink: 0,
-          padding: '1rem 2.5rem',
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        }}>
-          <div>
-            <p style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(1.5rem, 2.8vw, 2.1rem)',
-              fontWeight: 700, color: FG,
-              lineHeight: 1.05, letterSpacing: '-0.015em',
-              marginBottom: '0.3rem',
-            }}>The Green Guild</p>
-            <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.22em', color: INK, textTransform: 'uppercase' }}>
-              Direct. Local. Seasonal.
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', paddingTop: '0.15rem' }}>
-            <Link href="#how-it-works" style={{ color: FG, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, padding: '0.5rem 1rem' }}>
-              How the Green Guild works
-            </Link>
-            <Link href="/marketplace" style={{ color: FG, textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, padding: '0.5rem 1.625rem', border: `1.5px solid ${FG}`, borderRadius: '4px' }}>
-              Shop Now
-            </Link>
-            <Link href="/auth/login" style={{ color: FG, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500, padding: '0.5rem 1rem' }}>
-              Login
-            </Link>
-          </div>
-        </nav>
-
-        {/* ── HERO TEXT ── */}
-        <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative', zIndex: 10,
-          padding: '0rem 1rem 3rem', textAlign: 'center',
-        }}>
-          <div style={{ maxWidth: '860px' }}>
-            <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.5rem, 5.5vw, 4.5rem)',
-              fontWeight: 400, color: FG,
-              lineHeight: 1.12, letterSpacing: '-0.02em',
-              marginBottom: '1rem',
-            }}>
-              Fresh harvest,<br />
-              direct from the growers
-            </h1>
-
-            {/* leaf divider */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ height: '1px', width: '68px', background: INK, opacity: 0.45 }} />
-              <svg width="32" height="26" viewBox="0 0 32 26" fill="none">
-                <line x1="16" y1="2" x2="16" y2="24" stroke={INK} strokeWidth="0.9"/>
-                <path d="M16 8 Q9 5 7 2 Q9 0 14 5 Q16 8 16 8Z" stroke={INK} strokeWidth="0.9" fill="none"/>
-                <path d="M16 13 Q23 10 25 7 Q23 5 18 10 Q16 13 16 13Z" stroke={INK} strokeWidth="0.9" fill="none"/>
-                <path d="M16 4 Q13 1 12 0" stroke={INK} strokeWidth="0.7"/>
-                <path d="M16 4 Q19 1 20 0" stroke={INK} strokeWidth="0.7"/>
-              </svg>
-              <div style={{ height: '1px', width: '68px', background: INK, opacity: 0.45 }} />
-            </div>
-
-            <p style={{ fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)', color: '#6B7252', lineHeight: 1.6, letterSpacing: '0.01em' }}>
-              From farm to buyer, made simple.
-            </p>
-
-            {marketOpen && (
-              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: INK, letterSpacing: '0.05em', marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }} />
-                Market open · Order now
-              </p>
-            )}
-          </div>
-        </div>
       </section>
 
-      {/* ════════════════════════════════
-          COMMUNITY
-      ════════════════════════════════ */}
-      <section style={{ background: FG }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0rem 1rem 0', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 2.5vw, 1.875rem)', fontWeight: 500, color: BG, letterSpacing: '-0.01em', marginBottom: '1.5rem' }}>
-            Join the Green Guild community
-          </h2>
+      {/* ── COMMUNITY ── */}
+      <section className={styles.community}>
+        <h3>Join the Green Guild community</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
-            {[
-              {
-                icon: (
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="19" stroke={BG} strokeWidth="1.1"/>
-                    <path d="M20 28 Q16 22 16 18 Q16 13 20 11 Q24 13 24 18 Q24 22 20 28Z" stroke={BG} strokeWidth="1.1" fill="none"/>
-                    <path d="M20 11 Q15 8 12 10" stroke={BG} strokeWidth="0.9"/>
-                    <path d="M20 11 Q25 8 28 10" stroke={BG} strokeWidth="0.9"/>
-                    <path d="M17 19 Q20 17 23 19" stroke={BG} strokeWidth="0.8"/>
-                  </svg>
-                ),
-                title: 'Register – Grower',
-                desc: 'Join our network\nof trusted growers.',
-                href: '/auth/register?role=farmer',
-              },
-              {
-                icon: (
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="19" stroke={BG} strokeWidth="1.1"/>
-                    <rect x="11" y="18" width="18" height="12" rx="1" stroke={BG} strokeWidth="1.1"/>
-                    <path d="M14 18 V15 Q14 10 20 10 Q26 10 26 15 V18" stroke={BG} strokeWidth="1.1" fill="none"/>
-                    <path d="M17 10 Q16 7 16 5" stroke={BG} strokeWidth="0.9"/>
-                    <path d="M23 10 Q24 7 24 5" stroke={BG} strokeWidth="0.9"/>
-                    <line x1="20" y1="21" x2="20" y2="26" stroke={BG} strokeWidth="1"/>
-                  </svg>
-                ),
-                title: 'Register – Hub',
-                desc: 'Become a hub and\nconnect your region.',
-                href: '/auth/register?role=coordinator',
-              },
-              {
-                icon: (
-                  <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="19" stroke={BG} strokeWidth="1.1"/>
-                    <path d="M11 15 H14 L17 26 H25 L28 17 H16" stroke={BG} strokeWidth="1.1" fill="none" strokeLinejoin="round"/>
-                    <circle cx="18" cy="28.5" r="1.5" stroke={BG} strokeWidth="1"/>
-                    <circle cx="24" cy="28.5" r="1.5" stroke={BG} strokeWidth="1"/>
-                    <path d="M14 17 Q18 15 22 17 Q26 15 28 17" stroke={BG} strokeWidth="0.85"/>
-                  </svg>
-                ),
-                title: 'Register – Buyer (free)',
-                desc: 'Source fresh produce\ndirect from growers.',
-                href: '/auth/register',
-              },
-            ].map((item, idx) => (
-              <div key={idx} style={{ position: 'relative' }}>
-                {idx > 0 && <div style={{ position: 'absolute', left: 0, top: '10%', height: '80%', width: '1px', background: 'rgba(237,233,223,0.15)' }} />}
-                <Link href={item.href} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0 2.5rem 3.5rem', gap: '1.25rem' }}>
-                  <div style={{ width: '62px', height: '62px', borderRadius: '50%', border: '1.5px solid rgba(237,233,223,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {item.icon}
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.0rem', fontWeight: 600, color: BG, marginBottom: '0.5rem' }}>{item.title}</p>
-                    <p style={{ fontSize: '0.875rem', color: 'rgba(237,233,223,0.55)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{item.desc}</p>
-                  </div>
-                </Link>
+        <div className={styles.cards}>
+          {[
+            { icon: '🌱', title: 'Register – Grower',      desc: 'Join our network of trusted growers.',          href: '/auth/register?role=farmer' },
+            { icon: '🏚️', title: 'Register – Hub',          desc: 'Become a hub and connect your region.',         href: '/auth/register?role=coordinator' },
+            { icon: '🛒', title: 'Register – Buyer (free)', desc: 'Source fresh produce direct from growers.',     href: '/auth/register' },
+          ].map((item, idx) => (
+            <Link key={idx} href={item.href} className={styles.card} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className={styles.icon}>{item.icon}</div>
+              <div>
+                <h4>{item.title}</h4>
+                <p>{item.desc}</p>
               </div>
-            ))}
-          </div>
-          <div style={{ height: '1px', background: 'rgba(237,233,223,0.15)' }} />
+            </Link>
+          ))}
         </div>
-        <div style={{ padding: '1.25rem 2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-          <Link href="/privacy" style={{ color: 'rgba(237,233,223,0.45)', textDecoration: 'none', fontSize: '0.82rem' }}>Privacy Policy</Link>
-          <span style={{ color: 'rgba(237,233,223,0.25)', fontSize: '0.82rem' }}>|</span>
-          <Link href="/terms" style={{ color: 'rgba(237,233,223,0.45)', textDecoration: 'none', fontSize: '0.82rem' }}>Terms &amp; Conditions</Link>
+
+        <div className={styles.footerLinks}>
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms &amp; Conditions</Link>
         </div>
       </section>
 
       {/* ════════════════════════════════
-          SECONDARY SECTIONS
+          HOW IT WORKS
       ════════════════════════════════ */}
       <section id="how-it-works" style={{ padding: '6rem 2rem', background: '#F5F1E9' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.75rem' }}>How it works</p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>
               From field to buyer in 3 steps
             </h2>
           </div>
@@ -418,10 +292,10 @@ export default function HomePage() {
               { num: '02', icon: '🛒', title: 'Order on Wednesday', desc: "Buyers browse and order during the Wednesday market window. See who grew it and what you're paying." },
               { num: '03', icon: '🚚', title: 'Delivered fresh', desc: 'Growers harvest to order and dispatch direct. Hub pickup or home delivery anywhere in the zone.' },
             ].map(s => (
-              <div key={s.num} style={{ background: 'white', borderRadius: '16px', padding: '2.25rem', border: '1px solid rgba(27,58,45,0.08)', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-12px', right: '1.5rem', fontFamily: 'var(--font-display)', fontSize: '5rem', fontWeight: 900, color: 'rgba(27,58,45,0.04)', lineHeight: 1, userSelect: 'none' }}>{s.num}</div>
+              <div key={s.num} style={{ background: 'white', borderRadius: '16px', padding: '2.25rem', border: '1px solid rgba(23,58,51,0.08)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '-12px', right: '1.5rem', fontFamily: 'Georgia, serif', fontSize: '5rem', fontWeight: 900, color: 'rgba(23,58,51,0.04)', lineHeight: 1, userSelect: 'none' }}>{s.num}</div>
                 <div style={{ width: '3rem', height: '3rem', borderRadius: '12px', background: 'rgba(137,140,98,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.375rem', marginBottom: '1.5rem' }}>{s.icon}</div>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: FG, marginBottom: '0.75rem' }}>{s.title}</h3>
+                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.1rem', fontWeight: 600, color: FG, marginBottom: '0.75rem' }}>{s.title}</h3>
                 <p style={{ fontSize: '0.9rem', color: '#6B7252', lineHeight: 1.8 }}>{s.desc}</p>
               </div>
             ))}
@@ -429,28 +303,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section style={{ background: 'white', padding: '5rem 2rem', borderTop: '1px solid rgba(27,58,45,0.08)' }}>
+      {/* ════════════════════════════════
+          WHO SHOPS HERE
+      ════════════════════════════════ */}
+      <section style={{ background: 'white', padding: '5rem 2rem', borderTop: '1px solid rgba(23,58,51,0.08)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.75rem' }}>Who shops here</p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>A market for everyone</h2>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>A market for everyone</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
             <div style={{ background: FG, borderRadius: '16px', padding: '2.75rem' }}>
               <div style={{ fontSize: '1.875rem', marginBottom: '1.5rem' }}>💼</div>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 600, color: BG, marginBottom: '1rem' }}>Florists & businesses</h3>
+              <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', fontWeight: 600, color: '#f7f5ef', marginBottom: '1rem' }}>Florists &amp; businesses</h3>
               <ul style={{ listStyle: 'none', marginBottom: '2.25rem', padding: 0 }}>
                 {['Wholesale pricing ex-GST', 'ABN-verified accounts', 'No minimum spend', 'Weekly fresh stock'].map(f => (
-                  <li key={f} style={{ color: 'rgba(237,233,223,0.65)', fontSize: '0.9rem', marginBottom: '0.625rem', paddingLeft: '1.5rem', position: 'relative' }}>
+                  <li key={f} style={{ color: 'rgba(247,245,239,0.65)', fontSize: '0.9rem', marginBottom: '0.625rem', paddingLeft: '1.5rem', position: 'relative' }}>
                     <span style={{ position: 'absolute', left: 0, color: '#a8d5a2', fontWeight: 700 }}>✓</span>{f}
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register?role=buyer_b2b" style={{ background: BG, color: FG, textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Open wholesale account</Link>
+              <Link href="/auth/register?role=buyer_b2b" style={{ background: '#f7f5ef', color: FG, textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Open wholesale account</Link>
             </div>
             <div style={{ background: 'rgba(137,140,98,0.1)', borderRadius: '16px', padding: '2.75rem', border: '1px solid rgba(137,140,98,0.2)' }}>
               <div style={{ fontSize: '1.875rem', marginBottom: '1.5rem' }}>🌸</div>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 600, color: FG, marginBottom: '1rem' }}>Flower & produce lovers</h3>
+              <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', fontWeight: 600, color: FG, marginBottom: '1rem' }}>Flower &amp; produce lovers</h3>
               <ul style={{ listStyle: 'none', marginBottom: '2.25rem', padding: 0 }}>
                 {['Retail pricing inc-GST', 'No subscription needed', 'Know your grower', 'Fresh, seasonal varieties'].map(f => (
                   <li key={f} style={{ color: '#6B7252', fontSize: '0.9rem', marginBottom: '0.625rem', paddingLeft: '1.5rem', position: 'relative' }}>
@@ -458,22 +335,25 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/auth/register?role=buyer_b2c" style={{ background: FG, color: BG, textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Start shopping</Link>
+              <Link href="/auth/register?role=buyer_b2c" style={{ background: FG, color: '#f7f5ef', textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Start shopping</Link>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ════════════════════════════════
+          GROWER CTA
+      ════════════════════════════════ */}
       <section style={{ padding: '6rem 2rem', background: '#F5F1E9' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ background: FG, borderRadius: '20px', padding: '5rem 3rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', width: '500px', height: '300px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(168,213,162,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1.25rem' }}>🌻</div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 600, color: BG, marginBottom: '1rem', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 600, color: '#f7f5ef', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
                 Grow your sales, <em style={{ color: '#a8d5a2', fontStyle: 'italic' }}>not your overheads</em>
               </h2>
-              <p style={{ color: 'rgba(237,233,223,0.5)', maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.8, fontSize: '1rem' }}>
+              <p style={{ color: 'rgba(247,245,239,0.5)', maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.8, fontSize: '1rem' }}>
                 List your produce for free. Set your own price.<br />
                 5% commission only when you sell. Payouts land automatically.
               </p>
