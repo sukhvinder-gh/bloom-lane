@@ -39,7 +39,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
       {/* Nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,247,249,0.9)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-light)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>B</div>
+          <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>T</div>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 600 }}>The Green Guild</span>
         </Link>
         <div style={{ flex: 1 }} />

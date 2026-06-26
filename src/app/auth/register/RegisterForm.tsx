@@ -117,7 +117,7 @@ export default function RegisterForm() {
       <div className="reveal" style={{ width: '100%', maxWidth: '30rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '2rem' }}>
-            <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.1rem' }}>B</div>
+            <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.1rem' }}>T</div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
           </Link>
           <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Create account</h1>
@@ -154,7 +154,7 @@ export default function RegisterForm() {
               <label className="label">ABN (11 digits)</label>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <input className="input" placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => { up('abn', e.target.value); setAbnStatus('idle') }} style={{ flex: 1 }} />
-                <button type="button" onClick={checkABN} className="btn btn-olive btn-sm" disabled={abnStatus === 'checking'} style={{ flexShrink: 0 }}>
+                <button type="button" onClick={checkABN} className="btn btn-ghost btn-sm" disabled={abnStatus === 'checking'} style={{ flexShrink: 0 }}>
                   {abnStatus === 'checking' ? '…' : 'Verify'}
                 </button>
               </div>

@@ -34,7 +34,7 @@ export default function LoginForm() {
         <style>{`@media (min-width: 1024px) { [data-lg="flex"] { display: flex !important; } }`}</style>
         <div style={{ position: 'absolute', top: '-20%', right: '-20%', width: '70%', height: '70%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(163,177,138,0.15), transparent)', pointerEvents: 'none' }} />
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-          <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--navy)', fontSize: '1.1rem' }}>B</div>
+          <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--navy)', fontSize: '1.1rem' }}>T</div>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
         </Link>
         <div>
@@ -57,7 +57,7 @@ export default function LoginForm() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 2rem' }}>
         <div className="reveal" style={{ width: '100%', maxWidth: '24rem' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '3rem' }}>
-            <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>B</div>
+            <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>T</div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
           </Link>
           <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Welcome back</h1>
