@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { isMarketOpen } from '@/lib/utils/timezone'
+import { getSessionUserFromCookie } from '@/lib/supabase/server'
 import NewsletterSection from './_components/NewsletterSection'
 import styles from './page.module.css'
 
@@ -10,8 +11,9 @@ const P  = (d: string, w = 1.1) => <path d={d} stroke={INK} strokeWidth={w} fill
 const PF = (d: string, w = 0.7) => <path d={d} stroke={INK} strokeWidth={w} fill="none"/>
 const n2 = (v: number) => Math.round(v * 100) / 100
 
-export default function HomePage() {
+export default async function HomePage() {
   const marketOpen = isMarketOpen()
+  const sessionUser = await getSessionUserFromCookie()
 
   function Umbel({ cx, cy, primary, dr = 1.8 }: {
     cx: number; cy: number;
@@ -116,6 +118,7 @@ export default function HomePage() {
 
   return (
     <main className={styles.page}>
+      <div className={styles.firstScreen}>
 
       {/* ── HEADER ── */}
       <header className={styles.header}>
@@ -128,7 +131,10 @@ export default function HomePage() {
           <Link href="/marketplace" className={styles.shopBtn} style={{ textDecoration: 'none', display: 'inline-block' }}>
             Shop Now
           </Link>
-          <Link href="/auth/login">Login</Link>
+          {sessionUser
+            ? <Link href="/dashboard">My Account</Link>
+            : <Link href="/auth/login">Sign in</Link>
+          }
         </nav>
       </header>
 
@@ -137,12 +143,10 @@ export default function HomePage() {
 
         {/* LEFT botanical */}
         <div aria-hidden="true" className={styles.botanicalLeft}>
-          <img src="/botanicals-leaves.png" alt="" style={{
-            position:'absolute', left:0, top:'-5%',
-            height:'110%', width:'auto',
-            mixBlendMode:'multiply',
-            filter:'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)',
-            opacity: 0.55,
+          <img src="/left-botanical.svg" alt="" style={{
+            position:'absolute', left:'5%', top:'5%',
+            height:'90%', width:'auto',
+            opacity: 0.28,
           }}/>
         </div>
         {/* LEFT botanical — pumpkin + daisy + wildflowers — HIDDEN */}
@@ -251,7 +255,7 @@ export default function HomePage() {
             <span />
           </div>
 
-          <p>From farm to buyer, made simple.</p>
+          <p className={styles.heroSubtitle}>From farm to buyer, made simple.</p>
 
           {marketOpen && (
             <p suppressHydrationWarning style={{ fontSize: '0.85rem', fontWeight: 600, color: INK, letterSpacing: '0.05em', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
@@ -263,12 +267,10 @@ export default function HomePage() {
 
         {/* RIGHT botanical */}
         <div aria-hidden="true" className={styles.botanicalRight}>
-          <img src="/botanicals.png" alt="" style={{
-            position:'absolute', right:0, top:'-5%',
-            height:'110%', width:'auto',
-            mixBlendMode:'multiply',
-            filter:'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)',
-            opacity: 0.55,
+          <img src="/right-botanical.svg" alt="" style={{
+            position:'absolute', right:'5%', top:'5%',
+            height:'90%', width:'auto',
+            opacity: 0.28,
           }}/>
         </div>
         {/* RIGHT botanical — HIDDEN */}
@@ -425,6 +427,7 @@ export default function HomePage() {
           <Link href="/terms">Terms &amp; Conditions</Link>
         </div>
       </section>
+      </div>{/* /firstScreen */}
 
       {/* ════════════════════════════════
           HOW IT WORKS
@@ -450,68 +453,6 @@ export default function HomePage() {
                 <p style={{ fontSize: '0.9rem', color: '#6B7252', lineHeight: 1.8 }}>{s.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════
-          WHO SHOPS HERE
-      ════════════════════════════════ */}
-      <section style={{ background: 'white', padding: '5rem 2rem', borderTop: '1px solid rgba(23,58,51,0.08)' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.75rem' }}>Who shops here</p>
-            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>A market for everyone</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
-            <div style={{ background: FG, borderRadius: '16px', padding: '2.75rem' }}>
-              <div style={{ fontSize: '1.875rem', marginBottom: '1.5rem' }}>💼</div>
-              <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', fontWeight: 600, color: '#f7f5ef', marginBottom: '1rem' }}>Florists &amp; businesses</h3>
-              <ul style={{ listStyle: 'none', marginBottom: '2.25rem', padding: 0 }}>
-                {['Wholesale pricing ex-GST', 'ABN-verified accounts', 'No minimum spend', 'Weekly fresh stock'].map(f => (
-                  <li key={f} style={{ color: 'rgba(247,245,239,0.65)', fontSize: '0.9rem', marginBottom: '0.625rem', paddingLeft: '1.5rem', position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, color: '#a8d5a2', fontWeight: 700 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth/register?role=buyer_b2b" style={{ background: '#f7f5ef', color: FG, textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Open wholesale account</Link>
-            </div>
-            <div style={{ background: 'rgba(137,140,98,0.1)', borderRadius: '16px', padding: '2.75rem', border: '1px solid rgba(137,140,98,0.2)' }}>
-              <div style={{ fontSize: '1.875rem', marginBottom: '1.5rem' }}>🌸</div>
-              <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', fontWeight: 600, color: FG, marginBottom: '1rem' }}>Flower &amp; produce lovers</h3>
-              <ul style={{ listStyle: 'none', marginBottom: '2.25rem', padding: 0 }}>
-                {['Retail pricing inc-GST', 'No subscription needed', 'Know your grower', 'Fresh, seasonal varieties'].map(f => (
-                  <li key={f} style={{ color: '#6B7252', fontSize: '0.9rem', marginBottom: '0.625rem', paddingLeft: '1.5rem', position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 0, color: FG, fontWeight: 700 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/auth/register?role=buyer_b2c" style={{ background: FG, color: '#f7f5ef', textDecoration: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', display: 'inline-block' }}>Start shopping</Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════
-          GROWER CTA
-      ════════════════════════════════ */}
-      <section style={{ padding: '6rem 2rem', background: '#F5F1E9' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ background: FG, borderRadius: '20px', padding: '5rem 3rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', width: '500px', height: '300px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(168,213,162,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1.25rem' }}>🌻</div>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 600, color: '#f7f5ef', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
-                Grow your sales, <em style={{ color: '#a8d5a2', fontStyle: 'italic' }}>not your overheads</em>
-              </h2>
-              <p style={{ color: 'rgba(247,245,239,0.5)', maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.8, fontSize: '1rem' }}>
-                List your produce for free. Set your own price.<br />
-                5% commission only when you sell. Payouts land automatically.
-              </p>
-              <Link href="/auth/register?role=farmer" style={{ background: '#a8d5a2', color: FG, textDecoration: 'none', padding: '0.925rem 2.25rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.95rem', display: 'inline-block' }}>
-                List your produce for free →
-              </Link>
-            </div>
           </div>
         </div>
       </section>
