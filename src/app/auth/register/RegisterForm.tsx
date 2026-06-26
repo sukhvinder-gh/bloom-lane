@@ -126,35 +126,35 @@ export default function RegisterForm() {
   )
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '3rem 1.5rem' }}>
+    <div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
       {botanicals}
       <div className="reveal" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '30rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '2rem' }}>
-            <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.1rem' }}>T</div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '0.75rem' }}>
+            <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>T</div>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
           </Link>
-          <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Create account</h1>
+          <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Create account</h1>
           <p className="type-label" style={{ color: 'var(--moss)' }}>
             Already have one? <Link href="/auth/login" style={{ color: 'var(--navy)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign in</Link>
           </p>
         </div>
 
-        <div className="card" style={{ padding: '0.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.375rem', marginBottom: '1.5rem', background: 'var(--olive)' }}>
+        <div className="card" style={{ padding: '0.375rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.25rem', marginBottom: '0.75rem', background: 'var(--olive)' }}>
           {roles.map(opt => (
             <button key={opt.id} type="button" onClick={() => setRole(opt.id as Role)}
-              style={{ padding: '1rem 0.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: role === opt.id ? 'var(--forest)' : 'transparent' }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>{opt.icon}</div>
-              <div className="type-label-sm" style={{ color: role === opt.id ? 'var(--cream)' : 'var(--forest)', marginBottom: '0.2rem' }}>{opt.label}</div>
+              style={{ padding: '0.5rem 0.375rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: role === opt.id ? 'var(--forest)' : 'transparent' }}>
+              <div style={{ fontSize: '1.2rem', marginBottom: '0.2rem' }}>{opt.icon}</div>
+              <div className="type-label-sm" style={{ color: role === opt.id ? 'var(--cream)' : 'var(--forest)', marginBottom: '0.1rem' }}>{opt.label}</div>
               <div style={{ fontSize: '0.6rem', color: role === opt.id ? 'var(--sage)' : 'var(--moss)' }}>{opt.sub}</div>
             </button>
           ))}
         </div>
 
-        {error && <div className="badge badge-red" style={{ width: '100%', padding: '0.875rem', borderRadius: '0.75rem', marginBottom: '1.25rem', justifyContent: 'flex-start', fontSize: '0.75rem' }}>⚠ {error}</div>}
+        {error && <div className="badge badge-red" style={{ width: '100%', padding: '0.625rem', borderRadius: '0.75rem', marginBottom: '0.75rem', justifyContent: 'flex-start', fontSize: '0.75rem' }}>⚠ {error}</div>}
 
-        <form onSubmit={handleSubmit} className="card" style={{ padding: '2rem', display: 'grid', gap: '1.125rem', background: 'white' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <form onSubmit={handleSubmit} className="card" style={{ padding: '1.25rem', display: 'grid', gap: '0.625rem', background: 'white' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             <div><label className="label">Full name *</label><input className="input" placeholder="Jane Smith" value={form.fullName} onChange={e => up('fullName', e.target.value)} required /></div>
             <div><label className="label">Phone</label><input className="input" type="tel" placeholder="04xx xxx xxx" value={form.phone} onChange={e => up('phone', e.target.value)} /></div>
           </div>
@@ -166,24 +166,24 @@ export default function RegisterForm() {
           {(role === 'buyer_b2b' || role === 'farmer' || role === 'coordinator') && (
             <div>
               <label className="label">ABN (11 digits)</label>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.625rem' }}>
                 <input className="input" placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => { up('abn', e.target.value); setAbnStatus('idle') }} style={{ flex: 1 }} />
                 <button type="button" onClick={checkABN} className="btn btn-ghost btn-sm" disabled={abnStatus === 'checking'} style={{ flexShrink: 0 }}>
                   {abnStatus === 'checking' ? '…' : 'Verify'}
                 </button>
               </div>
-              {abnMsg && <p className="type-label-sm" style={{ marginTop: '0.5rem', color: abnStatus === 'ok' ? 'var(--forest)' : '#b91c1c' }}>{abnMsg}</p>}
+              {abnMsg && <p className="type-label-sm" style={{ marginTop: '0.375rem', color: abnStatus === 'ok' ? 'var(--forest)' : '#b91c1c' }}>{abnMsg}</p>}
             </div>
           )}
           {role === 'farmer' && (
             <div><label className="label">Farm postcode *</label><input className="input" placeholder="3000" maxLength={4} value={form.postcode} onChange={e => up('postcode', e.target.value)} required /></div>
           )}
           {role === 'coordinator' && (
-            <div style={{ padding: '0.875rem', background: 'var(--olive)', borderRadius: '0.75rem', fontSize: '0.775rem', color: 'var(--moss)' }}>
+            <div style={{ padding: '0.625rem', background: 'var(--olive)', borderRadius: '0.75rem', fontSize: '0.775rem', color: 'var(--moss)' }}>
               After registering, you can set up your hub from the coordinator dashboard.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             <Link href="/" className="btn btn-outline" style={{ justifyContent: 'center' }}>Cancel</Link>
             <button type="submit" className="btn btn-forest" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
           </div>
