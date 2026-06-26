@@ -126,7 +126,7 @@ export default function RegisterForm() {
   )
 
   return (
-    <div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
       {botanicals}
       <div className="reveal" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '30rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
