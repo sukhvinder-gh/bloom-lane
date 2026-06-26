@@ -143,10 +143,12 @@ export default async function HomePage() {
 
         {/* LEFT botanical */}
         <div aria-hidden="true" className={styles.botanicalLeft}>
-          <img src="/left-botanical.svg" alt="" style={{
-            position:'absolute', left:'5%', top:'5%',
-            height:'90%', width:'auto',
-            opacity: 0.28,
+          <img src="/botanicals-leaves.png" alt="" style={{
+            position:'absolute', left:0, top:'-5%',
+            height:'110%', width:'auto',
+            mixBlendMode:'multiply',
+            filter:'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)',
+            opacity: 0.55,
           }}/>
         </div>
         {/* LEFT botanical — pumpkin + daisy + wildflowers — HIDDEN */}
@@ -267,10 +269,12 @@ export default async function HomePage() {
 
         {/* RIGHT botanical */}
         <div aria-hidden="true" className={styles.botanicalRight}>
-          <img src="/right-botanical.svg" alt="" style={{
-            position:'absolute', right:'5%', top:'5%',
-            height:'90%', width:'auto',
-            opacity: 0.28,
+          <img src="/botanicals.png" alt="" style={{
+            position:'absolute', right:0, top:'-5%',
+            height:'110%', width:'auto',
+            mixBlendMode:'multiply',
+            filter:'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)',
+            opacity: 0.55,
           }}/>
         </div>
         {/* RIGHT botanical — HIDDEN */}
