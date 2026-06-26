@@ -97,9 +97,22 @@ export default function RegisterForm() {
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub/group' },
   ]
 
+  const BOTANICAL_FILTER = 'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)'
+  const botanicals = (
+    <>
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '20%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+        <img src="/botanicals-leaves.png" alt="" style={{ position: 'absolute', left: 0, top: '-5%', height: '110%', width: 'auto', mixBlendMode: 'multiply', filter: BOTANICAL_FILTER, opacity: 0.55 }} />
+      </div>
+      <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '20%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+        <img src="/botanicals.png" alt="" style={{ position: 'absolute', right: 0, top: '-5%', height: '110%', width: 'auto', mixBlendMode: 'multiply', filter: BOTANICAL_FILTER, opacity: 0.55 }} />
+      </div>
+    </>
+  )
+
   if (step === 'done') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
-      <div className="card-forest reveal" style={{ padding: '4rem', textAlign: 'center', maxWidth: '28rem' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden' }}>
+      {botanicals}
+      <div className="card-forest reveal" style={{ position: 'relative', zIndex: 1, padding: '4rem', textAlign: 'center', maxWidth: '28rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🌱</div>
         <h2 className="type-subheading" style={{ color: 'var(--cream)', marginBottom: '1rem' }}>You're in!</h2>
         <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '2.5rem', lineHeight: 1.8 }}>
@@ -113,8 +126,9 @@ export default function RegisterForm() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', padding: '3rem 1.5rem' }}>
-      <div className="reveal" style={{ width: '100%', maxWidth: '30rem' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '3rem 1.5rem' }}>
+      {botanicals}
+      <div className="reveal" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '30rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '2rem' }}>
             <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.1rem' }}>T</div>

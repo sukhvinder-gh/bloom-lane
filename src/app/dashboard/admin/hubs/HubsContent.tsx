@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { formatAEST } from '@/lib/utils/timezone'
 
 type HubRow = {
@@ -93,10 +94,10 @@ function ActionsMenu({ hub, onEdit, onToggle, onViewMembers, onEmail, onDelete, 
       >
         ⋯
       </button>
-      {open && (
+      {open && createPortal(
         <div
           ref={menuRef}
-          style={{ position: 'fixed', top: pos.top, right: pos.right, background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', zIndex: 1000, minWidth: '200px', overflow: 'hidden' }}
+          style={{ position: 'fixed', top: pos.top, right: pos.right, background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.14)', zIndex: 9999, minWidth: '200px', overflow: 'hidden' }}
         >
           <button onClick={() => { onViewMembers(); setOpen(false) }} style={itemStyle}>
             👥 View growers
@@ -119,7 +120,8 @@ function ActionsMenu({ hub, onEdit, onToggle, onViewMembers, onEmail, onDelete, 
           >
             🗑️ Delete hub
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
