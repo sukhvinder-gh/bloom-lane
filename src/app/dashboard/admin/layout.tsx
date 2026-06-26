@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     .maybeSingle()
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#EDE9DF' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f7f5ef' }}>
       <AdminSidebar
         role={profile?.role || ''}
         userName={profile?.full_name || ''}
