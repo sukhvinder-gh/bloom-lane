@@ -436,25 +436,25 @@ export default async function HomePage() {
       {/* ════════════════════════════════
           HOW IT WORKS
       ════════════════════════════════ */}
-      <section id="how-it-works" style={{ padding: '6rem 2rem', background: '#F5F1E9' }}>
+      <section id="how-it-works" style={{ padding: '4rem 2rem', background: '#f7f5ef' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.75rem' }}>How it works</p>
-            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 600, color: FG, letterSpacing: '-0.02em' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.6rem' }}>How it works</p>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 500, color: FG }}>
               From field to buyer in 3 steps
             </h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
             {[
               { num: '01', icon: '🌱', title: 'Growers list weekly', desc: 'Australian growers list fresh produce every Sunday to Tuesday. Flowers, herbs, vegetables, and more.' },
               { num: '02', icon: '🛒', title: 'Order on Wednesday', desc: "Buyers browse and order during the Wednesday market window. See who grew it and what you're paying." },
               { num: '03', icon: '🚚', title: 'Delivered fresh', desc: 'Growers harvest to order and dispatch direct. Hub pickup or home delivery anywhere in the zone.' },
             ].map(s => (
-              <div key={s.num} style={{ background: 'white', borderRadius: '16px', padding: '2.25rem', border: '1px solid rgba(23,58,51,0.08)', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-12px', right: '1.5rem', fontFamily: 'Georgia, serif', fontSize: '5rem', fontWeight: 900, color: 'rgba(23,58,51,0.04)', lineHeight: 1, userSelect: 'none' }}>{s.num}</div>
-                <div style={{ width: '3rem', height: '3rem', borderRadius: '12px', background: 'rgba(137,140,98,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.375rem', marginBottom: '1.5rem' }}>{s.icon}</div>
-                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.1rem', fontWeight: 600, color: FG, marginBottom: '0.75rem' }}>{s.title}</h3>
-                <p style={{ fontSize: '0.9rem', color: '#6B7252', lineHeight: 1.8 }}>{s.desc}</p>
+              <div key={s.num} style={{ background: 'white', borderRadius: '12px', padding: '2rem', border: '1px solid rgba(23,58,51,0.08)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '-10px', right: '1.25rem', fontFamily: 'Georgia, serif', fontSize: '4.5rem', fontWeight: 900, color: 'rgba(23,58,51,0.04)', lineHeight: 1, userSelect: 'none' }}>{s.num}</div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '999px', border: '1px solid rgba(23,58,51,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', marginBottom: '1.25rem' }}>{s.icon}</div>
+                <h3 style={{ fontFamily: 'Georgia, serif', fontSize: '1.05rem', fontWeight: 500, color: FG, marginBottom: '0.6rem' }}>{s.title}</h3>
+                <p style={{ fontSize: '0.88rem', color: INK, lineHeight: 1.75 }}>{s.desc}</p>
               </div>
             ))}
           </div>
