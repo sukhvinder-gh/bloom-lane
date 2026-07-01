@@ -5,3 +5,9 @@ bloom-lane-deploy.zip
 bloom-lane-source.zip
 .env.local
 .env*.local
+
+# Local design-source scratch files — not part of the app
+/Green Guild_02.html
+/public/*_old.png
+/public/*_Original.png
+/public/botanicals_1.png

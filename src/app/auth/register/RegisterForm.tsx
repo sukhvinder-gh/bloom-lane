@@ -97,20 +97,19 @@ export default function RegisterForm() {
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub/group' },
   ]
 
-  const BOTANICAL_FILTER = 'sepia(0.2) hue-rotate(55deg) saturate(0.55) brightness(0.95)'
   const botanicals = (
     <>
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '20%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <img src="/botanicals-leaves.png" alt="" style={{ position: 'absolute', left: 0, top: '-5%', height: '110%', width: 'auto', mixBlendMode: 'multiply', filter: BOTANICAL_FILTER, opacity: 0.55 }} />
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: 'clamp(180px, 24vw, 460px)', pointerEvents: 'none', zIndex: 0 }}>
+        <img src="/botanicals-leaves.png" alt="" style={{ display: 'block', width: '100%', height: 'auto', mixBlendMode: 'multiply' }} />
       </div>
-      <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '20%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        <img src="/botanicals.png" alt="" style={{ position: 'absolute', right: 0, top: '-5%', height: '110%', width: 'auto', mixBlendMode: 'multiply', filter: BOTANICAL_FILTER, opacity: 0.55 }} />
+      <div aria-hidden="true" style={{ position: 'absolute', right: 0, bottom: 0, width: 'clamp(180px, 24vw, 460px)', pointerEvents: 'none', zIndex: 0 }}>
+        <img src="/botanicals.png" alt="" style={{ display: 'block', width: '100%', height: 'auto', mixBlendMode: 'multiply' }} />
       </div>
     </>
   )
 
   if (step === 'done') return (
-    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f0e4', overflow: 'hidden' }}>
       {botanicals}
       <div className="card-forest reveal" style={{ position: 'relative', zIndex: 1, padding: '4rem', textAlign: 'center', maxWidth: '28rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🌱</div>
@@ -126,7 +125,7 @@ export default function RegisterForm() {
   )
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f5ef', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f0e4', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
       {botanicals}
       <div className="reveal" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '30rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1rem' }}>

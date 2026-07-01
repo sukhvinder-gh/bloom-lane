@@ -93,7 +93,7 @@ export default function NewsletterSection() {
               type="submit"
               disabled={status === 'loading'}
               style={{
-                background: '#f7f5ef',
+                background: '#f0ebe0',
                 color: '#173a33',
                 border: 'none',
                 padding: '0.75rem 1.5rem',
