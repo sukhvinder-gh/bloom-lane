@@ -11,6 +11,9 @@ export default function AdminDisputesPage() {
   const [filter, setFilter] = useState<Filter>('open')
   const [resolving, setResolving] = useState<string | null>(null)
   const [noteMap, setNoteMap] = useState<Record<string, string>>({})
+  const [refundAmountMap, setRefundAmountMap] = useState<Record<string, string>>({})
+  const [refundErrorMap, setRefundErrorMap] = useState<Record<string, string>>({})
+  const [refundResultMap, setRefundResultMap] = useState<Record<string, { creditNotes: number; amountCents: number }>>({})
 
   useEffect(() => {
     fetch('/api/admin/disputes').then(r => r.json()).then(d => {
@@ -19,7 +22,7 @@ export default function AdminDisputesPage() {
     })
   }, [])
 
-  async function resolve(dispute: any, newOrderStatus: string) {
+  async function resolveNoRefund(dispute: any) {
     setResolving(dispute.id)
     await fetch('/api/admin/disputes', {
       method: 'PATCH',
@@ -28,11 +31,42 @@ export default function AdminDisputesPage() {
         dispute_id: dispute.id,
         order_id: dispute.order?.id,
         resolution_note: noteMap[dispute.id] || null,
-        new_order_status: newOrderStatus,
+        new_order_status: 'resolved',
       }),
     })
     setDisputes(ds => ds.map(d => d.id === dispute.id
-      ? { ...d, resolved_at: new Date().toISOString(), resolution_note: noteMap[dispute.id] || null, order: { ...d.order, status: newOrderStatus } }
+      ? { ...d, resolved_at: new Date().toISOString(), resolution_note: noteMap[dispute.id] || null, order: { ...d.order, status: 'resolved' } }
+      : d
+    ))
+    setResolving(null)
+  }
+
+  async function issueRefund(dispute: any) {
+    setResolving(dispute.id)
+    setRefundErrorMap(m => ({ ...m, [dispute.id]: '' }))
+
+    const dollarInput = refundAmountMap[dispute.id]
+    const refund_amount_cents = dollarInput ? Math.round(parseFloat(dollarInput) * 100) : undefined
+
+    const res = await fetch(`/api/admin/disputes/${dispute.id}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        refund_amount_cents,
+        note: noteMap[dispute.id] || null,
+      }),
+    })
+    const result = await res.json()
+
+    if (!res.ok) {
+      setRefundErrorMap(m => ({ ...m, [dispute.id]: result.error || 'Refund failed' }))
+      setResolving(null)
+      return
+    }
+
+    setRefundResultMap(m => ({ ...m, [dispute.id]: { creditNotes: result.credit_notes?.length || 0, amountCents: result.refund_amount_cents } }))
+    setDisputes(ds => ds.map(d => d.id === dispute.id
+      ? { ...d, resolved_at: new Date().toISOString(), resolution_note: noteMap[dispute.id] || null, order: { ...d.order, status: result.order_status } }
       : d
     ))
     setResolving(null)
@@ -144,14 +178,37 @@ export default function AdminDisputesPage() {
                         style={{ resize: 'vertical' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <button className="btn btn-forest btn-sm" disabled={resolving === dispute.id} onClick={() => resolve(dispute, 'resolved')}>
-                        {resolving === dispute.id ? '…' : '✓ Mark Resolved'}
+
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div>
+                        <label className="label">Refund amount ($, blank = full {formatPrice(dispute.order?.total_cents)})</label>
+                        <input
+                          className="input"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder={(dispute.order?.total_cents / 100).toFixed(2)}
+                          value={refundAmountMap[dispute.id] || ''}
+                          onChange={e => setRefundAmountMap(m => ({ ...m, [dispute.id]: e.target.value }))}
+                          style={{ width: '10rem' }}
+                        />
+                      </div>
+                      <button className="btn btn-bloom btn-sm" disabled={resolving === dispute.id} onClick={() => issueRefund(dispute)}>
+                        {resolving === dispute.id ? '…' : '↩ Refund via Stripe'}
                       </button>
-                      <button className="btn btn-ghost btn-sm" disabled={resolving === dispute.id} onClick={() => resolve(dispute, 'refunded')}>
-                        {resolving === dispute.id ? '…' : '↩ Mark Refunded'}
+                      <button className="btn btn-ghost btn-sm" disabled={resolving === dispute.id} onClick={() => resolveNoRefund(dispute)}>
+                        {resolving === dispute.id ? '…' : '✓ Resolve — no refund'}
                       </button>
                     </div>
+
+                    {refundErrorMap[dispute.id] && (
+                      <p style={{ color: 'var(--bloom)', fontSize: '0.8rem' }}>{refundErrorMap[dispute.id]}</p>
+                    )}
+                    {refundResultMap[dispute.id] && (
+                      <p style={{ color: 'var(--sage-new)', fontSize: '0.8rem' }}>
+                        Refunded {formatPrice(refundResultMap[dispute.id].amountCents)} · {refundResultMap[dispute.id].creditNotes} credit note(s) issued
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

@@ -57,7 +57,26 @@ export async function POST(
     if (alreadyPaid.has(farmerId)) continue
 
     const commission = Math.round(data.gross * COMMISSION_RATE)
-    const net = data.gross - commission
+    const availableForClawback = data.gross - commission
+
+    // Apply pending balance adjustments (refund clawbacks) oldest-first, up to
+    // what this payout can absorb. We don't reverse past Stripe transfers —
+    // this is exactly that "deduct from future payouts" mechanism.
+    const { data: pendingAdjustments } = await admin
+      .from('farmer_balance_adjustments')
+      .select('id, amount_cents')
+      .eq('farmer_id', farmerId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+
+    let adjustment = 0
+    const adjustmentsToApply: string[] = []
+    for (const adj of pendingAdjustments || []) {
+      if (adjustment + adj.amount_cents > availableForClawback) break
+      adjustment += adj.amount_cents
+      adjustmentsToApply.push(adj.id)
+    }
+    const net = availableForClawback - adjustment
 
     const { data: payout, error } = await admin
       .from('payouts')
@@ -67,13 +86,22 @@ export async function POST(
         order_item_ids: data.items,
         gross_amount_cents: data.gross,
         commission_cents: commission,
+        adjustment_cents: adjustment,
         net_amount_cents: net,
         status: 'pending',
       })
       .select()
       .single()
 
-    if (!error) created.push(payout)
+    if (!error && payout) {
+      created.push(payout)
+      if (adjustmentsToApply.length > 0) {
+        await admin
+          .from('farmer_balance_adjustments')
+          .update({ status: 'applied', applied_to_payout_id: payout.id, applied_at: new Date().toISOString() })
+          .in('id', adjustmentsToApply)
+      }
+    }
   }
 
   return NextResponse.json({ created, skipped: alreadyPaid.size })

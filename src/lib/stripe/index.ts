@@ -103,16 +103,20 @@ export async function createFarmerPayout(params: {
 }
 
 /**
- * Process refund for a disputed order
+ * Process refund for a disputed order.
+ * reason defaults to 'requested_by_customer' — 'fraudulent' has real
+ * card-network risk-scoring consequences and must only be used for actual
+ * fraud, not ordinary dispute resolutions.
  */
 export async function createRefund(
   paymentIntentId: string,
-  amountCents?: number
+  amountCents?: number,
+  reason: 'requested_by_customer' | 'duplicate' | 'fraudulent' = 'requested_by_customer'
 ): Promise<Stripe.Refund> {
   return stripe.refunds.create({
     payment_intent: paymentIntentId,
     ...(amountCents ? { amount: amountCents } : {}),
-    reason: 'fraudulent', // or 'requested_by_customer'
+    reason,
   })
 }
 

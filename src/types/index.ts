@@ -64,6 +64,8 @@ export interface Farmer {
   commission_rate: number // e.g. 0.10 for 10%
   stripe_account_id?: string
   stripe_onboarding_complete: boolean
+  gst_registered: boolean // may this grower legally charge GST?
+  rcti_agreed: boolean    // has the grower agreed to platform-issued RCTIs?
   status: FarmerStatus
   created_at: string
   updated_at: string
@@ -141,6 +143,8 @@ export interface OrderItem {
   unit_price_cents: number // price at time of purchase
   subtotal_cents: number
   is_b2b: boolean
+  gst_applied: boolean // was GST charged on this line? (grower registered + product not gst_free)
+  gst_cents: number    // GST component included in subtotal_cents, snapshot at purchase
   ppod_url?: string
   ppod_gps_lat?: number
   ppod_gps_lng?: number
@@ -154,6 +158,7 @@ export interface Payout {
   order_item_ids: string[]
   gross_amount_cents: number
   commission_cents: number
+  adjustment_cents: number // clawback from prior credit notes/refunds, deducted before net
   net_amount_cents: number
   stripe_transfer_id?: string
   status: 'pending' | 'processing' | 'paid' | 'failed'

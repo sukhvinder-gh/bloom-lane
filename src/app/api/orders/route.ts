@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent } from '@/lib/stripe'
-import { getBuyerUnitPrice, calculateOrderTotals } from '@/lib/utils/pricing'
+import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
 import { isMarketOpen } from '@/lib/utils/timezone'
 import { z } from 'zod'
 
@@ -71,10 +71,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Fetch product details first for validation
+  // farmers(gst_registered) is joined so GST can be evaluated per grower, not
+  // just per product — only a GST-registered grower may have GST charged on
+  // their line, regardless of the product's own is_gst_free category.
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active')
+    .select('id, name, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered)')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -121,10 +124,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Build order items with prices
+  // Build order items with prices.
+  // GST is snapshotted per line at time of purchase (grower's registration
+  // status at checkout), not recomputed later from onboarding data — if the
+  // grower's status changes afterwards, past orders must stay accurate.
   const orderItems = items.map(item => {
     const product = products.find(p => p.id === item.product_id)!
-    const unit_price = getBuyerUnitPrice(product, isB2B)
+    const growerGstRegistered = !!(product as any).farmers?.gst_registered
+    const unit_price = getBuyerUnitPrice(product, isB2B, growerGstRegistered)
+    const unit_gst = getUnitGstCents(product, isB2B, growerGstRegistered)
     return {
       product_id: item.product_id,
       farmer_id: product.farmer_id,
@@ -132,6 +140,8 @@ export async function POST(request: NextRequest) {
       unit_price_cents: unit_price,
       subtotal_cents: unit_price * item.quantity,
       is_b2b: isB2B,
+      gst_applied: gstAppliesToItem(product, growerGstRegistered),
+      gst_cents: unit_gst * item.quantity,
     }
   })
 
@@ -143,7 +153,7 @@ export async function POST(request: NextRequest) {
     deliveryFeeCents = parseInt(config?.value || '2000')
   }
 
-  const totals = calculateOrderTotals(orderItems, deliveryFeeCents, isB2B)
+  const totals = calculateOrderTotals(orderItems, deliveryFeeCents)
 
   // Create order
   const { data: order, error: orderError } = await adminSupabase
