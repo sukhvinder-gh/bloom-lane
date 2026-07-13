@@ -247,6 +247,7 @@ export default function MarketplacePage() {
   const [marketOpen]              = useState(isMarketOpen())
   const [search, setSearch]       = useState('')
   const [selected, setSelected]   = useState<any>(null)
+  const [availableCategories, setAvailableCategories] = useState<Set<string>>(new Set())
   const { addItem, updateQuantity, items, totalItems } = useCart()
 
   useEffect(() => {
@@ -271,6 +272,17 @@ export default function MarketplacePage() {
     fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}`)
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
   }, [category, isB2B])
+
+  // Which categories actually have purchasable stock right now — the filter
+  // list should reflect real availability, not every category that's ever existed.
+  useEffect(() => {
+    fetch(`/api/products?b2b=${isB2B}`)
+      .then(r => r.json())
+      .then(d => setAvailableCategories(new Set((d.data || []).map((p: any) => p.category))))
+  }, [isB2B])
+
+  // Always keep "All" and whatever's currently selected, even if it just emptied out.
+  const visibleCategories = CATEGORIES.filter(c => c.id === '' || c.id === category || availableCategories.has(c.id))
 
   function handleAdd(product: any) {
     addItem(product, 1, isB2B)
@@ -335,7 +347,7 @@ export default function MarketplacePage() {
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.75rem 1rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-          {CATEGORIES.map(cat => (
+          {visibleCategories.map(cat => (
             <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
               style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${category === cat.id ? 'var(--navy)' : 'var(--border)'}`, background: category === cat.id ? 'var(--navy)' : 'white', color: category === cat.id ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
               {cat.label}
@@ -380,7 +392,7 @@ export default function MarketplacePage() {
           )}
           <p className="label">Category</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            {CATEGORIES.map(cat => (
+            {visibleCategories.map(cat => (
               <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
                 className={`nav-item ${category === cat.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
                 {cat.label}
