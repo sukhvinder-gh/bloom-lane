@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
+import MessageThread from '@/components/MessageThread'
 
 const CATEGORY_EMOJI: Record<string, string> = {
   flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
@@ -66,6 +67,13 @@ export default function BuyerOrderDetailPage() {
 
   const currentIdx = TIMELINE_STEPS.findIndex(s => s.statuses.includes(order.status))
   const disputeAllowed = canDispute(order.dispute_deadline) && order.status === 'delivered'
+
+  // One message thread per grower — a multi-supplier order must never let a
+  // buyer's question to one grower leak into another grower's conversation.
+  const growerThreads = (order.purchase_orders || []).map((po: any) => {
+    const item = order.order_items?.find((i: any) => i.farmer_id === po.farmer_id)
+    return { poId: po.id, farmerName: item?.farmers?.business_name || 'Grower' }
+  })
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem' }}>
@@ -194,6 +202,15 @@ export default function BuyerOrderDetailPage() {
               ))}
             </div>
           </div>
+
+          {/* Messages — one thread per grower on this order */}
+          {growerThreads.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {growerThreads.map((t: any) => (
+                <MessageThread key={t.poId} purchaseOrderId={t.poId} title={`Message ${t.farmerName}`} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right */}

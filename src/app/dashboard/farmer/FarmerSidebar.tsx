@@ -17,6 +17,8 @@ const NAV = [
   { href: '/dashboard/farmer',                label: 'Overview',      icon: '🏠',  exact: true },
   { href: '/dashboard/farmer/inventory',      label: 'Inventory',     icon: '🌿' },
   { href: '/dashboard/farmer/orders',         label: 'Orders',        icon: '📋' },
+  { href: '/dashboard/farmer/harvest-list',   label: 'Harvest List',  icon: '🌾' },
+  { href: '/dashboard/farmer/pack-list',      label: 'Pack List',     icon: '📦' },
   { href: '/dashboard/farmer/storefront',     label: 'My Storefront', icon: '🏪' },
   { href: '/dashboard/farmer/payouts',        label: 'Payouts',       icon: '💳' },
   { href: '/dashboard/farmer/membership',     label: 'Membership',    icon: '🎫' },

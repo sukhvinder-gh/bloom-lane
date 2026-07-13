@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
+import MessageThread from '@/components/MessageThread'
 
 const ORDER_STATUS: Record<string, { label: string; bg: string; color: string }> = {
   payment_confirmed: { label: 'Paid',       bg: '#EAF3DE', color: '#3B6D11' },
@@ -26,6 +27,7 @@ type ConfirmAction = { orderId: string; orderNumber: string; newStatus: 'ready' 
 export default function FarmerOrdersPage() {
   const [orders, setOrders]           = useState<any[]>([])
   const [poStatuses, setPoStatuses]   = useState<Record<string, string>>({})
+  const [poIds, setPoIds]             = useState<Record<string, string>>({})
   const [loading, setLoading]         = useState(true)
   const [expanded, setExpanded]       = useState<Set<string>>(new Set())
   const [uploadingId, setUploadingId] = useState<string | null>(null)
@@ -61,7 +63,7 @@ export default function FarmerOrdersPage() {
         if (fetched.length > 0) {
           fetch('/api/farmer/po-statuses?ids=' + fetched.map((o: any) => o.id).join(','))
             .then(r => r.json())
-            .then(ps => setPoStatuses(ps.data || {}))
+            .then(ps => { setPoStatuses(ps.data || {}); setPoIds(ps.ids || {}) })
             .catch(() => {})
         }
       })
@@ -476,6 +478,11 @@ export default function FarmerOrdersPage() {
                                 ))}
                               </tbody>
                             </table>
+                            {poIds[order.id] && (
+                              <div style={{ marginTop: '1.25rem', maxWidth: '32rem' }}>
+                                <MessageThread purchaseOrderId={poIds[order.id]} title="Messages with buyer" />
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>

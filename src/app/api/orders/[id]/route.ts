@@ -28,11 +28,12 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const adminClient = createAdminClient()
+
   // Annotate items with po_rejected flag (for partial rejection display)
   // Buyers see "unavailable" without knowing the grower; admins get the same data
   if ((data as any).has_partial_rejection) {
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const adminClient = createAdminClient()
     const { data: rejectedPOs } = await adminClient
       .from('purchase_orders')
       .select('farmer_id')
@@ -44,6 +45,15 @@ export async function GET(
       po_rejected: rejectedFarmerIds.has(item.farmer_id),
     }))
   }
+
+  // purchase_order ids per grower — the messaging thread is scoped to
+  // (order, farmer) via this id, not the raw order_id, since one order can
+  // span multiple growers who shouldn't see each other's conversations.
+  const { data: pos } = await adminClient
+    .from('purchase_orders')
+    .select('id, farmer_id')
+    .eq('order_id', id)
+  ;(data as any).purchase_orders = pos || []
 
   return NextResponse.json({ data })
 }

@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
     const { data: farmer } = await supabase.from('farmers').select('id').eq('user_id', user.id).single()
     if (!farmer) return NextResponse.json({ error: 'Not a farmer' }, { status: 403 })
 
-    let query = supabase.from('products').select('*').eq('farmer_id', farmer.id).eq('is_active', true)
+    // Includes archived (is_active=false) products — a grower needs to see and
+    // restore those from their own inventory list, not just active listings.
+    let query = supabase.from('products').select('*').eq('farmer_id', farmer.id)
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ data })

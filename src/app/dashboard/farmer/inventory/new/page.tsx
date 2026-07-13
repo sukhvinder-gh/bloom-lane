@@ -122,6 +122,14 @@ export default function NewProductPage() {
         {/* Photos */}
         <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Photos</h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--moss)', lineHeight: 1.6, marginTop: '-0.5rem' }}>
+            Use real photos of this exact crop, not stock images — buyers want to see the actual stem length, bloom size, and quality they'll receive.
+          </p>
+          {form.image_urls.length === 0 && (
+            <p style={{ fontSize: '0.78rem', color: '#991b1b', background: '#fee2e2', padding: '0.5rem 0.75rem', borderRadius: '0.5rem' }}>
+              No photo yet — listings with a real photo sell better.
+            </p>
+          )}
           <ProductImageUpload
             urls={form.image_urls}
             onChange={urls => up('image_urls', urls)}

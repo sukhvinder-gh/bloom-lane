@@ -25,14 +25,16 @@ export async function GET(request: NextRequest) {
 
   const { data: pos } = await admin
     .from('purchase_orders')
-    .select('order_id, status')
+    .select('id, order_id, status')
     .eq('farmer_id', farmer.id)
     .in('order_id', orderIds)
 
   const map: Record<string, string> = {}
+  const poIdMap: Record<string, string> = {}
   for (const po of pos ?? []) {
     map[po.order_id] = po.status
+    poIdMap[po.order_id] = po.id
   }
 
-  return NextResponse.json({ data: map })
+  return NextResponse.json({ data: map, ids: poIdMap })
 }

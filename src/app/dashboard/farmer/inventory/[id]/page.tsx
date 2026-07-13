@@ -43,6 +43,7 @@ export default function EditProductPage() {
     min_order_b2b: '1',
     is_gst_free: false,
     is_listed_this_week: false,
+    is_active: true,
     image_urls: [] as string[],
   })
 
@@ -79,6 +80,7 @@ export default function EditProductPage() {
         min_order_b2b:           String(data.min_order_b2b || '1'),
         is_gst_free:             data.is_gst_free || false,
         is_listed_this_week:     data.is_listed_this_week || false,
+        is_active:               data.is_active !== false,
         image_urls:              data.image_urls || (data.image_url ? [data.image_url] : []),
       })
       setFetching(false)
@@ -125,12 +127,23 @@ export default function EditProductPage() {
     router.refresh()
   }
 
-  async function handleDelete() {
-    if (!confirm('Delete this product? This cannot be undone.')) return
+  async function handleArchive() {
+    if (!confirm('Archive this product? It will stop being sold, but stays in your inventory so you can bring it back next season.')) return
     const res = await fetch(`/api/products/${productId}`, { method: 'DELETE' })
     if (res.ok) {
       router.push('/dashboard/farmer/inventory')
       router.refresh()
+    }
+  }
+
+  async function handleRestore() {
+    const res = await fetch(`/api/products/${productId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    })
+    if (res.ok) {
+      up('is_active', true)
     }
   }
 
@@ -156,11 +169,24 @@ export default function EditProductPage() {
           <Link href="/dashboard/farmer/inventory" className="btn btn-ghost btn-sm">← Back</Link>
           <h1 className="type-heading reveal" style={{ color: 'var(--forest)' }}>Edit product</h1>
         </div>
-        <button onClick={handleDelete}
-          style={{ padding: '0.4rem 1rem', background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-          Delete
-        </button>
+        {form.is_active ? (
+          <button onClick={handleArchive}
+            style={{ padding: '0.4rem 1rem', background: '#fee2e2', color: '#991b1b', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+            🗄 Archive
+          </button>
+        ) : (
+          <button onClick={handleRestore}
+            style={{ padding: '0.4rem 1rem', background: 'var(--sage-soft)', color: 'var(--sage-new)', border: 'none', borderRadius: '0.5rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+            ↺ Restore
+          </button>
+        )}
       </div>
+
+      {!form.is_active && (
+        <div className="badge badge-olive reveal" style={{ width: '100%', padding: '1rem', borderRadius: '1rem', justifyContent: 'flex-start', marginBottom: '1.5rem', fontSize: '0.8rem' }}>
+          🗄 This product is archived and isn't for sale. Restore it to make it available again — nothing was deleted, your pricing and photos are still here.
+        </div>
+      )}
 
       {error && (
         <div className="badge badge-red reveal" style={{ width: '100%', padding: '1rem', borderRadius: '1rem', justifyContent: 'flex-start', marginBottom: '1.5rem', fontSize: '0.7rem' }}>
@@ -267,6 +293,14 @@ export default function EditProductPage() {
         {/* Photos */}
         <div className="card reveal reveal-d3" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Photos</h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--moss)', lineHeight: 1.6, marginTop: '-0.5rem' }}>
+            Use real photos of this exact crop, not stock images — buyers want to see the actual stem length, bloom size, and quality they'll receive.
+          </p>
+          {form.image_urls.length === 0 && (
+            <p style={{ fontSize: '0.78rem', color: '#991b1b', background: '#fee2e2', padding: '0.5rem 0.75rem', borderRadius: '0.5rem' }}>
+              No photo yet — listings with a real photo sell better.
+            </p>
+          )}
           <ProductImageUpload
             urls={form.image_urls}
             onChange={urls => up('image_urls', urls)}
