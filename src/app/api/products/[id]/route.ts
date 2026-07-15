@@ -21,6 +21,10 @@ const updateProductSchema = z.object({
   is_active: z.boolean().optional(),
   image_url: z.string().url().optional().nullable(),
   image_urls: z.array(z.string().url()).optional(),
+  color_tags: z.array(z.string()).max(6).optional(),
+  common_name: z.string().max(80).optional().nullable(),
+  latin_name: z.string().max(80).optional().nullable(),
+  stems_per_unit: z.number().int().positive().optional().nullable(),
 })
 
 async function getFarmerForUser(supabase: any, userId: string) {

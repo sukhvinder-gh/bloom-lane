@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, getPricePerStemCents } from '@/lib/utils/pricing'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -334,6 +334,12 @@ export default function FarmerInventoryPage() {
                   </td>
                   <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(p.wholesale_price)}</span>
+                    {(() => {
+                      const perStem = getPricePerStemCents(p, p.wholesale_price)
+                      return perStem !== null && p.unit !== 'stem'
+                        ? <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.15rem' }}>≈ {formatPrice(perStem)}/stem</p>
+                        : null
+                    })()}
                     {p.is_gst_free && <span className="badge badge-sage" style={{ display: 'block', marginTop: '0.25rem' }}>GST free</span>}
                   </td>
                   <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>

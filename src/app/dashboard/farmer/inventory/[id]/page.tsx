@@ -6,6 +6,8 @@ import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { calculateStockSplits, formatPrice } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import ProductImageUpload from '@/components/ProductImageUpload'
+import ColorTagPicker from '@/components/ColorTagPicker'
+import { findSpeciesByCommonName } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES = [
   { id: 'flowers_cut', label: '✿ Cut Flowers' },
@@ -45,6 +47,9 @@ export default function EditProductPage() {
     is_listed_this_week: false,
     is_active: true,
     image_urls: [] as string[],
+    color_tags: [] as string[],
+    latin_name: '',
+    stems_per_unit: '',
   })
 
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -82,6 +87,9 @@ export default function EditProductPage() {
         is_listed_this_week:     data.is_listed_this_week || false,
         is_active:               data.is_active !== false,
         image_urls:              data.image_urls || (data.image_url ? [data.image_url] : []),
+        color_tags:              data.color_tags || [],
+        latin_name:              data.latin_name || '',
+        stems_per_unit:          data.stems_per_unit ? String(data.stems_per_unit) : '',
       })
       setFetching(false)
     }
@@ -114,6 +122,9 @@ export default function EditProductPage() {
         is_listed_this_week: form.is_listed_this_week,
         image_url:          form.image_urls[0] || null,
         image_urls:         form.image_urls,
+        color_tags:         form.color_tags,
+        latin_name:         form.latin_name || null,
+        stems_per_unit:     form.unit === 'bunch' && form.stems_per_unit ? parseInt(form.stems_per_unit) : null,
       }),
     })
 
@@ -220,6 +231,39 @@ export default function EditProductPage() {
                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
+          </div>
+          {form.unit === 'bunch' && (
+            <div>
+              <label className="label">Stems per bunch</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <input className="input" style={{ width: '6rem' }} type="number" min="1" placeholder="e.g. 10" value={form.stems_per_unit} onChange={e => up('stems_per_unit', e.target.value)} />
+                {[5, 10].map(n => (
+                  <button key={n} type="button" onClick={() => up('stems_per_unit', String(n))}
+                    style={{ padding: '0.4rem 0.875rem', borderRadius: '99px', border: form.stems_per_unit === String(n) ? '1.5px solid var(--forest)' : '1.5px solid var(--olive)', background: form.stems_per_unit === String(n) ? 'var(--olive)' : 'white', color: 'var(--forest)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                    {n} stems
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>We recommend 5 or 10 stems per bunch — makes it easy for buyers to compare prices across growers by the stem.</p>
+            </div>
+          )}
+          <div>
+            <label className="label">Latin / botanical name (optional)</label>
+            <input className="input" placeholder="e.g. Helianthus annuus" value={form.latin_name} onChange={e => up('latin_name', e.target.value)} />
+            {!form.latin_name && findSpeciesByCommonName(form.name) && (
+              <button
+                type="button"
+                onClick={() => up('latin_name', findSpeciesByCommonName(form.name)!.latinName)}
+                style={{ marginTop: '0.5rem', padding: '0.3rem 0.75rem', borderRadius: '99px', border: '1px solid var(--olive)', background: 'var(--olive)', color: 'var(--forest)', fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                Use "{findSpeciesByCommonName(form.name)!.latinName}"?
+              </button>
+            )}
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>Helps buyers find this listing even if they search by the botanical name.</p>
+          </div>
+          <div>
+            <label className="label">Color</label>
+            <ColorTagPicker selected={form.color_tags} onChange={ids => up('color_tags', ids)} />
           </div>
         </div>
 

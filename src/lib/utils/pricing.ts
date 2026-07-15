@@ -113,6 +113,23 @@ export function formatPrice(cents: number, showGstLabel = false): string {
 }
 
 /**
+ * Price per stem, for buyer comparison across growers who bunch differently.
+ * - unit 'stem': the unit price already is the per-stem price.
+ * - unit 'bunch' with stems_per_unit set: unit price / stems in the bunch.
+ * - anything else (kg, tray, dozen, etc.): not a stem-comparable unit.
+ */
+export function getPricePerStemCents(
+  product: Pick<Product, 'unit' | 'stems_per_unit'>,
+  unitPriceCents: number
+): number | null {
+  if (product.unit === 'stem') return unitPriceCents
+  if (product.unit === 'bunch' && product.stems_per_unit && product.stems_per_unit > 0) {
+    return Math.round(unitPriceCents / product.stems_per_unit)
+  }
+  return null
+}
+
+/**
  * Calculate farmer payout for an order item
  * gross = item subtotal (what buyer paid)
  * commission = gross * commission_rate

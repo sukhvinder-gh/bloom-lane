@@ -17,6 +17,10 @@ const createProductSchema = z.object({
   is_listed_this_week: z.boolean().default(false),
   image_url: z.string().url().optional().nullable(),
   image_urls: z.array(z.string().url()).optional(),
+  color_tags: z.array(z.string()).max(6).optional(),
+  common_name: z.string().max(80).optional().nullable(),
+  latin_name: z.string().max(80).optional().nullable(),
+  stems_per_unit: z.number().int().positive().optional().nullable(),
 })
 
 export async function GET(request: NextRequest) {
@@ -50,6 +54,9 @@ export async function GET(request: NextRequest) {
     .eq('is_active', true)
 
   if (category) query = query.eq('category', category)
+
+  const color = url.searchParams.get('color') || ''
+  if (color) query = query.contains('color_tags', [color])
 
   // Filter out products with zero stock in the relevant pool
   if (isB2B) {

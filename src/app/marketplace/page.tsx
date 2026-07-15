@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCart } from '@/hooks/useCart'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, getPricePerStemCents } from '@/lib/utils/pricing'
 import { isMarketOpen } from '@/lib/utils/timezone'
+import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES = [
   { id: '', label: 'All' }, { id: 'flowers_cut', label: '✿ Cut Flowers' },
@@ -139,7 +140,24 @@ function ProductDrawer({
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', lineHeight: 1.1, marginBottom: '0.25rem' }}>
               {product.name}
             </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--moss)' }}>per {product.unit}</p>
+            {product.latin_name && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)', fontStyle: 'italic', marginBottom: '0.25rem' }}>{product.latin_name}</p>
+            )}
+            <p style={{ fontSize: '0.82rem', color: 'var(--moss)' }}>
+              per {product.unit}
+              {(() => {
+                const perStem = getPricePerStemCents(product, displayPrice)
+                return perStem !== null && product.unit !== 'stem' ? ` · ≈ ${formatPrice(perStem)}/stem` : ''
+              })()}
+            </p>
+            {product.color_tags?.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.5rem' }}>
+                {product.color_tags.map((cid: string) => {
+                  const c = COLOR_PALETTE.find(x => x.id === cid)
+                  return c ? <span key={cid} title={c.label} style={{ width: '1rem', height: '1rem', borderRadius: '50%', background: c.swatch, border: '1px solid rgba(0,0,0,0.15)' }} /> : null
+                })}
+              </div>
+            )}
           </div>
 
           {/* Price */}
@@ -241,6 +259,7 @@ export default function MarketplacePage() {
   const [products, setProducts]   = useState<any[]>([])
   const [loading, setLoading]     = useState(true)
   const [category, setCategory]   = useState('')
+  const [color, setColor]         = useState('')
   const [isB2B, setIsB2B]         = useState(false)
   const [userRole, setUserRole]   = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
@@ -269,9 +288,9 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}`)
+    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${color ? `&color=${color}` : ''}`)
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
-  }, [category, isB2B])
+  }, [category, color, isB2B])
 
   // Which categories actually have purchasable stock right now — the filter
   // list should reflect real availability, not every category that's ever existed.
@@ -292,11 +311,16 @@ export default function MarketplacePage() {
     return items.find(i => i.product_id === productId)?.quantity || 0
   }
 
-  const filtered = products.filter(p =>
-    !search ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.farmers?.business_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = products.filter(p => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.farmers?.business_name?.toLowerCase().includes(q) ||
+      p.latin_name?.toLowerCase().includes(q) ||
+      p.common_name?.toLowerCase().includes(q)
+    )
+  })
 
   const closeDrawer = useCallback(() => setSelected(null), [])
 
@@ -391,11 +415,26 @@ export default function MarketplacePage() {
             </div>
           )}
           <p className="label">Category</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
             {visibleCategories.map(cat => (
               <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
                 className={`nav-item ${category === cat.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
                 {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="label">Color</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <button type="button" onClick={() => setColor('')}
+              className={`nav-item ${color === '' ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
+              All colors
+            </button>
+            {COLOR_PALETTE.map(c => (
+              <button key={c.id} type="button" onClick={() => setColor(c.id)}
+                className={`nav-item ${color === c.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '0.9rem', height: '0.9rem', borderRadius: '50%', background: c.swatch, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                {c.label}
               </button>
             ))}
           </div>
@@ -458,7 +497,13 @@ export default function MarketplacePage() {
 
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>
-                      <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>per {product.unit} · {available} left</p>
+                      <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>
+                        per {product.unit} · {available} left
+                        {(() => {
+                          const perStem = getPricePerStemCents(product, displayPrice)
+                          return perStem !== null && product.unit !== 'stem' ? ` · ≈ ${formatPrice(perStem)}/stem` : ''
+                        })()}
+                      </p>
                       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 'auto' }}>
                         <div>
                           {!authLoaded ? (

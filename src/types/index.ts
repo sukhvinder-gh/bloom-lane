@@ -87,6 +87,10 @@ export interface Product {
   b2b_available: number
   b2c_available: number
   min_order_b2b: number
+  stems_per_unit?: number | null
+  color_tags: string[]
+  common_name?: string
+  latin_name?: string
   is_gst_free: boolean
   is_active: boolean
   is_listed_this_week: boolean

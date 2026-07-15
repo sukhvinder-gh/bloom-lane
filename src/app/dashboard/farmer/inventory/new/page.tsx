@@ -6,6 +6,8 @@ import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { calculateStockSplits, formatPrice } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import ProductImageUpload from '@/components/ProductImageUpload'
+import ColorTagPicker from '@/components/ColorTagPicker'
+import { findSpeciesByCommonName } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES = [{ id: 'flowers_cut', label: '✿ Cut Flowers' }, { id: 'flowers_dried', label: '🌾 Dried Flowers' }, { id: 'foliage', label: '🍃 Foliage' }, { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' }, { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' }, { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' }]
 const UNITS = ['bunch', 'stem', 'kg', 'g', 'each', 'tray', 'box', 'punnet', 'dozen']
@@ -14,7 +16,7 @@ export default function NewProductPage() {
   const router = useRouter()
   const supabase = createClient()
   const listingOpen = isListingWindowOpen()
-  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', stock_total: '', min_order_b2b: '1', is_gst_free: false, is_listed_this_week: listingOpen, image_urls: [] as string[] })
+  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', stock_total: '', min_order_b2b: '1', is_gst_free: false, is_listed_this_week: listingOpen, image_urls: [] as string[], color_tags: [] as string[], latin_name: '', stems_per_unit: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [b2bPct, setB2bPct] = useState(0.8) // default, overridden by config
@@ -34,7 +36,7 @@ export default function NewProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setError('')
-    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week, image_url: form.image_urls[0] || null, image_urls: form.image_urls }) })
+    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week, image_url: form.image_urls[0] || null, image_urls: form.image_urls, color_tags: form.color_tags, latin_name: form.latin_name || null, stems_per_unit: form.unit === 'bunch' && form.stems_per_unit ? parseInt(form.stems_per_unit) : null }) })
     const data = await res.json()
     if (!res.ok) { setError(data.error || 'Failed to create product'); setLoading(false); return }
     router.push('/dashboard/farmer/inventory')
@@ -59,6 +61,39 @@ export default function NewProductPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div><label className="label">Category *</label><select className="input" value={form.category} onChange={e => up('category', e.target.value)}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
             <div><label className="label">Unit *</label><select className="input" value={form.unit} onChange={e => up('unit', e.target.value)}>{UNITS.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
+          </div>
+          {form.unit === 'bunch' && (
+            <div>
+              <label className="label">Stems per bunch</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <input className="input" style={{ width: '6rem' }} type="number" min="1" placeholder="e.g. 10" value={form.stems_per_unit} onChange={e => up('stems_per_unit', e.target.value)} />
+                {[5, 10].map(n => (
+                  <button key={n} type="button" onClick={() => up('stems_per_unit', String(n))}
+                    style={{ padding: '0.4rem 0.875rem', borderRadius: '99px', border: form.stems_per_unit === String(n) ? '1.5px solid var(--forest)' : '1.5px solid var(--olive)', background: form.stems_per_unit === String(n) ? 'var(--olive)' : 'white', color: 'var(--forest)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                    {n} stems
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>We recommend 5 or 10 stems per bunch — makes it easy for buyers to compare prices across growers by the stem.</p>
+            </div>
+          )}
+          <div>
+            <label className="label">Latin / botanical name (optional)</label>
+            <input className="input" placeholder="e.g. Helianthus annuus" value={form.latin_name} onChange={e => up('latin_name', e.target.value)} />
+            {!form.latin_name && findSpeciesByCommonName(form.name) && (
+              <button
+                type="button"
+                onClick={() => up('latin_name', findSpeciesByCommonName(form.name)!.latinName)}
+                style={{ marginTop: '0.5rem', padding: '0.3rem 0.75rem', borderRadius: '99px', border: '1px solid var(--olive)', background: 'var(--olive)', color: 'var(--forest)', fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+              >
+                Use "{findSpeciesByCommonName(form.name)!.latinName}"?
+              </button>
+            )}
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>Helps buyers find this listing even if they search by the botanical name.</p>
+          </div>
+          <div>
+            <label className="label">Color</label>
+            <ColorTagPicker selected={form.color_tags} onChange={ids => up('color_tags', ids)} />
           </div>
         </div>
 
