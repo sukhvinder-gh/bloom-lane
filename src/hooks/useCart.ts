@@ -1,11 +1,19 @@
 // src/hooks/useCart.ts
 // FIX BUG-13: Cart now persists across page refreshes via Zustand persist middleware
 // Uses sessionStorage (not localStorage) — clears when tab closes, intentional for security
+//
+// Cart reservation: adding/changing quantity now reserves real stock
+// server-side for 60 minutes (see /api/cart/reserve), instead of the old
+// purely-client-side optimism. This is what actually prevents two buyers
+// both "having" the last few stems — the hold happens the moment an item
+// is added, not just at checkout.
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CartItem, Product, FulfillmentType } from '@/types'
 import { getBuyerUnitPrice } from '@/lib/utils/pricing'
+
+type MutationResult = { success: boolean; error?: string; available?: number }
 
 interface CartStore {
   items: CartItem[]
@@ -13,9 +21,9 @@ interface CartStore {
   hub_id?: string
   isB2B: boolean
 
-  addItem: (product: Product, quantity: number, isB2B: boolean) => void
-  removeItem: (productId: string) => void
-  updateQuantity: (productId: string, quantity: number) => void
+  addItem: (product: Product, quantity: number, isB2B: boolean) => Promise<MutationResult>
+  removeItem: (productId: string) => Promise<MutationResult>
+  updateQuantity: (productId: string, quantity: number) => Promise<MutationResult>
   clearCart: () => void
   setFulfillmentType: (type: FulfillmentType) => void
   setHubId: (hubId: string) => void
@@ -23,6 +31,29 @@ interface CartStore {
   totalItems: () => number
   subtotalCents: () => number
   itemCount: () => number
+}
+
+async function reserveOnServer(productId: string, quantity: number, isB2B: boolean): Promise<MutationResult & { expires_at?: string }> {
+  const res = await fetch('/api/cart/reserve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product_id: productId, quantity, is_b2b: isB2B }),
+  })
+  const data = await res.json()
+  if (!res.ok) return { success: false, error: data.error || 'Could not reserve stock', available: data.available }
+  return { success: true, expires_at: data.expires_at }
+}
+
+async function releaseOnServer(productId: string, isB2B: boolean): Promise<void> {
+  try {
+    await fetch('/api/cart/reserve', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId, is_b2b: isB2B }),
+    })
+  } catch {
+    // Best-effort — an abandoned reservation still expires via the sweep job
+  }
 }
 
 export const useCart = create<CartStore>()(
@@ -33,22 +64,21 @@ export const useCart = create<CartStore>()(
       hub_id: undefined,
       isB2B: false,
 
-      addItem: (product, quantity, isB2B) => {
+      addItem: async (product, quantity, isB2B) => {
         const existing = get().items.find(i => i.product_id === product.id)
-        const unit_price_cents = getBuyerUnitPrice(product, isB2B)
-
-        // Enforce stock cap based on buyer type
-        const maxStock = isB2B ? product.b2b_available : product.b2c_available
         const currentQty = existing?.quantity || 0
-        const newQty = Math.min(currentQty + quantity, maxStock)
+        const newQty = currentQty + quantity
 
-        if (newQty <= 0) return // don't add if stock is 0
+        const result = await reserveOnServer(product.id, newQty, isB2B)
+        if (!result.success) return result
+
+        const unit_price_cents = getBuyerUnitPrice(product, isB2B)
 
         if (existing) {
           set(state => ({
             items: state.items.map(item =>
               item.product_id === product.id
-                ? { ...item, quantity: newQty, unit_price_cents, is_b2b: isB2B }
+                ? { ...item, quantity: newQty, unit_price_cents, is_b2b: isB2B, reserved_until: result.expires_at }
                 : item
             ),
             isB2B,
@@ -61,34 +91,42 @@ export const useCart = create<CartStore>()(
               quantity: newQty,
               is_b2b: isB2B,
               unit_price_cents,
+              reserved_until: result.expires_at,
             }],
             isB2B,
           }))
         }
+        return { success: true }
       },
 
-      removeItem: (productId) => {
-        set(state => ({ items: state.items.filter(i => i.product_id !== productId) }))
-      },
-
-      updateQuantity: (productId, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(productId)
-          return
-        }
-        // Enforce stock cap on manual update
+      removeItem: async (productId) => {
         const item = get().items.find(i => i.product_id === productId)
-        if (item) {
-          const maxStock = item.is_b2b ? item.product.b2b_available : item.product.b2c_available
-          const capped = Math.min(quantity, maxStock)
-          set(state => ({
-            items: state.items.map(i =>
-              i.product_id === productId ? { ...i, quantity: capped } : i
-            )
-          }))
-        }
+        set(state => ({ items: state.items.filter(i => i.product_id !== productId) }))
+        if (item) await releaseOnServer(productId, item.is_b2b)
+        return { success: true }
       },
 
+      updateQuantity: async (productId, quantity) => {
+        const item = get().items.find(i => i.product_id === productId)
+        if (!item) return { success: false, error: 'Item not in cart' }
+
+        if (quantity <= 0) {
+          return get().removeItem(productId)
+        }
+
+        const result = await reserveOnServer(productId, quantity, item.is_b2b)
+        if (!result.success) return result
+
+        set(state => ({
+          items: state.items.map(i =>
+            i.product_id === productId ? { ...i, quantity, reserved_until: result.expires_at } : i
+          )
+        }))
+        return { success: true }
+      },
+
+      // Clears local state only — used after a successful order (reservations
+      // are already consumed server-side by then, nothing left to release).
       clearCart: () => set({ items: [], hub_id: undefined }),
 
       setFulfillmentType: (type) => set({ fulfillment_type: type }),

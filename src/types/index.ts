@@ -66,6 +66,7 @@ export interface Farmer {
   stripe_onboarding_complete: boolean
   gst_registered: boolean // may this grower legally charge GST?
   rcti_agreed: boolean    // has the grower agreed to platform-issued RCTIs?
+  offers_farm_pickup: boolean
   status: FarmerStatus
   created_at: string
   updated_at: string
@@ -207,6 +208,7 @@ export interface CartItem {
   quantity: number
   is_b2b: boolean
   unit_price_cents: number
+  reserved_until?: string
 }
 
 export interface Cart {

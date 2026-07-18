@@ -19,11 +19,12 @@ export default async function PackListPage() {
 
   const { data: pos } = await admin
     .from('purchase_orders')
-    .select('order_id, status')
+    .select('order_id, status, pickup_method')
     .eq('farmer_id', farmer.id)
     .in('status', ACTIVE_PO_STATUSES)
 
   const orderIds = [...new Set((pos || []).map(p => p.order_id))]
+  const pickupMethodByOrder = new Map((pos || []).map(p => [p.order_id, p.pickup_method]))
 
   const { data: orders } = orderIds.length > 0
     ? await admin
@@ -69,7 +70,9 @@ export default async function PackListPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '2px solid var(--forest)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
                   <div>
                     <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--forest)' }}>{buyerName}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--moss)', marginLeft: '0.75rem' }}>{order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--moss)', marginLeft: '0.75rem' }}>
+                      {pickupMethodByOrder.get(order.id) === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}
+                    </span>
                   </div>
                   <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--moss)' }}>
                     {order.order_number} · {formatAEST(order.created_at, 'dd MMM')}

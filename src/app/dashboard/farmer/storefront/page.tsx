@@ -29,6 +29,7 @@ export default function FarmerStorefrontPage() {
     growing_practices: '',
     seasonal_specialties: '',
     sustainability: '',
+    offers_farm_pickup: false,
   })
 
   useEffect(() => { load() }, [])
@@ -59,6 +60,7 @@ export default function FarmerStorefrontPage() {
         growing_practices:    data.growing_practices || '',
         seasonal_specialties: (data.seasonal_specialties || []).join(', '),
         sustainability:       (data.sustainability || []).join(', '),
+        offers_farm_pickup:   data.offers_farm_pickup || false,
       })
     }
     setLoading(false)
@@ -127,6 +129,7 @@ export default function FarmerStorefrontPage() {
         growing_practices:    form.growing_practices || null,
         seasonal_specialties: form.seasonal_specialties ? form.seasonal_specialties.split(',').map(s => s.trim()).filter(Boolean) : [],
         sustainability:       form.sustainability ? form.sustainability.split(',').map(s => s.trim()).filter(Boolean) : [],
+        offers_farm_pickup:   form.offers_farm_pickup,
         updated_at:           new Date().toISOString(),
       })
       .eq('id', farmer.id)
@@ -305,6 +308,16 @@ export default function FarmerStorefrontPage() {
             <input style={inputStyle} value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="3000" maxLength={4} />
           </div>
         </div>
+
+        {/* Farm pickup */}
+        {farmer && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.offers_farm_pickup} onChange={e => setForm(f => ({ ...f, offers_farm_pickup: e.target.checked }))} style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+              Offer <strong>farm pickup</strong> at the address above — buyers can choose to collect your items directly from your farm instead of via the hub or delivery.
+            </span>
+          </label>
+        )}
 
         {/* Submit */}
         <button

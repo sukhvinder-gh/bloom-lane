@@ -21,10 +21,31 @@ export default function CartPage() {
 
   const [stockIssues, setStockIssues] = useState<StockIssue[]>([])
   const [validating, setValidating]   = useState(false)
+  const [cartError, setCartError]     = useState('')
+  const [now, setNow]                 = useState(() => Date.now())
 
   useEffect(() => {
     if (items.length > 0) validateStock()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tick every 15s so reservation countdowns stay roughly live.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000)
+    return () => clearInterval(id)
+  }, [])
+
+  function minutesLeft(reservedUntil?: string): number | null {
+    if (!reservedUntil) return null
+    return Math.max(0, Math.round((new Date(reservedUntil).getTime() - now) / 60_000))
+  }
+
+  async function handleUpdateQuantity(productId: string, qty: number) {
+    const result = await updateQuantity(productId, qty)
+    if (!result.success) {
+      setCartError(result.error === 'Insufficient stock' ? `Only ${result.available ?? 0} left available.` : (result.error || 'Could not update quantity'))
+      setTimeout(() => setCartError(''), 4000)
+    }
+  }
 
   async function validateStock() {
     setValidating(true)
@@ -50,7 +71,7 @@ export default function CartPage() {
 
   function fixIssue(issue: StockIssue) {
     if (issue.available <= 0) removeItem(issue.product_id)
-    else updateQuantity(issue.product_id, issue.available)
+    else handleUpdateQuantity(issue.product_id, issue.available)
     setStockIssues(prev => prev.filter(i => i.product_id !== issue.product_id))
   }
 
@@ -86,6 +107,13 @@ export default function CartPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+
+      {/* Cart error toast */}
+      {cartError && (
+        <div style={{ position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)', zIndex: 500, background: '#7f1d1d', color: '#fca5a5', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', maxWidth: '26rem', textAlign: 'center' }}>
+          ⚠ {cartError}
+        </div>
+      )}
 
       {/* Nav */}
       <nav style={{ background: 'white', borderBottom: '1px solid var(--olive)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -187,22 +215,32 @@ export default function CartPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0', border: '1.5px solid var(--olive)', borderRadius: '99px', overflow: 'hidden' }}>
                       <button
-                        onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                        onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}
                         style={{ width: '2rem', height: '2rem', border: 'none', background: 'var(--olive)', color: 'var(--forest)', cursor: 'pointer', fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)' }}
                       >−</button>
                       <input
                         type="text" inputMode="numeric" value={item.quantity}
-                        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) updateQuantity(item.product_id, Math.min(v, maxStock)) }}
+                        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) handleUpdateQuantity(item.product_id, v) }}
                         style={{ width: '2.5rem', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--olive)', borderRight: '1px solid var(--olive)', height: '2rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--forest)', background: 'white', outline: 'none' }}
                       />
                       <button
-                        onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                        disabled={item.quantity >= maxStock}
-                        style={{ width: '2rem', height: '2rem', border: 'none', background: 'var(--olive)', color: item.quantity >= maxStock ? 'var(--moss)' : 'var(--forest)', cursor: item.quantity >= maxStock ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)' }}
+                        onClick={() => handleUpdateQuantity(item.product_id, item.quantity + 1)}
+                        style={{ width: '2rem', height: '2rem', border: 'none', background: 'var(--olive)', color: 'var(--forest)', cursor: 'pointer', fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body)' }}
                       >+</button>
                     </div>
                     <span style={{ fontSize: '0.72rem', color: 'var(--moss)' }}>{maxStock} available</span>
                   </div>
+
+                  {/* Reservation countdown */}
+                  {(() => {
+                    const mins = minutesLeft(item.reserved_until)
+                    if (mins === null) return null
+                    return (
+                      <p style={{ fontSize: '0.7rem', color: mins <= 5 ? '#b91c1c' : 'var(--sage-new)', fontWeight: 600, marginTop: '0.5rem' }}>
+                        {mins <= 0 ? '⚠ Reservation may have expired — re-check before checkout' : `🔒 Reserved — expires in ${mins} min`}
+                      </p>
+                    )
+                  })()}
                 </div>
 
                 {/* Line total + remove */}

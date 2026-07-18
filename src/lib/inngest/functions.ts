@@ -283,9 +283,31 @@ export const expireDisputeWindow = inngest.createFunction(
   }
 )
 
+// ============================================================
+// 5. CART RESERVATION SWEEP — release stock from abandoned carts
+// Cron: every 5 minutes
+// ============================================================
+
+export const expireCartReservations = inngest.createFunction(
+  { id: 'expire-cart-reservations', name: 'Release Expired Cart Reservations' },
+  { cron: '*/5 * * * *' },
+  async ({ step }) => {
+    const supabase = createAdminClient()
+
+    const released = await step.run('release-expired', async () => {
+      const { data, error } = await supabase.rpc('cart_release_expired_reservations')
+      if (error) throw new Error(`Failed to release expired reservations: ${error.message}`)
+      return data as number
+    })
+
+    return { released, at: new Date().toISOString() }
+  }
+)
+
 export const inngestFunctions = [
   tuesdayHeartbeat,
   wednesdayMarketOpen,
   processPayoutAfterDispute,
   expireDisputeWindow,
+  expireCartReservations,
 ]

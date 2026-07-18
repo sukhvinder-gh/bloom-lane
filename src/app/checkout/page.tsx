@@ -18,6 +18,31 @@ export default function CheckoutPage() {
 
   const [hubs, setHubs]                 = useState<any[]>([])
   const [selectedHubId, setSelectedHubId] = useState<string>('')
+  const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
+
+  // Growers in this cart who offer farm pickup — pulled from whatever the
+  // marketplace fetch attached to each product, so no extra request needed.
+  const pickupEligibleFarmers = (() => {
+    const seen = new Map<string, any>()
+    for (const item of items) {
+      const f = (item.product as any).farmers
+      if (f?.offers_farm_pickup && !seen.has(item.product.farmer_id)) {
+        seen.set(item.product.farmer_id, { ...f, farmer_id: item.product.farmer_id })
+      }
+    }
+    return [...seen.values()]
+  })()
+
+  function toggleFarmPickup(farmerId: string) {
+    setFarmPickupIds(s => {
+      const next = new Set(s)
+      next.has(farmerId) ? next.delete(farmerId) : next.add(farmerId)
+      return next
+    })
+  }
+
+  // Nothing left to pool through hub/delivery once every item's grower is farm-pickup.
+  const pooledItems = items.filter(i => !farmPickupIds.has(i.product.farmer_id))
 
   useEffect(() => {
     const supabase = createClient()
@@ -29,7 +54,7 @@ export default function CheckoutPage() {
       })
   }, [])
 
-  const deliveryFee = fulfillment_type === 'direct_delivery' ? DELIVERY_FEE : 0
+  const deliveryFee = fulfillment_type === 'direct_delivery' && pooledItems.length > 0 ? DELIVERY_FEE : 0
 
   // B2B totals
   const subtotalExGst = isB2B
@@ -76,6 +101,7 @@ export default function CheckoutPage() {
           delivery_state: address.state,
           delivery_postcode: address.postcode,
           notes,
+          farm_pickup_farmer_ids: [...farmPickupIds],
         }),
       })
       const orderData = await res.json()
@@ -130,6 +156,9 @@ export default function CheckoutPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--cream)', marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.product.name}
+                        {farmPickupIds.has(item.product.farmer_id) && (
+                          <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', color: 'var(--sage)', fontWeight: 600 }}>🚜 farm pickup</span>
+                        )}
                       </p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
                         {item.quantity} × {formatPrice(displayUnit)} / {item.product.unit}
@@ -201,9 +230,40 @@ export default function CheckoutPage() {
         {/* ── Left: Delivery form ── */}
         <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
+          {/* Farm pickup — per grower, on top of the pooled hub/delivery choice below */}
+          {pickupEligibleFarmers.length > 0 && (
+            <div className="card reveal" style={{ padding: '2rem' }}>
+              <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '0.375rem' }}>🚜 Farm pickup available</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1.25rem' }}>
+                These growers let you collect directly from the farm instead of the hub or delivery.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {pickupEligibleFarmers.map(f => (
+                  <label key={f.farmer_id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '1rem', background: farmPickupIds.has(f.farmer_id) ? 'var(--forest)' : 'var(--olive)', borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}>
+                    <input type="checkbox" checked={farmPickupIds.has(f.farmer_id)} onChange={() => toggleFarmPickup(f.farmer_id)}
+                      style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0, marginTop: '0.1rem' }} />
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: '0.875rem', color: farmPickupIds.has(f.farmer_id) ? 'var(--cream)' : 'var(--forest)' }}>{f.business_name}</p>
+                      <p style={{ fontSize: '0.78rem', color: farmPickupIds.has(f.farmer_id) ? 'var(--sage)' : 'var(--moss)', marginTop: '0.15rem' }}>
+                        {[f.address, f.suburb, f.state].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Fulfillment type */}
           <div className="card reveal" style={{ padding: '2rem' }}>
-            <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1.25rem' }}>Collection method</h2>
+            <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '0.5rem' }}>Collection method</h2>
+            {pooledItems.length === 0 ? (
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Not needed — every item in your cart is set to farm pickup above.</p>
+            ) : (
+            <>
+            {pickupEligibleFarmers.length > 0 && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1rem' }}>For everything else in your cart.</p>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               {[
                 { id: 'hub_pickup',       icon: '🏭', label: 'Hub Pickup', sub: 'Collect from our central hub · Free' },
@@ -256,10 +316,12 @@ export default function CheckoutPage() {
                 )}
               </div>
             )}
+            </>
+            )}
           </div>
 
           {/* Delivery address */}
-          {fulfillment_type === 'direct_delivery' && (
+          {fulfillment_type === 'direct_delivery' && pooledItems.length > 0 && (
             <div className="card reveal" style={{ padding: '2rem' }}>
               <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1.25rem' }}>Delivery address</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

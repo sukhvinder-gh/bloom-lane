@@ -303,8 +303,22 @@ export default function MarketplacePage() {
   // Always keep "All" and whatever's currently selected, even if it just emptied out.
   const visibleCategories = CATEGORIES.filter(c => c.id === '' || c.id === category || availableCategories.has(c.id))
 
-  function handleAdd(product: any) {
-    addItem(product, 1, isB2B)
+  const [cartError, setCartError] = useState('')
+
+  async function handleAdd(product: any) {
+    const result = await addItem(product, 1, isB2B)
+    if (!result.success) {
+      setCartError(result.error === 'Insufficient stock' ? `Only ${result.available ?? 0} left — someone else may have just grabbed the rest.` : (result.error || 'Could not add to cart'))
+      setTimeout(() => setCartError(''), 4000)
+    }
+  }
+
+  async function handleUpdateQty(productId: string, qty: number) {
+    const result = await updateQuantity(productId, qty)
+    if (!result.success) {
+      setCartError(result.error === 'Insufficient stock' ? `Only ${result.available ?? 0} left available.` : (result.error || 'Could not update quantity'))
+      setTimeout(() => setCartError(''), 4000)
+    }
   }
 
   function getCartQty(productId: string) {
@@ -326,6 +340,13 @@ export default function MarketplacePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+
+      {/* Cart error toast */}
+      {cartError && (
+        <div style={{ position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)', zIndex: 500, background: '#7f1d1d', color: '#fca5a5', padding: '0.75rem 1.25rem', borderRadius: '0.75rem', fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', maxWidth: '26rem', textAlign: 'center' }}>
+          ⚠ {cartError}
+        </div>
+      )}
 
       {/* Top nav */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -541,11 +562,11 @@ export default function MarketplacePage() {
                             <button onClick={() => handleAdd(product)} className="btn btn-forest btn-sm">Add</button>
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'var(--forest)', borderRadius: '99px', padding: '0.2rem 0.25rem' }}>
-                              <button onClick={() => updateQuantity(product.id, cartQty - 1)}
+                              <button onClick={() => handleUpdateQty(product.id, cartQty - 1)}
                                 style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', border: 'none', background: 'rgba(255,247,249,0.2)', color: 'var(--cream)', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                               <input
                                 type="text" inputMode="numeric" value={cartQty}
-                                onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) updateQuantity(product.id, Math.min(v, available)) }}
+                                onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) handleUpdateQty(product.id, v) }}
                                 style={{ width: '2.25rem', background: 'transparent', border: 'none', color: 'var(--cream)', fontWeight: 700, fontSize: '0.875rem', textAlign: 'center', outline: 'none' }}
                               />
                               <button onClick={() => handleAdd(product)} disabled={cartQty >= available}
@@ -573,7 +594,7 @@ export default function MarketplacePage() {
           marketOpen={marketOpen}
           cartQty={getCartQty(selected.id)}
           onAdd={() => handleAdd(selected)}
-          onUpdateQty={qty => updateQuantity(selected.id, qty)}
+          onUpdateQty={qty => handleUpdateQty(selected.id, qty)}
           onClose={closeDrawer}
         />
       )}

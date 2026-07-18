@@ -72,10 +72,12 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch existing PO status (if any)
   const { data: poRecord } = await admin
     .from('purchase_orders')
-    .select('status, rejection_reason, rejected_at')
+    .select('status, rejection_reason, rejected_at, pickup_method')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
     .maybeSingle()
+
+  const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
 
   const commissionRate: number = (farmer as any).commission_rate ?? 0.10
   const gross = items.reduce((s, i) => s + i.subtotal_cents, 0)
@@ -101,6 +103,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
       <POStatusActions
         orderId={orderId}
         initialStatus={(poRecord?.status ?? 'pending') as any}
+        pickupMethod={pickupMethod}
       />
 
       {/* PO rejection status banner */}
@@ -156,14 +159,16 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
-                  {order.fulfillment_type === 'hub_pickup' ? (
+                  {pickupMethod === 'farm_pickup' ? (
+                    '🚜 Farm pickup — buyer collects directly from you'
+                  ) : order.fulfillment_type === 'hub_pickup' ? (
                     hubZone
                       ? `Hub drop-off — ${[hubZone.hub_address, hubZone.hub_suburb, hubZone.hub_state].filter(Boolean).join(', ')}`
                       : 'Hub drop-off (admin to confirm location)'
                   ) : 'Direct delivery to florist'}
                 </span>
               </div>
-              {order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
+              {pickupMethod !== 'farm_pickup' && order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Collection window:</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>

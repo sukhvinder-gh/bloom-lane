@@ -72,7 +72,12 @@ export default function BuyerOrderDetailPage() {
   // buyer's question to one grower leak into another grower's conversation.
   const growerThreads = (order.purchase_orders || []).map((po: any) => {
     const item = order.order_items?.find((i: any) => i.farmer_id === po.farmer_id)
-    return { poId: po.id, farmerName: item?.farmers?.business_name || 'Grower' }
+    return {
+      poId: po.id,
+      farmerName: item?.farmers?.business_name || 'Grower',
+      pickupMethod: po.pickup_method as 'standard' | 'farm_pickup',
+      farmAddress: [po.farmers?.address, po.farmers?.suburb, po.farmers?.state].filter(Boolean).join(', '),
+    }
   })
 
   return (
@@ -207,7 +212,14 @@ export default function BuyerOrderDetailPage() {
           {growerThreads.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {growerThreads.map((t: any) => (
-                <MessageThread key={t.poId} purchaseOrderId={t.poId} title={`Message ${t.farmerName}`} />
+                <div key={t.poId}>
+                  {t.pickupMethod === 'farm_pickup' && (
+                    <div style={{ background: 'var(--sage-soft)', border: '1px solid var(--sage)', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.75rem', fontSize: '0.82rem', color: 'var(--forest)' }}>
+                      🚜 <strong>{t.farmerName}</strong> — farm pickup{t.farmAddress ? `, ${t.farmAddress}` : ''}
+                    </div>
+                  )}
+                  <MessageThread purchaseOrderId={t.poId} title={`Message ${t.farmerName}`} />
+                </div>
               ))}
             </div>
           )}

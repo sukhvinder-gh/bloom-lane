@@ -67,19 +67,34 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', orderId)
 
-      // Create purchase_orders rows (one per farmer) — idempotent via ignoreDuplicates
+      // Create purchase_orders rows (one per farmer) — idempotent via ignoreDuplicates.
+      // Growers the buyer chose farm pickup for get pickup_method set here, since
+      // POs don't exist until now (order.farm_pickup_farmer_ids is the snapshot
+      // taken at checkout).
       try {
         const { data: orderItems } = await supabase
           .from('order_items')
           .select('farmer_id')
           .eq('order_id', orderId)
 
+        const { data: orderRow } = await supabase
+          .from('orders')
+          .select('farm_pickup_farmer_ids')
+          .eq('id', orderId)
+          .single()
+        const farmPickupIds = new Set((orderRow as any)?.farm_pickup_farmer_ids || [])
+
         if (orderItems && orderItems.length > 0) {
           const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
           await supabase
             .from('purchase_orders')
             .upsert(
-              farmerIds.map(farmerId => ({ order_id: orderId, farmer_id: farmerId, status: 'pending' })),
+              farmerIds.map(farmerId => ({
+                order_id: orderId,
+                farmer_id: farmerId,
+                status: 'pending',
+                pickup_method: farmPickupIds.has(farmerId) ? 'farm_pickup' : 'standard',
+              })),
               { onConflict: 'order_id,farmer_id', ignoreDuplicates: true }
             )
         }

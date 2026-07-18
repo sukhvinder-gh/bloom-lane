@@ -51,7 +51,7 @@ export async function GET(
   // span multiple growers who shouldn't see each other's conversations.
   const { data: pos } = await adminClient
     .from('purchase_orders')
-    .select('id, farmer_id')
+    .select('id, farmer_id, pickup_method, farmers(address, suburb, state)')
     .eq('order_id', id)
   ;(data as any).purchase_orders = pos || []
 

@@ -22,6 +22,7 @@ const checkoutSchema = z.object({
   delivery_postcode: z.string().optional(),
   hub_id: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
+  farm_pickup_farmer_ids: z.array(z.string().uuid()).max(50).optional().default([]),
 })
 
 export async function POST(request: NextRequest) {
@@ -61,27 +62,38 @@ export async function POST(request: NextRequest) {
   }
 
   const { items, fulfillment_type, hub_id, delivery_address,
-    delivery_suburb, delivery_state, delivery_postcode, notes } = parsed.data
-
-  if (fulfillment_type === 'hub_pickup' && !hub_id) {
-    return NextResponse.json({ error: 'Hub ID required for hub pickup' }, { status: 400 })
-  }
-  if (fulfillment_type === 'direct_delivery' && !delivery_address) {
-    return NextResponse.json({ error: 'Delivery address required' }, { status: 400 })
-  }
+    delivery_suburb, delivery_state, delivery_postcode, notes,
+    farm_pickup_farmer_ids: requestedFarmPickupIds } = parsed.data
 
   // Fetch product details first for validation
-  // farmers(gst_registered) is joined so GST can be evaluated per grower, not
-  // just per product — only a GST-registered grower may have GST charged on
-  // their line, regardless of the product's own is_gst_free category.
+  // farmers(gst_registered, offers_farm_pickup) is joined so GST and farm
+  // pickup can both be evaluated per grower, not per product.
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered)')
+    .select('id, name, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup)')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
     return NextResponse.json({ error: 'One or more products not found' }, { status: 404 })
+  }
+
+  // Never trust the client's farm-pickup list — a grower must actually offer
+  // it, and must actually have items in this order.
+  const farmPickupFarmerIds = [...new Set(
+    requestedFarmPickupIds.filter(fid =>
+      products.some(p => p.farmer_id === fid && (p as any).farmers?.offers_farm_pickup)
+    )
+  )]
+  const hasPooledItems = products.some(p => !farmPickupFarmerIds.includes(p.farmer_id))
+
+  if (hasPooledItems) {
+    if (fulfillment_type === 'hub_pickup' && !hub_id) {
+      return NextResponse.json({ error: 'Hub ID required for hub pickup' }, { status: 400 })
+    }
+    if (fulfillment_type === 'direct_delivery' && !delivery_address) {
+      return NextResponse.json({ error: 'Delivery address required' }, { status: 400 })
+    }
   }
 
   // Verify all products are still listed and active
@@ -107,21 +119,46 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Atomic stock check & reservation
-  const { data: stockResult, error: stockError } = await adminSupabase
-    .rpc('checkout_reserve_stock', {
-      p_items: items.map(item => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        is_b2b: isB2B,
-      })),
+  // Stock is usually already held — the buyer reserved it 60 minutes ago when
+  // they added it to their cart (see /api/cart/reserve). Consume those
+  // reservations here (delete without releasing, since the order now
+  // permanently owns that stock) rather than re-deducting on top of them.
+  // Anything without a live reservation (expired, or never reserved — e.g.
+  // an older client) falls back to the original atomic check-and-reserve.
+  const consumedItems: typeof items = []
+  const unreservedItems: typeof items = []
+  for (const item of items) {
+    const { data: consumed } = await adminSupabase.rpc('cart_consume_reservation', {
+      p_user_id: user.id,
+      p_product_id: item.product_id,
+      p_quantity: item.quantity,
+      p_is_b2b: isB2B,
     })
+    ;(consumed ? consumedItems : unreservedItems).push(item)
+  }
 
-  if (stockError || !stockResult?.success) {
-    return NextResponse.json(
-      { error: stockResult?.error || 'One or more items are out of stock. Please refresh your cart.' },
-      { status: 409 }
-    )
+  if (unreservedItems.length > 0) {
+    const { data: stockResult, error: stockError } = await adminSupabase
+      .rpc('checkout_reserve_stock', {
+        p_items: unreservedItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          is_b2b: isB2B,
+        })),
+      })
+
+    if (stockError || !stockResult?.success) {
+      // Undo the reservations we already consumed above — the order isn't happening.
+      if (consumedItems.length > 0) {
+        await adminSupabase.rpc('checkout_release_stock', {
+          p_items: consumedItems.map(i => ({ ...i, is_b2b: isB2B })),
+        })
+      }
+      return NextResponse.json(
+        { error: stockResult?.error || 'One or more items are out of stock. Please refresh your cart.' },
+        { status: 409 }
+      )
+    }
   }
 
   // Build order items with prices.
@@ -145,9 +182,9 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  // Get delivery fee
+  // Get delivery fee — nothing to deliver if every item is going via farm pickup
   let deliveryFeeCents = 0
-  if (fulfillment_type === 'direct_delivery') {
+  if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
     const { data: config } = await supabase
       .from('config').select('value').eq('key', 'delivery_fee_cents').single()
     deliveryFeeCents = parseInt(config?.value || '2000')
@@ -173,6 +210,7 @@ export async function POST(request: NextRequest) {
       total_cents: totals.total,
       buyer_is_b2b: isB2B,
       notes,
+      farm_pickup_farmer_ids: farmPickupFarmerIds,
     })
     .select()
     .single()

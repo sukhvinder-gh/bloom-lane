@@ -11,7 +11,7 @@ interface StepConfig {
   next?: { status: string; btnLabel: string; confirmText: string }
 }
 
-const STEPS: Record<string, StepConfig> = {
+const STANDARD_STEPS: Record<string, StepConfig> = {
   pending: {
     label: 'Awaiting action',
     color: '#92400e',
@@ -44,18 +44,46 @@ const STEPS: Record<string, StepConfig> = {
   },
 }
 
+// Farm pickup skips the hub leg — 'ready' means ready for the buyer to
+// collect from the farm, and that's the end of the grower's workflow.
+const FARM_PICKUP_STEPS: Record<string, StepConfig> = {
+  pending: {
+    label: 'Awaiting action',
+    color: '#92400e',
+    bg: '#fef3c7',
+    next: {
+      status: 'ready',
+      btnLabel: 'Mark ready for pickup',
+      confirmText: 'Confirm items are packed and ready for the buyer to collect from your farm.',
+    },
+  },
+  ready: {
+    label: 'Ready for pickup',
+    color: '#065f46',
+    bg: '#d1fae5',
+  },
+  rejected: {
+    label: 'Rejected',
+    color: '#b91c1c',
+    bg: '#fee2e2',
+  },
+}
+
 export function POStatusActions({
   orderId,
   initialStatus,
+  pickupMethod = 'standard',
 }: {
   orderId: string
   initialStatus: POStatus
+  pickupMethod?: 'standard' | 'farm_pickup'
 }) {
   const [status, setStatus] = useState<string>(initialStatus)
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
+  const STEPS = pickupMethod === 'farm_pickup' ? FARM_PICKUP_STEPS : STANDARD_STEPS
   const config = STEPS[status] ?? { label: status, color: 'var(--forest)', bg: 'var(--olive)' }
 
   async function advance() {
@@ -145,6 +173,11 @@ export function POStatusActions({
       {status === 'delivered_to_hub' && (
         <p style={{ fontSize: '0.8rem', color: 'var(--moss)', maxWidth: '36rem' }}>
           Your items are confirmed at the hub. The buyer order will advance to &ldquo;Ready for pickup&rdquo; once all growers have delivered.
+        </p>
+      )}
+      {pickupMethod === 'farm_pickup' && status === 'ready' && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--moss)', maxWidth: '36rem' }}>
+          The buyer has been notified to collect directly from your farm. No hub delivery needed for this order.
         </p>
       )}
     </div>

@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
+// Farm-pickup POs skip the hub delivery leg entirely — 'ready' (ready for the
+// buyer to collect from the farm) is their terminal state. Standard POs still
+// need the hub drop-off confirmation.
+const STANDARD_TRANSITIONS: Record<string, string[]> = {
   pending:          ['ready'],
   ready:            ['delivered_to_hub'],
   delivered_to_hub: [],
   rejected:         [],
+}
+const FARM_PICKUP_TRANSITIONS: Record<string, string[]> = {
+  pending:  ['ready'],
+  ready:    [],
+  rejected: [],
+}
+
+function isPOFulfilled(po: { status: string; pickup_method: string }): boolean {
+  return po.pickup_method === 'farm_pickup' ? po.status === 'ready' : po.status === 'delivered_to_hub'
 }
 
 export async function PATCH(
@@ -29,7 +41,7 @@ export async function PATCH(
 
   const { data: po } = await admin
     .from('purchase_orders')
-    .select('id, status')
+    .select('id, status, pickup_method')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
     .single()
@@ -37,7 +49,8 @@ export async function PATCH(
   if (!po) return NextResponse.json({ error: 'PO not found' }, { status: 404 })
 
   const { status: newStatus } = await request.json()
-  const allowed = VALID_TRANSITIONS[po.status] ?? []
+  const transitions = po.pickup_method === 'farm_pickup' ? FARM_PICKUP_TRANSITIONS : STANDARD_TRANSITIONS
+  const allowed = transitions[po.status] ?? []
   if (!allowed.includes(newStatus)) {
     return NextResponse.json(
       { error: `Cannot transition from ${po.status} to ${newStatus}` },
@@ -59,9 +72,10 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Auto-aggregate: when every PO reaches delivered_to_hub, advance the order.
+  // Auto-aggregate: when every PO has reached ITS OWN terminal state (ready
+  // for farm pickup, delivered_to_hub for standard), advance the order.
   // Skip if a partial rejection exists — admin must resolve manually first.
-  if (newStatus === 'delivered_to_hub') {
+  if (isPOFulfilled({ status: newStatus, pickup_method: po.pickup_method })) {
     const { data: orderRow } = await admin
       .from('orders')
       .select('has_partial_rejection')
@@ -71,13 +85,12 @@ export async function PATCH(
     if (!orderRow?.has_partial_rejection) {
       const { data: allPOs } = await admin
         .from('purchase_orders')
-        .select('status')
+        .select('status, pickup_method')
         .eq('order_id', orderId)
 
-      const allDelivered =
-        allPOs && allPOs.length > 0 && allPOs.every(p => p.status === 'delivered_to_hub')
+      const allFulfilled = allPOs && allPOs.length > 0 && allPOs.every(isPOFulfilled)
 
-      if (allDelivered) {
+      if (allFulfilled) {
         await admin
           .from('orders')
           .update({ status: 'ready_for_pickup', updated_at: new Date().toISOString() })

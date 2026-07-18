@@ -28,6 +28,7 @@ export default function FarmerOrdersPage() {
   const [orders, setOrders]           = useState<any[]>([])
   const [poStatuses, setPoStatuses]   = useState<Record<string, string>>({})
   const [poIds, setPoIds]             = useState<Record<string, string>>({})
+  const [poPickupMethods, setPoPickupMethods] = useState<Record<string, string>>({})
   const [loading, setLoading]         = useState(true)
   const [expanded, setExpanded]       = useState<Set<string>>(new Set())
   const [uploadingId, setUploadingId] = useState<string | null>(null)
@@ -63,7 +64,7 @@ export default function FarmerOrdersPage() {
         if (fetched.length > 0) {
           fetch('/api/farmer/po-statuses?ids=' + fetched.map((o: any) => o.id).join(','))
             .then(r => r.json())
-            .then(ps => { setPoStatuses(ps.data || {}); setPoIds(ps.ids || {}) })
+            .then(ps => { setPoStatuses(ps.data || {}); setPoIds(ps.ids || {}); setPoPickupMethods(ps.pickupMethods || {}) })
             .catch(() => {})
         }
       })
@@ -260,7 +261,7 @@ export default function FarmerOrdersPage() {
                       <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}>
                         {order.order_number}
                         <div style={{ fontSize: '0.7rem', fontFamily: 'var(--font-body)', fontWeight: 400, color: 'var(--moss)', marginTop: '1px' }}>
-                          {order.fulfillment_type === 'hub_pickup' ? '🏭 Hub' : '🚚 Delivery'}
+                          {poPickupMethods[order.id] === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub' : '🚚 Delivery'}
                         </div>
                       </td>
 
