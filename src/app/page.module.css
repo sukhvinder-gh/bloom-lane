@@ -294,6 +294,31 @@
 }
 
 /* ---------------- */
+/* Responsive — short window (the corners are sized by width, so on a wide-
+   but-short window there's not enough vertical room and they climb into the
+   heading; shrink then hide them as available height drops) */
+/* ---------------- */
+
+@media (max-height: 760px) {
+  .botanicalLeft,
+  .botanicalRight {
+    width: clamp(140px, 16vw, 260px);
+  }
+}
+
+@media (max-height: 600px) {
+  .firstScreen {
+    height: auto;
+    overflow: visible;
+  }
+
+  .botanicalLeft,
+  .botanicalRight {
+    display: none;
+  }
+}
+
+/* ---------------- */
 /* Responsive — mobile */
 /* ---------------- */
 
