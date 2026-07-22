@@ -43,6 +43,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 export default function AdminInventoryPage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState('all')
   const [status, setStatus]     = useState<StatusFilter>('all')
@@ -51,9 +52,12 @@ export default function AdminInventoryPage() {
 
   useEffect(() => {
     fetch('/api/admin/inventory')
-      .then(r => r.json())
-      .then(d => setProducts(d.data || []))
-      .catch(() => {})
+      .then(async r => {
+        const d = await r.json()
+        if (!r.ok) throw new Error(d.error || `Request failed (${r.status})`)
+        setProducts(d.data || [])
+      })
+      .catch(err => setLoadError(err.message || 'Could not load inventory'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -114,6 +118,13 @@ export default function AdminInventoryPage() {
           Every product across all growers — toggle listing status or click a grower to manage their catalogue
         </p>
       </div>
+
+      {/* Load error banner */}
+      {loadError && (
+        <div style={{ padding: '1rem 1.25rem', borderRadius: '0.75rem', background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1.5rem' }}>
+          ⚠ Couldn't load inventory: {loadError}
+        </div>
+      )}
 
       {/* Summary stats */}
       {!loading && (
@@ -210,7 +221,7 @@ export default function AdminInventoryPage() {
             <div key={i} className="card" style={{ height: '4.5rem', padding: '1rem' }} />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : loadError ? null : filtered.length === 0 ? (
         <div className="card" style={{ padding: '4rem', textAlign: 'center' }}>
           <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📦</p>
           <p style={{ color: 'var(--moss)', fontSize: '0.9rem' }}>
