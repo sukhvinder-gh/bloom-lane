@@ -43,11 +43,11 @@ export default async function HomePage() {
           <header className={styles.header}>
             <div>
               <h1 className={styles.logo}>The Green Guild</h1>
-              <p className={styles.tagline}>DIRECT. LOCAL. SEASONAL.</p>
+              <p className={styles.heroSubtitle}>Direct. Local. Seasonal.</p>
             </div>
             <nav className={styles.nav}>
               <Link href="#how-it-works">How the Green Guild works</Link>
-              <Link href="/marketplace" className={styles.shopBtn}>Shop Now</Link>
+              <Link href="/marketplace">Shop Now</Link>
               {sessionUser
                 ? <Link href="/dashboard">My Account</Link>
                 : <Link href="/auth/login">Login</Link>
