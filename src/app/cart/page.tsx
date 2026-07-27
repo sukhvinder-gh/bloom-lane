@@ -6,7 +6,7 @@ import { useCart } from '@/hooks/useCart'
 import { formatPrice } from '@/lib/utils/pricing'
 
 const EMOJI: Record<string, string> = {
-  flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
+  flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦',
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 
@@ -17,7 +17,7 @@ type StockIssue = {
 
 export default function CartPage() {
   const router = useRouter()
-  const { items, isB2B, updateQuantity, removeItem, subtotalCents } = useCart()
+  const { items, isB2B, updateQuantity, removeItem, subtotalCents, totalItems, setItemNotes } = useCart()
 
   const [stockIssues, setStockIssues] = useState<StockIssue[]>([])
   const [validating, setValidating]   = useState(false)
@@ -80,12 +80,12 @@ export default function CartPage() {
   const gstAmount = isB2B
     ? items.reduce((s, i) => {
         if (i.product.is_gst_free) return s
-        const exGst = i.product.wholesale_price || Math.round(i.unit_price_cents / 1.1)
+        const exGst = i.product.wholesale_price ?? Math.round(i.unit_price_cents / 1.1)
         return s + Math.round(exGst * 0.1) * i.quantity
       }, 0)
     : 0
   const subtotalExGst = isB2B
-    ? items.reduce((s, i) => s + (i.product.wholesale_price || (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
+    ? items.reduce((s, i) => s + (i.product.wholesale_price ?? (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
     : 0
 
   const hasIssues = stockIssues.length > 0
@@ -121,7 +121,7 @@ export default function CartPage() {
         <h1 className="type-subheading" style={{ color: 'var(--forest)', fontSize: '1.75rem' }}>
           Your cart
           <span style={{ marginLeft: '0.75rem', fontSize: '1rem', color: 'var(--moss)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>
-            {items.length} {items.length === 1 ? 'item' : 'items'}
+            {totalItems()} {totalItems() === 1 ? 'item' : 'items'}
           </span>
         </h1>
       </nav>
@@ -174,7 +174,7 @@ export default function CartPage() {
           {items.map((item, idx) => {
             const hasIssue   = stockIssues.some(s => s.product_id === item.product_id)
             const isGstFree  = item.product.is_gst_free
-            const exGstUnit  = item.product.wholesale_price || (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
+            const exGstUnit  = item.product.wholesale_price ?? (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
             const displayUnit = isB2B ? exGstUnit : item.unit_price_cents
             const lineTotal   = displayUnit * item.quantity
             const maxStock    = isB2B ? item.product.b2b_available : item.product.b2c_available
@@ -241,6 +241,16 @@ export default function CartPage() {
                       </p>
                     )
                   })()}
+
+                  {/* Per-item note for the grower */}
+                  <input
+                    type="text"
+                    value={item.notes || ''}
+                    onChange={e => setItemNotes(item.product_id, e.target.value)}
+                    placeholder="Note for the grower (optional)"
+                    maxLength={200}
+                    style={{ width: '100%', marginTop: '0.6rem', padding: '0.4rem 0.6rem', fontSize: '0.78rem', border: '1px solid var(--olive)', borderRadius: '0.5rem', background: 'white', color: 'var(--forest)', outline: 'none', fontFamily: 'var(--font-body)' }}
+                  />
                 </div>
 
                 {/* Line total + remove */}

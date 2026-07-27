@@ -7,6 +7,7 @@ import { isListingWindowOpen } from '@/lib/utils/timezone'
 const CATEGORY_LABELS: Record<string, string> = {
   flowers_cut:   'Cut Flowers',
   flowers_dried: 'Dried Flowers',
+  flowers_native:'Australian Natives',
   foliage:       'Foliage',
   vegetables:    'Vegetables',
   herbs:         'Herbs',
@@ -19,6 +20,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_EMOJI: Record<string, string> = {
   flowers_cut:   '🌸',
   flowers_dried: '🌾',
+  flowers_native:'🌼',
   foliage:       '🍃',
   vegetables:    '🥦',
   herbs:         '🌿',

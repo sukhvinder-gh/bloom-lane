@@ -9,19 +9,20 @@ import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES = [
   { id: '', label: 'All' }, { id: 'flowers_cut', label: '✿ Cut Flowers' },
-  { id: 'flowers_dried', label: '🌾 Dried' }, { id: 'foliage', label: '🍃 Foliage' },
+  { id: 'flowers_dried', label: '🌾 Dried' }, { id: 'flowers_native', label: '🌼 Natives' },
+  { id: 'foliage', label: '🍃 Foliage' },
   { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' },
   { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' },
-  { id: 'honey', label: '🍯 Honey' },
+  { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' },
 ]
 
 const CATEGORY_LABEL: Record<string, string> = {
-  flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', foliage: 'Foliage',
+  flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
   vegetables: 'Vegetables', herbs: 'Herbs', fruit: 'Fruit', eggs: 'Eggs', honey: 'Honey', other: 'Other',
 }
 
 const EMOJI: Record<string, string> = {
-  flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
+  flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦',
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 
@@ -49,8 +50,8 @@ function ProductDrawer({
   const [imgIdx, setImgIdx] = useState(0)
   const available = isB2B ? product.b2b_available : product.b2c_available
   const displayPrice = isB2B
-    ? (product.b2b_display_price || product.wholesale_price)
-    : (product.b2c_display_price || product.buyer_unit_price || product.wholesale_price)
+    ? (product.b2b_display_price ?? product.wholesale_price)
+    : (product.b2c_display_price ?? product.buyer_unit_price ?? product.wholesale_price)
   const priceLabel = isB2B
     ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
     : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
@@ -167,12 +168,12 @@ function ProductDrawer({
             ) : isAdminOrFarmer ? (
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>
-                  {formatPrice(product.b2b_display_price || product.wholesale_price)}
+                  {formatPrice(product.b2b_display_price ?? product.wholesale_price)}
                   <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginLeft: '0.4rem', opacity: 0.6 }}>wholesale</span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
                   {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
-                  {' · '}Retail: {formatPrice(product.b2c_display_price || product.buyer_unit_price || Math.round((product.wholesale_price || 0) * 1.1))}
+                  {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
                 </p>
               </div>
             ) : (
@@ -184,7 +185,7 @@ function ProductDrawer({
                   {priceLabel}
                   {isB2B && !product.is_gst_free && (
                     <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
-                      · {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST
+                      · {formatPrice(product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))} inc-GST
                     </span>
                   )}
                 </p>
@@ -208,6 +209,13 @@ function ProductDrawer({
                 </Link>
               </div>
             </div>
+          )}
+
+          {/* Farm pickup */}
+          {product.farmers?.offers_farm_pickup && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 600, background: 'var(--green-soft)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem' }}>
+              🚜 Farm pickup available from this grower
+            </p>
           )}
 
           {/* Stock */}
@@ -267,7 +275,14 @@ export default function MarketplacePage() {
   const [search, setSearch]       = useState('')
   const [selected, setSelected]   = useState<any>(null)
   const [availableCategories, setAvailableCategories] = useState<Set<string>>(new Set())
+  const [farmerId, setFarmerId]   = useState('')
   const { addItem, updateQuantity, items, totalItems } = useCart()
+
+  // Read ?farmer_id= via plain browser API rather than useSearchParams() so this
+  // top-level page doesn't need a Suspense boundary split just for one param.
+  useEffect(() => {
+    setFarmerId(new URLSearchParams(window.location.search).get('farmer_id') || '')
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -288,9 +303,9 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${color ? `&color=${color}` : ''}`)
+    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${color ? `&color=${color}` : ''}${farmerId ? `&farmer_id=${farmerId}` : ''}`)
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
-  }, [category, color, isB2B])
+  }, [category, color, isB2B, farmerId])
 
   // Which categories actually have purchasable stock right now — the filter
   // list should reflect real availability, not every category that's ever existed.
@@ -374,6 +389,16 @@ export default function MarketplacePage() {
           </Link>
         </div>
       </nav>
+
+      {/* Grower filter banner */}
+      {farmerId && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1.5rem', background: 'var(--green-soft)', borderBottom: '1px solid var(--border-light)', flexWrap: 'wrap' }}>
+          <p style={{ fontSize: '0.85rem', color: 'var(--forest)', fontWeight: 600 }}>
+            Showing products from {products[0]?.farmers?.business_name || 'this grower'}
+          </p>
+          <Link href="/marketplace" className="btn btn-ghost btn-sm">View all growers →</Link>
+        </div>
+      )}
 
       {/* Mobile controls */}
       <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
@@ -487,8 +512,8 @@ export default function MarketplacePage() {
               {filtered.map((product, i) => {
                 const available   = isB2B ? product.b2b_available : product.b2c_available
                 const displayPrice = isB2B
-                  ? (product.b2b_display_price || product.wholesale_price)
-                  : (product.b2c_display_price || product.buyer_unit_price || product.wholesale_price)
+                  ? (product.b2b_display_price ?? product.wholesale_price)
+                  : (product.b2c_display_price ?? product.buyer_unit_price ?? product.wholesale_price)
                 const priceLabel  = isB2B
                   ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
                   : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
@@ -517,7 +542,16 @@ export default function MarketplacePage() {
                     </div>
 
                     <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.25rem', lineHeight: 1.3 }}>{product.name}</p>
+                      <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.15rem', lineHeight: 1.3 }}>{product.name}</p>
+                      {product.farmers?.business_name && (
+                        <Link
+                          href={`/growers/${product.farmer_id}`}
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                          style={{ fontSize: '0.72rem', color: 'var(--moss)', textDecoration: 'none', marginBottom: '0.4rem', display: 'inline-block' }}
+                        >
+                          {product.farmers.business_name}
+                        </Link>
+                      )}
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>
                         per {product.unit} · {available} left
                         {(() => {
@@ -532,12 +566,12 @@ export default function MarketplacePage() {
                           ) : isAdminOrFarmer ? (
                             <>
                               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>
-                                {formatPrice(product.b2b_display_price || product.wholesale_price)}
+                                {formatPrice(product.b2b_display_price ?? product.wholesale_price)}
                                 <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-body)', marginLeft: '0.3rem', opacity: 0.6 }}>wholesale</span>
                               </div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
                                 {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
-                                {' · '}Retail: {formatPrice(product.b2c_display_price || product.buyer_unit_price || Math.round((product.wholesale_price || 0) * 1.1))}
+                                {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
                               </div>
                             </>
                           ) : (
@@ -546,7 +580,7 @@ export default function MarketplacePage() {
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
                                 {priceLabel}
                                 {isB2B && !product.is_gst_free && (
-                                  <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price || Math.round(product.wholesale_price * 1.1))} inc-GST</span>
+                                  <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))} inc-GST</span>
                                 )}
                               </div>
                             </>

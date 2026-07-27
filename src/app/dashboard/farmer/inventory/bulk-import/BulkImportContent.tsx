@@ -3,7 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 const CATEGORIES: Record<string, string> = {
-  flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', foliage: 'Foliage',
+  flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
   vegetables: 'Vegetables', herbs: 'Herbs', fruit: 'Fruit', eggs: 'Eggs', honey: 'Honey', other: 'Other',
 }
 const VALID_CATEGORIES = Object.keys(CATEGORIES)

@@ -58,12 +58,12 @@ export default function CheckoutPage() {
 
   // B2B totals
   const subtotalExGst = isB2B
-    ? items.reduce((s, i) => s + (i.product.wholesale_price || (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
+    ? items.reduce((s, i) => s + (i.product.wholesale_price ?? (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
     : 0
   const gstAmount = isB2B
     ? items.reduce((s, i) => {
         if (i.product.is_gst_free) return s
-        const exGst = i.product.wholesale_price || Math.round(i.unit_price_cents / 1.1)
+        const exGst = i.product.wholesale_price ?? Math.round(i.unit_price_cents / 1.1)
         return s + Math.round(exGst * 0.1) * i.quantity
       }, 0)
     : 0
@@ -93,7 +93,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+          items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.notes || undefined })),
           fulfillment_type,
           hub_id: fulfillment_type === 'hub_pickup' ? selectedHubId : undefined,
           delivery_address: address.line1,
@@ -148,7 +148,7 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
               {items.map(item => {
                 const isGstFree  = item.product.is_gst_free
-                const exGstUnit  = item.product.wholesale_price || (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
+                const exGstUnit  = item.product.wholesale_price ?? (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
                 const displayUnit = isB2B ? exGstUnit : item.unit_price_cents
                 const lineTotal   = displayUnit * item.quantity
                 return (
@@ -165,6 +165,11 @@ export default function CheckoutPage() {
                         {isB2B && !isGstFree && <span style={{ opacity: 0.6 }}> ex-GST</span>}
                         {!isB2B && <span style={{ opacity: 0.6 }}> inc-GST</span>}
                       </p>
+                      {item.notes && (
+                        <p style={{ fontSize: '0.7rem', color: 'var(--sage)', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                          📝 {item.notes}
+                        </p>
+                      )}
                     </div>
                     <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--cream)', letterSpacing: '-0.02em', flexShrink: 0 }}>
                       {formatPrice(lineTotal)}

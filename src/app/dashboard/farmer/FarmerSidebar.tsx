@@ -65,6 +65,18 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
 
       {/* Nav */}
       <nav style={{ flex: 1, paddingTop: '0.625rem', paddingBottom: '0.625rem', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {/* Exit links — a farmer should always have a clear way back to the
+            buying side of the app and the landing page, not just their own tools */}
+        <Link href="/" onClick={() => setOpen(false)} className="rf-nav-item">
+          <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🏠</span>
+          Home
+        </Link>
+        <Link href="/marketplace" onClick={() => setOpen(false)} className="rf-nav-item">
+          <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🛍️</span>
+          Marketplace
+        </Link>
+        <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.5rem 1.25rem' }} />
+
         {NAV.map(item => {
           const active = isActive(item.href, item.exact)
           return (

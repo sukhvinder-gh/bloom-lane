@@ -3,7 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { z } from 'zod'
 
-const VALID_CATEGORIES = ['flowers_cut', 'flowers_dried', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']
+const VALID_CATEGORIES = ['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()

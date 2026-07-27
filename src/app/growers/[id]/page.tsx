@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/server'
 import { formatPrice, getBuyerUnitPrice } from '@/lib/utils/pricing'
 
-const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
+const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
 
 export default async function GrowerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -15,7 +15,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
       id, business_name, bio, suburb, state,
       brand_color, banner_url, logo_url,
       region, growing_practices, seasonal_specialties, sustainability,
-      created_at
+      offers_farm_pickup, created_at
     `)
     .eq('id', id)
     .eq('status', 'approved')
@@ -79,7 +79,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                 </div>
               )}
             </div>
-            <Link href="/marketplace" className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>
+            <Link href={`/marketplace?farmer_id=${farmer.id}`} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>
               Shop their products →
             </Link>
           </div>
@@ -125,7 +125,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                   ))}
                 </div>
                 <div style={{ padding: '1rem 1.75rem', borderTop: '1px solid var(--border-light)', textAlign: 'center' }}>
-                  <Link href="/marketplace" className="btn btn-forest btn-sm">Order from {farmer.business_name} →</Link>
+                  <Link href={`/marketplace?farmer_id=${farmer.id}`} className="btn btn-forest btn-sm">Order from {farmer.business_name} →</Link>
                 </div>
               </div>
             )}
@@ -143,6 +143,11 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
               <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.5rem' }}>
                 Exact address not shown — orders are delivered to your hub or door.
               </p>
+              {farmer.offers_farm_pickup && (
+                <p style={{ fontSize: '0.85rem', color: 'var(--forest)', fontWeight: 600, marginTop: '0.75rem', background: 'var(--green-soft)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem' }}>
+                  🚜 Farm pickup available
+                </p>
+              )}
             </div>
 
             {/* Seasonal specialties */}

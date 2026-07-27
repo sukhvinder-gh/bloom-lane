@@ -49,6 +49,17 @@ export default function AdminSidebar({ role, userName, userEmail, hasGrowerAccou
 
       {/* Nav items */}
       <nav style={{ flex: 1, paddingTop: '0.625rem', paddingBottom: '0.625rem', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        {/* Exit links */}
+        <Link href="/" onClick={() => setOpen(false)} className="rf-nav-item">
+          <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🏠</span>
+          Home
+        </Link>
+        <Link href="/marketplace" onClick={() => setOpen(false)} className="rf-nav-item">
+          <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🛍️</span>
+          Marketplace
+        </Link>
+        <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.5rem 1.25rem' }} />
+
         {NAV.map(item => {
           const active = isActive(item.href, item.exact)
           return (

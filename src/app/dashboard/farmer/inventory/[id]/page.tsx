@@ -12,6 +12,7 @@ import { findSpeciesByCommonName } from '@/lib/data/flowerSpecies'
 const CATEGORIES = [
   { id: 'flowers_cut', label: '✿ Cut Flowers' },
   { id: 'flowers_dried', label: '🌾 Dried Flowers' },
+  { id: 'flowers_native', label: '🌼 Australian Natives' },
   { id: 'foliage', label: '🍃 Foliage' },
   { id: 'vegetables', label: '🥦 Vegetables' },
   { id: 'herbs', label: '🌿 Herbs' },

@@ -8,7 +8,7 @@ import { z } from 'zod'
 const createProductSchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional(),
-  category: z.enum(['flowers_cut', 'flowers_dried', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']),
+  category: z.enum(['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']),
   unit: z.string().min(1).max(20),
   wholesale_price: z.number().int().positive(),
   stock_total: z.number().int().nonnegative(),
@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
 
   const color = url.searchParams.get('color') || ''
   if (color) query = query.contains('color_tags', [color])
+
+  const farmerId = url.searchParams.get('farmer_id') || ''
+  if (farmerId) query = query.eq('farmer_id', farmerId)
 
   // Filter out products with zero stock in the relevant pool
   if (isB2B) {

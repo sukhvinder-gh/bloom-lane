@@ -9,7 +9,7 @@ import ProductImageUpload from '@/components/ProductImageUpload'
 import ColorTagPicker from '@/components/ColorTagPicker'
 import { findSpeciesByCommonName } from '@/lib/data/flowerSpecies'
 
-const CATEGORIES = [{ id: 'flowers_cut', label: '✿ Cut Flowers' }, { id: 'flowers_dried', label: '🌾 Dried Flowers' }, { id: 'foliage', label: '🍃 Foliage' }, { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' }, { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' }, { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' }]
+const CATEGORIES = [{ id: 'flowers_cut', label: '✿ Cut Flowers' }, { id: 'flowers_dried', label: '🌾 Dried Flowers' }, { id: 'flowers_native', label: '🌼 Australian Natives' }, { id: 'foliage', label: '🍃 Foliage' }, { id: 'vegetables', label: '🥦 Vegetables' }, { id: 'herbs', label: '🌿 Herbs' }, { id: 'fruit', label: '🍓 Fruit' }, { id: 'eggs', label: '🥚 Eggs' }, { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' }]
 const UNITS = ['bunch', 'stem', 'kg', 'g', 'each', 'tray', 'box', 'punnet', 'dozen']
 
 export default function NewProductPage() {

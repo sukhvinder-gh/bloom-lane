@@ -23,6 +23,7 @@ export type FarmerStatus = 'pending_approval' | 'approved' | 'suspended'
 export type ProductCategory =
   | 'flowers_cut'
   | 'flowers_dried'
+  | 'flowers_native'
   | 'foliage'
   | 'vegetables'
   | 'herbs'
@@ -209,6 +210,7 @@ export interface CartItem {
   is_b2b: boolean
   unit_price_cents: number
   reserved_until?: string
+  notes?: string
 }
 
 export interface Cart {

@@ -11,7 +11,7 @@ import { z } from 'zod'
 const updateProductSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   description: z.string().max(500).optional(),
-  category: z.enum(['flowers_cut', 'flowers_dried', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']).optional(),
+  category: z.enum(['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']).optional(),
   unit: z.string().min(1).max(20).optional(),
   wholesale_price: z.number().int().positive().optional(),
   stock_total: z.number().int().nonnegative().optional(),

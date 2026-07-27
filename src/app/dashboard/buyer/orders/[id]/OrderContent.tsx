@@ -7,7 +7,7 @@ import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
 import MessageThread from '@/components/MessageThread'
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  flowers_cut: '🌸', flowers_dried: '🌾', foliage: '🍃', vegetables: '🥦',
+  flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦',
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 

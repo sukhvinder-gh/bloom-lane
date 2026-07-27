@@ -14,6 +14,7 @@ const checkoutSchema = z.object({
   items: z.array(z.object({
     product_id: z.string().uuid(),
     quantity: z.number().int().positive(),
+    notes: z.string().max(200).optional(),
   })).min(1),
   fulfillment_type: z.enum(['direct_delivery', 'hub_pickup']),
   delivery_address: z.string().optional(),
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup)')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup)')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       const product = products.find(p => p.id === item.product_id)!
       if (item.quantity < product.min_order_b2b) {
         return NextResponse.json(
-          { error: `Minimum order for "${product.name}" is ${product.min_order_b2b} ${product.min_order_b2b === 1 ? 'unit' : 'units'}` },
+          { error: `Minimum order for "${product.name}" is ${product.min_order_b2b} ${product.unit}` },
           { status: 400 }
         )
       }
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
       is_b2b: isB2B,
       gst_applied: gstAppliesToItem(product, growerGstRegistered),
       gst_cents: unit_gst * item.quantity,
+      notes: item.notes || null,
     }
   })
 

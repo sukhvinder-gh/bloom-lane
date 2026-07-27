@@ -7,12 +7,14 @@ const FLOWER_TYPES = [
   { id: '', label: 'All types' },
   { id: 'flowers_cut',   label: '✿ Cut Flowers' },
   { id: 'flowers_dried', label: '🌾 Dried' },
+  { id: 'flowers_native',label: '🌼 Natives' },
   { id: 'foliage',       label: '🍃 Foliage' },
   { id: 'vegetables',    label: '🥦 Vegetables' },
   { id: 'herbs',         label: '🌿 Herbs' },
   { id: 'fruit',         label: '🍓 Fruit' },
   { id: 'eggs',          label: '🥚 Eggs' },
   { id: 'honey',         label: '🍯 Honey' },
+  { id: 'other',         label: '📦 Other' },
 ]
 
 const SUSTAINABILITY_OPTIONS = [

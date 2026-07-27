@@ -24,13 +24,13 @@ interface CartStore {
   addItem: (product: Product, quantity: number, isB2B: boolean) => Promise<MutationResult>
   removeItem: (productId: string) => Promise<MutationResult>
   updateQuantity: (productId: string, quantity: number) => Promise<MutationResult>
+  setItemNotes: (productId: string, notes: string) => void
   clearCart: () => void
   setFulfillmentType: (type: FulfillmentType) => void
   setHubId: (hubId: string) => void
 
   totalItems: () => number
   subtotalCents: () => number
-  itemCount: () => number
 }
 
 async function reserveOnServer(productId: string, quantity: number, isB2B: boolean): Promise<MutationResult & { expires_at?: string }> {
@@ -125,6 +125,10 @@ export const useCart = create<CartStore>()(
         return { success: true }
       },
 
+      setItemNotes: (productId, notes) => set(state => ({
+        items: state.items.map(i => i.product_id === productId ? { ...i, notes } : i)
+      })),
+
       // Clears local state only — used after a successful order (reservations
       // are already consumed server-side by then, nothing left to release).
       clearCart: () => set({ items: [], hub_id: undefined }),
@@ -134,7 +138,6 @@ export const useCart = create<CartStore>()(
 
       totalItems: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
       subtotalCents: () => get().items.reduce((sum, item) => sum + item.unit_price_cents * item.quantity, 0),
-      itemCount: () => get().items.length,
     }),
     {
       name: 'bloom-lane-cart',
