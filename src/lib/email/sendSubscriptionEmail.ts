@@ -14,7 +14,7 @@ function baseLayout(content: string) {
   </div>
   <div style="padding:32px 40px">${content}</div>
   <div style="background:#f5f9f5;padding:16px 40px;text-align:center">
-    <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild Market — thegreenguild.com.au</p>
+    <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild — thegreenguild.com.au</p>
   </div>
 </div></body></html>`
 }
@@ -25,7 +25,7 @@ export async function sendSubscriptionConfirmation(data: {
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const planLabel = data.plan === 'hub_membership' ? 'Hub Membership'
-    : data.plan === 'wholesale_collection' ? 'Wholesale Collection'
+    : data.plan === 'wholesale_collection' ? 'Free Grower Listing'
     : data.plan === 'mailing_list' ? 'Florist Mailing List'
     : data.plan === 'personal_shopper' ? 'Personal Shopper & Delivery'
     : data.plan === 'coordinator' ? 'Hub Coordinator'

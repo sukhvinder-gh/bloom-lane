@@ -17,7 +17,7 @@ type MemberRow = {
 
 const PLAN_LABELS: Record<string, string> = {
   hub_membership: 'Hub Membership',
-  wholesale_collection: 'Wholesale Collection',
+  wholesale_collection: 'Free Grower Listing',
   mailing_list: 'Florist Mailing List',
   personal_shopper: 'Personal Shopper',
   coordinator: 'Coordinator',

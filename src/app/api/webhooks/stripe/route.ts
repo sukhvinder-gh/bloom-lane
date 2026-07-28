@@ -208,14 +208,15 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
   // Fetch all items with farmer + product info
   const { data: items, error: itemsErr } = await supabase
     .from('order_items')
-    .select('id, farmer_id, quantity, unit_price_cents, subtotal_cents, is_b2b, products(name, unit, is_gst_free)')
+    .select('id, farmer_id, quantity, unit_price_cents, subtotal_cents, is_b2b, gst_applied, gst_cents, products(name, unit, is_gst_free)')
     .eq('order_id', orderId)
   if (itemsErr || !items || items.length === 0) { console.error('[EMAIL] Items fetch failed:', itemsErr); return }
 
-  // Fetch buyer profile for confirmation email
+  // Fetch buyer profile — needed for both the confirmation email and to show
+  // who placed the order on each grower's PO
   const { data: buyerProfile } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('full_name, business_name, email')
     .eq('id', (order as any).buyer_id)
     .single()
 
@@ -262,7 +263,7 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
   const farmerIds = [...byFarmer.keys()]
   const { data: farmers } = await supabase
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state, commission_rate')
+    .select('id, business_name, abn, email, suburb, state, commission_rate, gst_registered')
     .in('id', farmerIds)
   if (!farmers) { console.error('[EMAIL] Farmers fetch failed'); return }
 
@@ -281,6 +282,10 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
           farmer_abn: farmer.abn,
           farmer_suburb: farmer.suburb,
           farmer_state: farmer.state,
+          farmer_gst_registered: (farmer as any).gst_registered ?? false,
+          buyer_business_name: buyerProfile?.business_name ?? null,
+          buyer_full_name: buyerProfile?.full_name ?? null,
+          buyer_email: buyerProfile?.email ?? null,
           commission_rate: farmer.commission_rate ?? 0.10,
           items: farmerItems.map(i => ({
             id: i.id,
@@ -289,6 +294,8 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
             subtotal_cents: i.subtotal_cents,
             product_name: (i as any).products?.name ?? '',
             product_unit: (i as any).products?.unit ?? '',
+            gst_applied: (i as any).gst_applied ?? false,
+            gst_cents: (i as any).gst_cents ?? 0,
           })),
         })
         console.log('[EMAIL] PO sent to farmer', farmer.email)

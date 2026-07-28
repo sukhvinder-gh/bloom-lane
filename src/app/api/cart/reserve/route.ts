@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { hasActiveMembership } from '@/lib/utils/membership'
 import { z } from 'zod'
 
 const RESERVATION_MINUTES = 60
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!(await hasActiveMembership(user.id))) {
+    return NextResponse.json({ error: 'An approved membership is required before you can add items to your cart.' }, { status: 403 })
+  }
 
   const parsed = reserveSchema.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })

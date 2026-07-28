@@ -29,6 +29,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;text-align:right;color:#1a3a2a">${item.quantity}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;text-align:right;color:#4a7a5a;font-size:12px">${item.product_unit}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;text-align:right;color:#1a3a2a">${fmt(item.unit_price_cents)}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;text-align:right;color:#4a7a5a;font-size:12px">${item.gst_applied ? fmt(item.gst_cents || 0) : '—'}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;text-align:right;color:#1a3a2a;font-weight:700">${fmt(item.subtotal_cents)}</td>
     </tr>
   `).join('')
@@ -44,7 +45,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
     <div style="background:#1a3a2a;padding:32px 40px;display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
-        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">The Green Guild Market</div>
+        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${po.farmer_gst_registered ? 'GST registered' : 'Not registered for GST'}</div>
       </div>
       <div style="text-align:right">
         <div style="color:white;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">PURCHASE ORDER</div>
@@ -60,6 +61,13 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
         A new order has been placed and your purchase order is ready. Please review the details below and fulfil by the date listed.
         The full PDF is attached for your records.
       </p>
+
+      <!-- Buyer -->
+      <div style="background:#f5f9f5;border-radius:10px;padding:16px 20px;margin-bottom:16px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">From (Buyer)</div>
+        <div style="color:#1a3a2a;font-size:14px;font-weight:600">${po.buyer_business_name || po.buyer_full_name || 'Buyer'}</div>
+        ${po.buyer_business_name && po.buyer_full_name ? `<div style="color:#4a7a5a;font-size:12px;margin-top:2px">${po.buyer_full_name}</div>` : ''}
+      </div>
 
       <!-- Dates -->
       <div style="background:#f5f9f5;border-radius:10px;padding:16px 20px;margin-bottom:24px">
@@ -91,6 +99,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
             <th style="padding:8px 12px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1a3a2a">Qty</th>
             <th style="padding:8px 12px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1a3a2a">Unit</th>
             <th style="padding:8px 12px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1a3a2a">Unit Price</th>
+            <th style="padding:8px 12px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1a3a2a">GST</th>
             <th style="padding:8px 12px;text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#1a3a2a">Subtotal</th>
           </tr>
         </thead>
@@ -132,7 +141,9 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
     </div>
 
     <div style="background:#f5f9f5;padding:20px 40px;text-align:center">
-      <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild Market · This email constitutes a purchase order. PO #${po.order_number}</p>
+      <p style="color:#4a7a5a;font-size:11px;margin:0">
+        This purchase order is between ${po.buyer_business_name || po.buyer_full_name || 'the buyer'} and ${po.farmer_business_name}. The Green Guild facilitates this transaction but is not a party to it. PO #${po.order_number}
+      </p>
     </div>
   </div>
 </body>

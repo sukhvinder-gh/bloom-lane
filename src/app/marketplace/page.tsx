@@ -276,12 +276,15 @@ export default function MarketplacePage() {
   const [selected, setSelected]   = useState<any>(null)
   const [availableCategories, setAvailableCategories] = useState<Set<string>>(new Set())
   const [farmerId, setFarmerId]   = useState('')
+  const [shopAsBuyer, setShopAsBuyer] = useState(false)
   const { addItem, updateQuantity, items, totalItems } = useCart()
 
-  // Read ?farmer_id= via plain browser API rather than useSearchParams() so this
-  // top-level page doesn't need a Suspense boundary split just for one param.
+  // Read ?farmer_id=/?as=buyer via plain browser API rather than useSearchParams()
+  // so this top-level page doesn't need a Suspense boundary split for these params.
   useEffect(() => {
-    setFarmerId(new URLSearchParams(window.location.search).get('farmer_id') || '')
+    const params = new URLSearchParams(window.location.search)
+    setFarmerId(params.get('farmer_id') || '')
+    setShopAsBuyer(params.get('as') === 'buyer')
   }, [])
 
   useEffect(() => {
@@ -294,12 +297,16 @@ export default function MarketplacePage() {
         setUserRole(role)
         if (role === 'buyer_b2b') setIsB2B(true)
         else if (role === 'buyer_b2c') setIsB2B(false)
+        // A grower explicitly shopping as a buyer (via "Shop as Buyer" in their
+        // sidebar) sees genuine retail pricing, not the wholesale preview —
+        // what they see here must match what checkout actually charges them.
+        else if (shopAsBuyer) setIsB2B(false)
         else if (role === 'farmer' || role === 'admin' || role === 'super_admin' || role === 'platform_admin') setIsB2B(true)
       })
     })
-  }, [])
+  }, [shopAsBuyer])
 
-  const isAdminOrFarmer = userRole === 'farmer' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'platform_admin'
+  const isAdminOrFarmer = !shopAsBuyer && (userRole === 'farmer' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'platform_admin')
 
   useEffect(() => {
     setLoading(true)

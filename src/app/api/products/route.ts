@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
+import { hasActiveMembership } from '@/lib/utils/membership'
 import { z } from 'zod'
 
 const createProductSchema = z.object({
@@ -102,6 +103,9 @@ export async function POST(request: NextRequest) {
   if (!farmer) return NextResponse.json({ error: 'Farmer account not found' }, { status: 403 })
   if (farmer.status !== 'approved') {
     return NextResponse.json({ error: 'Farmer account not yet approved' }, { status: 403 })
+  }
+  if (!(await hasActiveMembership(user.id))) {
+    return NextResponse.json({ error: 'An approved membership is required before you can list products.' }, { status: 403 })
   }
 
   const body = await request.json()

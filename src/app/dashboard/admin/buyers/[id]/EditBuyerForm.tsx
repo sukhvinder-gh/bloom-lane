@@ -57,7 +57,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
           <div>
             <h1 className="type-heading" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>{buyer.full_name || buyer.email}</h1>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className={`badge ${isB2B ? 'badge-sage' : 'badge-cream'}`}>{isB2B ? 'B2B Wholesale' : 'B2C Retail'}</span>
+              <span className={`badge ${isB2B ? 'badge-sage' : 'badge-cream'}`}>{isB2B ? 'B2B Buyer' : 'B2C Retail'}</span>
               {buyer.abn_verified && <span className="badge badge-sage">✓ ABN Verified</span>}
               <span className="type-label-sm" style={{ color: 'var(--moss)' }}>{buyer.email}</span>
             </div>
@@ -120,7 +120,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
                 className={`btn btn-sm ${isB2B ? 'btn-forest' : 'btn-ghost'}`}
                 style={{ flex: 1 }}
               >
-                B2B Wholesale
+                B2B Buyer
               </button>
               <button
                 type="button"
@@ -132,7 +132,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
               </button>
             </div>
             <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.5rem' }}>
-              {isB2B ? 'Wholesale pricing and ABN verification required.' : 'Retail pricing, no ABN required.'}
+              {isB2B ? 'Buyer pricing and ABN verification required.' : 'Retail pricing, no ABN required.'}
             </p>
           </div>
 
@@ -154,6 +154,15 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
             </button>
             {!isB2B && <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.25rem' }}>N/A for B2C buyers</p>}
           </div>
+
+          {isB2B && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Flower-related business (self-declared at signup)</label>
+              {initial.flower_related_business === true && <span className="badge badge-sage">✓ Declared flower-related</span>}
+              {initial.flower_related_business === false && <span className="badge" style={{ background: 'var(--olive)', color: 'var(--moss)' }}>Not declared flower-related</span>}
+              {initial.flower_related_business == null && <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Not stated (signed up before this was tracked)</span>}
+            </div>
+          )}
 
         </div>
       </div>

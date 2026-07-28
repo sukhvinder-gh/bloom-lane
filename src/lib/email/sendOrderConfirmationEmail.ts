@@ -146,7 +146,7 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
     </div>
 
     <div style="background:#f5f9f5;padding:20px 40px;text-align:center">
-      <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild Market · ${data.order_number}</p>
+      <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild · ${data.order_number}</p>
     </div>
   </div>
 </body>

@@ -14,6 +14,7 @@ export default function RegisterForm() {
   const [role, setRole] = useState<Role>(defaultRole)
   const [step, setStep] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState({ email: '', password: '', fullName: '', businessName: '', phone: '', abn: '', postcode: '' })
+  const [flowerBusiness, setFlowerBusiness] = useState(false)
   const [abnStatus, setAbnStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
   const [abnMsg, setAbnMsg] = useState('')
   const [loading, setLoading] = useState(false)
@@ -56,6 +57,7 @@ export default function RegisterForm() {
           phone:         form.phone.trim(),
           abn:           form.abn.replace(/\s/g, ''),
           postcode:      form.postcode.trim(),
+          flower_related_business: role === 'buyer_b2b' ? flowerBusiness : null,
         }
       }
     })
@@ -91,7 +93,7 @@ export default function RegisterForm() {
   }
 
   const roles = [
-    { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: 'Wholesale with ABN' },
+    { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: 'Buyer pricing with ABN' },
     { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Retail pricing' },
     { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: 'List & sell produce' },
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub/group' },
@@ -173,6 +175,12 @@ export default function RegisterForm() {
               </div>
               {abnMsg && <p className="type-label-sm" style={{ marginTop: '0.375rem', color: abnStatus === 'ok' ? 'var(--forest)' : '#b91c1c' }}>{abnMsg}</p>}
             </div>
+          )}
+          {role === 'buyer_b2b' && (
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', fontSize: '0.8rem', color: 'var(--moss)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={flowerBusiness} onChange={e => setFlowerBusiness(e.target.checked)} style={{ marginTop: '0.15rem' }} />
+              This ABN is for a flower-related business (florist, event stylist, wedding planner, etc.)
+            </label>
           )}
           {role === 'farmer' && (
             <div><label className="label">Farm postcode *</label><input className="input" placeholder="3000" maxLength={4} value={form.postcode} onChange={e => up('postcode', e.target.value)} required /></div>

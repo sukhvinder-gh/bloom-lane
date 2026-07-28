@@ -51,6 +51,8 @@ export interface POItem {
   subtotal_cents: number
   product_name: string
   product_unit: string
+  gst_applied?: boolean
+  gst_cents?: number
 }
 
 export interface POData {
@@ -63,6 +65,10 @@ export interface POData {
   farmer_abn: string | null
   farmer_suburb: string | null
   farmer_state: string | null
+  farmer_gst_registered?: boolean
+  buyer_business_name?: string | null
+  buyer_full_name?: string | null
+  buyer_email?: string | null
   commission_rate: number
   items: POItem[]
 }
@@ -80,7 +86,7 @@ export function PODocument({ po }: { po: POData }) {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.brandName}>THE GREEN GUILD</Text>
-            <Text style={styles.brandSub}>The Green Guild Market · ABN on file</Text>
+            <Text style={styles.brandSub}>{po.farmer_gst_registered ? 'GST registered · ABN on file' : 'Not registered for GST · ABN on file'}</Text>
           </View>
           <View>
             <Text style={styles.poTitle}>PURCHASE ORDER</Text>
@@ -98,6 +104,12 @@ export function PODocument({ po }: { po: POData }) {
             {(po.farmer_suburb || po.farmer_state) && (
               <Text style={styles.colSub}>{[po.farmer_suburb, po.farmer_state].filter(Boolean).join(', ')}</Text>
             )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.colLabel}>From (Buyer)</Text>
+            <Text style={styles.colVal}>{po.buyer_business_name || po.buyer_full_name || 'Buyer'}</Text>
+            {po.buyer_business_name && po.buyer_full_name && <Text style={styles.colSub}>{po.buyer_full_name}</Text>}
+            {po.buyer_email && <Text style={styles.colSub}>{po.buyer_email}</Text>}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.colLabel}>Dates</Text>
@@ -126,6 +138,7 @@ export function PODocument({ po }: { po: POData }) {
           <Text style={styles.thRight}>Qty</Text>
           <Text style={styles.thRight}>Unit</Text>
           <Text style={styles.thRight}>Unit Price</Text>
+          <Text style={styles.thRight}>GST</Text>
           <Text style={styles.thRight}>Subtotal</Text>
         </View>
         {po.items.map(item => (
@@ -134,6 +147,7 @@ export function PODocument({ po }: { po: POData }) {
             <Text style={styles.tdRight}>{item.quantity}</Text>
             <Text style={styles.tdUnit}>{item.product_unit}</Text>
             <Text style={styles.tdRight}>{fmt(item.unit_price_cents)}</Text>
+            <Text style={styles.tdUnit}>{item.gst_applied ? fmt(item.gst_cents || 0) : '—'}</Text>
             <Text style={styles.tdRight}>{fmt(item.subtotal_cents)}</Text>
           </View>
         ))}
@@ -158,7 +172,9 @@ export function PODocument({ po }: { po: POData }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>The Green Guild Market · This document constitutes a purchase order between The Green Guild and the above grower.</Text>
+          <Text style={styles.footerText}>
+            This purchase order is between {po.buyer_business_name || po.buyer_full_name || 'the buyer'} and {po.farmer_business_name}. The Green Guild facilitates this transaction but is not a party to it.
+          </Text>
           <Text style={styles.footerText}>PO #{po.order_number}</Text>
         </View>
       </Page>

@@ -18,7 +18,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch the farmer record for this user — limit(1) handles multiple records gracefully
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state, commission_rate')
+    .select('id, business_name, abn, email, suburb, state, commission_rate, gst_registered')
     .eq('user_id', sessionUser.id)
     .limit(1)
 
@@ -28,7 +28,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch order header (no hub_id — fetched separately below to avoid column-not-found errors)
   const { data: order, error: orderErr } = await admin
     .from('orders')
-    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b')
+    .select('id, order_number, created_at, grower_fulfillment_date, florist_delivery_date, fulfillment_type, buyer_is_b2b, buyer_id')
     .eq('id', orderId)
     .single()
 
@@ -36,6 +36,13 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
     console.error('[PO] Order fetch failed:', orderErr)
     redirect('/dashboard/farmer/orders')
   }
+
+  // Fetch buyer — the PO must clearly show who placed the order
+  const { data: buyer } = await admin
+    .from('profiles')
+    .select('full_name, business_name, email')
+    .eq('id', (order as any).buyer_id)
+    .maybeSingle()
 
   // Fetch hub details separately — safe, non-blocking if column/row missing
   let hubZone: { hub_address: string | null; hub_suburb: string | null; hub_state: string | null; hub_postcode: string | null; hub_collection_day: string | null; hub_collection_time_start: string | null; hub_collection_time_end: string | null } | null = null
@@ -60,7 +67,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch this farmer's items from the order
   const { data: items, error: itemsErr } = await admin
     .from('order_items')
-    .select('id, quantity, unit_price_cents, subtotal_cents, is_b2b, products(name, unit, category)')
+    .select('id, quantity, unit_price_cents, subtotal_cents, is_b2b, gst_applied, gst_cents, products(name, unit, category)')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
 
@@ -113,7 +120,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
           <div>
             <p style={{ fontWeight: 700, color: '#b91c1c', fontSize: '0.9rem' }}>This PO has been rejected</p>
             {poRecord.rejection_reason && <p style={{ fontSize: '0.8rem', color: '#b91c1c', opacity: 0.8, marginTop: '0.2rem' }}>{poRecord.rejection_reason}</p>}
-            <p style={{ fontSize: '0.75rem', color: '#b91c1c', opacity: 0.6, marginTop: '0.2rem' }}>Rejected {poRecord.rejected_at ? formatAEST(poRecord.rejected_at) : ''} · Admin has been notified</p>
+            <p style={{ fontSize: '0.75rem', color: '#b91c1c', opacity: 0.6, marginTop: '0.2rem' }}>Rejected {poRecord.rejected_at ? formatAEST(poRecord.rejected_at) : ''} · Visible on the buyer's order status</p>
           </div>
         </div>
       )}
@@ -125,7 +132,9 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', borderBottom: '2px solid var(--forest)', paddingBottom: '1.5rem' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>THE GREEN GUILD</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>The Green Guild Market · ABN on file</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>
+              {farmer.gst_registered ? 'GST registered · ABN on file' : 'Not registered for GST · ABN on file'}
+            </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>PURCHASE ORDER</div>
@@ -134,14 +143,20 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        {/* To / From */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+        {/* To / From / Dates */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
           <div>
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>To (Grower)</p>
             <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.2rem' }}>{farmer.business_name}</p>
             {farmer.abn && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: {farmer.abn}</p>}
             {farmer.email && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{farmer.email}</p>}
             {(farmer.suburb || farmer.state) && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{[farmer.suburb, farmer.state].filter(Boolean).join(', ')}</p>}
+          </div>
+          <div>
+            <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>From (Buyer)</p>
+            <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.2rem' }}>{buyer?.business_name || buyer?.full_name || 'Buyer'}</p>
+            {buyer?.business_name && buyer?.full_name && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{buyer.full_name}</p>}
+            {buyer?.email && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{buyer.email}</p>}
           </div>
           <div>
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>Dates</p>
@@ -185,7 +200,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--forest)' }}>
-              {['Product', 'Qty', 'Unit', 'Unit Price', 'Subtotal'].map((h, i) => (
+              {['Product', 'Qty', 'Unit', 'Unit Price', 'GST', 'Subtotal'].map((h, i) => (
                 <th key={h} style={{ padding: '0.625rem 0.75rem', textAlign: i >= 2 ? 'right' : 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--forest)' }}>{h}</th>
               ))}
             </tr>
@@ -197,6 +212,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--forest)' }}>{item.quantity}</td>
                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--moss)', fontSize: '0.8rem' }}>{(item as any).products?.unit}</td>
                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(item.unit_price_cents)}</td>
+                <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--moss)', fontSize: '0.8rem' }}>{(item as any).gst_applied ? formatPrice((item as any).gst_cents) : '—'}</td>
                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--forest)', fontWeight: 700 }}>{formatPrice(item.subtotal_cents)}</td>
               </tr>
             ))}
@@ -223,7 +239,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
 
         {/* Footer */}
         <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--moss)' }}>
-          <span>The Green Guild Market · This document constitutes a purchase order between The Green Guild and the above grower.</span>
+          <span>This purchase order is between {buyer?.business_name || buyer?.full_name || 'the buyer'} and {farmer.business_name}. The Green Guild facilitates this transaction but is not a party to it.</span>
           <span>PO #{order.order_number}</span>
         </div>
       </div>

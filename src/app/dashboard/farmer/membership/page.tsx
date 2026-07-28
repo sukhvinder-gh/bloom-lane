@@ -2,6 +2,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
+// Display label only — the underlying plan value ('wholesale_collection')
+// is unchanged in the database/subscriptions.plan enum. This tier is a
+// no-fee grower/seller listing, not related to buyer wholesale pricing —
+// the old label overloaded "wholesale" to mean two different things.
+const FREE_TIER_LABEL = 'Free Grower Listing'
+
 // ── Confirmation modal ────────────────────────────────────────────────────────
 type ConfirmScenario = 'new' | 'plan_change' | 'billing_change'
 
@@ -16,7 +22,7 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
   onCancel: () => void
 }) {
   const planLabel = (p: string) =>
-    p === 'hub_membership' ? 'Hub Membership' : p === 'wholesale_collection' ? 'Wholesale Collection' : p
+    p === 'hub_membership' ? 'Hub Membership' : p === 'wholesale_collection' ? FREE_TIER_LABEL : p
   const billingLabel = (b: string) =>
     b === 'monthly' ? 'Monthly' : b === 'seasonal' ? 'Seasonal (3 mo)' : b === 'annual' ? 'Annual' : b
 
@@ -116,7 +122,7 @@ function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => v
 
   const planName = sub.plan === 'hub_membership'
     ? `Hub Membership — ${sub.billing_period === 'seasonal' ? 'Seasonal' : sub.billing_period === 'annual' ? 'Annual' : 'Monthly'}`
-    : 'Wholesale Collection'
+    : FREE_TIER_LABEL
 
   const isPending   = sub.status === 'pending'
   const statusBg    = isPending ? '#FEF3C7' : '#D1FAE5'
@@ -324,7 +330,7 @@ export default function GrowerSubscriptionPage() {
     if (data.requiresPayment) {
       setMsg({ type: 'ok', text: `Subscription saved. Payment of $${((data.amount_cents || 0) / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
     } else {
-      setMsg({ type: 'ok', text: 'Wholesale Collection registration complete! Your listings are now active.' })
+      setMsg({ type: 'ok', text: `${FREE_TIER_LABEL} registration complete! Your listings are now active.` })
       setTimeout(() => router.push('/dashboard/farmer'), 2000)
     }
     setSaving(false)
@@ -378,7 +384,7 @@ export default function GrowerSubscriptionPage() {
           },
           {
             value: 'wholesale_collection' as const,
-            label: 'Wholesale Collection',
+            label: FREE_TIER_LABEL,
             badge: 'Option 2',
             badgeColor: '#065F46',
             badgeBg: '#D1FAE5',
@@ -560,7 +566,7 @@ export default function GrowerSubscriptionPage() {
           className="btn btn-forest"
           style={{ padding: '0.875rem', fontSize: '1rem', borderRadius: '0.875rem' }}
         >
-          {saving ? 'Saving…' : plan === 'wholesale_collection' ? 'Register for Wholesale Collection' : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
+          {saving ? 'Saving…' : plan === 'wholesale_collection' ? `Register for ${FREE_TIER_LABEL}` : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
 
@@ -590,7 +596,7 @@ export default function GrowerSubscriptionPage() {
               <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⛔</div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#B91C1C', fontWeight: 700, marginBottom: '0.5rem' }}>Cancel Membership?</h2>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
-                You're about to cancel your <strong>{current?.plan === 'hub_membership' ? 'Hub Membership' : 'Wholesale Collection'}</strong>.
+                You're about to cancel your <strong>{current?.plan === 'hub_membership' ? 'Hub Membership' : FREE_TIER_LABEL}</strong>.
                 Your listings may be hidden when the membership ends.
               </p>
               <p style={{ fontSize: '0.78rem', color: 'var(--moss)' }}>This cannot be undone from this screen. Contact admin to reactivate.</p>

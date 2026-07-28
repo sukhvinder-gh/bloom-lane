@@ -10,7 +10,7 @@ export default async function AdminBuyerEditPage({ params }: { params: Promise<{
 
   const { data: buyer } = await admin
     .from('profiles')
-    .select('id, email, full_name, phone, role, abn, abn_verified, business_name, created_at')
+    .select('id, email, full_name, phone, role, abn, abn_verified, business_name, flower_related_business, created_at')
     .eq('id', id)
     .single()
 

@@ -24,7 +24,7 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
       { key: 'hub_membership_monthly_cents',  label: 'Hub Membership — Monthly',         hint: 'In cents — 6000 = $60.00',  type: 'number' },
       { key: 'hub_membership_seasonal_cents', label: 'Hub Membership — Seasonal (3 mo)', hint: 'In cents — 15000 = $150.00', type: 'number' },
       { key: 'hub_membership_annual_cents',   label: 'Hub Membership — Annual',          hint: 'In cents — 48000 = $480.00', type: 'number' },
-      { key: 'wholesale_commission_pct',      label: 'Wholesale Collection Commission',  hint: 'e.g. 0.15 = 15% per order',  type: 'number' },
+      { key: 'wholesale_commission_pct',      label: 'Free Grower Listing Commission',   hint: 'e.g. 0.15 = 15% per order',  type: 'number' },
     ],
   },
   {

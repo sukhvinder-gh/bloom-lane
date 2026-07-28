@@ -6,6 +6,11 @@ import type { Product, PriceBreakdown, AppConfig } from '@/types'
 
 const GST_RATE = 0.10
 
+// Single source for the GST-free explanatory text shown to growers when
+// marking a product GST-free — pending a stakeholder review for ATO
+// accuracy, kept in one place so the final wording is a one-line change.
+export const GST_FREE_EXPLANATION = 'raw, unprocessed food — check ATO guidelines'
+
 /**
  * Whether GST may legally be charged on this line.
  * Two independent conditions must both hold:

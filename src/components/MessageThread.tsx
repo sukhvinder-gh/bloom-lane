@@ -7,7 +7,14 @@ type Message = {
   sender_role: 'buyer' | 'farmer' | 'admin'
   body: string
   created_at: string
-  profiles?: { full_name?: string }
+  profiles?: { full_name?: string; business_name?: string }
+}
+
+function senderLabel(m: Message): string {
+  if (m.sender_role === 'buyer' && m.profiles?.business_name) {
+    return m.profiles.full_name ? `${m.profiles.business_name} (${m.profiles.full_name})` : m.profiles.business_name
+  }
+  return m.profiles?.full_name || ROLE_LABEL[m.sender_role]
 }
 
 const ROLE_LABEL: Record<Message['sender_role'], string> = {
@@ -75,7 +82,7 @@ export default function MessageThread({ purchaseOrderId, title }: { purchaseOrde
                   padding: '0.625rem 0.875rem',
                 }}>
                   <p style={{ fontSize: '0.7rem', opacity: 0.75, marginBottom: '0.2rem', fontWeight: 700 }}>
-                    {m.profiles?.full_name || ROLE_LABEL[m.sender_role]}
+                    {senderLabel(m)}
                   </p>
                   <p style={{ fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{m.body}</p>
                 </div>

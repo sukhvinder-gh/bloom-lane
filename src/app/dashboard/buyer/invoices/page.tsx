@@ -131,7 +131,7 @@ export default async function BuyerInvoicesPage() {
               {/* Footer */}
               <div style={{ padding: '0.75rem 1.5rem', background: 'var(--cream)', borderTop: '1px solid var(--olive)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5 }}>
-                  The Green Guild Market · GST registered · ABN on file
+                  The Green Guild · GST registered · ABN on file
                 </p>
                 <Link href={`/dashboard/buyer/orders/${order.id}`} style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 700, textDecoration: 'none', opacity: 0.7 }}>
                   View Order →

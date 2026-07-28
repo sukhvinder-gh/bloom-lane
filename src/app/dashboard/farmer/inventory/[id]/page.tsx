@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
-import { calculateStockSplits, formatPrice } from '@/lib/utils/pricing'
+import { calculateStockSplits, formatPrice, GST_FREE_EXPLANATION } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import ProductImageUpload from '@/components/ProductImageUpload'
 import ColorTagPicker from '@/components/ColorTagPicker'
@@ -284,7 +284,7 @@ export default function EditProductPage() {
             <input type="checkbox" checked={form.is_gst_free} onChange={e => up('is_gst_free', e.target.checked)}
               style={{ width: '1rem', height: '1rem', accentColor: 'var(--forest)' }} />
             <span style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
-              This product is <strong>GST-free</strong> (raw, unprocessed food)
+              This product is <strong>GST-free</strong> ({GST_FREE_EXPLANATION})
             </span>
           </label>
 

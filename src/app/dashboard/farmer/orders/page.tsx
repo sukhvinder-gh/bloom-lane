@@ -220,6 +220,7 @@ export default function FarmerOrdersPage() {
                 <th style={{ ...th, width: '2rem' }} />
                 <th style={th}>Order</th>
                 <th style={th}>Date</th>
+                <th style={th}>Buyer</th>
                 <th style={{ ...th, width: '32%' }}>Items</th>
                 <th style={{ ...th, textAlign: 'right' as const }}>Total</th>
                 <th style={{ ...th, textAlign: 'center' as const }}>Order status</th>
@@ -268,6 +269,11 @@ export default function FarmerOrdersPage() {
                       {/* Date */}
                       <td style={{ ...td, opacity: 0.6, whiteSpace: 'nowrap' as const }}>
                         {formatAEST(order.created_at, 'dd MMM yyyy')}
+                      </td>
+
+                      {/* Buyer */}
+                      <td style={{ ...td, fontSize: '0.8rem' }}>
+                        {order.profiles?.business_name || order.profiles?.full_name || '—'}
                       </td>
 
                       {/* Items summary */}
@@ -481,7 +487,7 @@ export default function FarmerOrdersPage() {
                             </table>
                             {poIds[order.id] && (
                               <div style={{ marginTop: '1.25rem', maxWidth: '32rem' }}>
-                                <MessageThread purchaseOrderId={poIds[order.id]} title="Messages with buyer" />
+                                <MessageThread purchaseOrderId={poIds[order.id]} title={`Messages with ${order.profiles?.business_name || order.profiles?.full_name || 'buyer'}`} />
                               </div>
                             )}
                           </div>

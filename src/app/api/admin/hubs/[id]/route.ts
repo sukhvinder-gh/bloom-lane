@@ -57,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     </div>
   </div>
   <div style="background:#f5f9f5;padding:14px 40px;text-align:center">
-    <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild Market — thegreenguild.com.au</p>
+    <p style="color:#4a7a5a;font-size:11px;margin:0">The Green Guild — thegreenguild.com.au</p>
   </div>
 </div></body></html>`
 

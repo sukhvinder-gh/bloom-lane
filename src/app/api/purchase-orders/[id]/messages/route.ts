@@ -42,7 +42,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from('messages')
-    .select('id, sender_id, sender_role, body, created_at, profiles(full_name)')
+    .select('id, sender_id, sender_role, body, created_at, profiles(full_name, business_name)')
     .eq('purchase_order_id', poId)
     .order('created_at', { ascending: true })
 
@@ -79,7 +79,7 @@ export async function POST(
       sender_role: role,
       body: parsed.data.body,
     })
-    .select('id, sender_id, sender_role, body, created_at, profiles(full_name)')
+    .select('id, sender_id, sender_role, body, created_at, profiles(full_name, business_name)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

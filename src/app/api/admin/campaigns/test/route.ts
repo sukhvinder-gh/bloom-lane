@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     </div>
   </div>
   <div style="background:#f5f9f5;padding:16px 40px;text-align:center">
-    <p style="color:#9ab0a0;font-size:11px;margin:0">The Green Guild Market — thegreenguild.com.au</p>
+    <p style="color:#9ab0a0;font-size:11px;margin:0">The Green Guild — thegreenguild.com.au</p>
     <p style="color:#9ab0a0;font-size:11px;margin:4px 0 0">This is a test preview email.</p>
   </div>
 </div></body></html>`

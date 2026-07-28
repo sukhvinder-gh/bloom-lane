@@ -104,7 +104,7 @@ export default function BuyersContent({ initialBuyers }: { initialBuyers: any[] 
         <div>
           <h1 className="type-heading reveal" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Buyers</h1>
           <p className="type-label" style={{ color: 'var(--moss)' }}>
-            {displayed.length} shown · {buyers.length} total · {b2bCount} B2B wholesale · {b2cCount} B2C retail
+            {displayed.length} shown · {buyers.length} total · {b2bCount} B2B buyer · {b2cCount} B2C retail
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -135,7 +135,7 @@ export default function BuyersContent({ initialBuyers }: { initialBuyers: any[] 
           <span style={{ fontSize: '1.25rem' }}>⚠️</span>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 700, color: 'var(--amber-new)', fontSize: '0.875rem' }}>{pendingB2B} B2B {pendingB2B === 1 ? 'buyer needs' : 'buyers need'} ABN verification</p>
-            <p style={{ color: 'var(--amber-new)', fontSize: '0.8rem', opacity: 0.8 }}>Verify their ABN to unlock wholesale pricing access.</p>
+            <p style={{ color: 'var(--amber-new)', fontSize: '0.8rem', opacity: 0.8 }}>Verify their ABN to unlock buyer pricing access.</p>
           </div>
           <button onClick={() => setFilter('pending')} className="btn btn-sm btn-forest">Review now</button>
         </div>
@@ -186,7 +186,7 @@ export default function BuyersContent({ initialBuyers }: { initialBuyers: any[] 
                         <p className="type-label" style={{ color: 'var(--moss)' }}>{buyer.email}</p>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
-                        <span className={`badge ${isB2B ? 'badge-sage' : 'badge-cream'}`}>{isB2B ? 'B2B Wholesale' : 'B2C Retail'}</span>
+                        <span className={`badge ${isB2B ? 'badge-sage' : 'badge-cream'}`}>{isB2B ? 'B2B Buyer' : 'B2C Retail'}</span>
                       </td>
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <p style={{ fontSize: '0.8rem', color: 'var(--navy)', fontFamily: 'monospace' }}>{buyer.abn || <span style={{ opacity: 0.3 }}>—</span>}</p>

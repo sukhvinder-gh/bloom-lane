@@ -94,7 +94,7 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
                 {isTaxInvoice && farmer?.abn && (
                   <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: {farmer.abn}</div>
                 )}
-                <div style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.35rem' }}>Fulfilled via The Green Guild Market</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.35rem' }}>Fulfilled via The Green Guild</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>

@@ -8,6 +8,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
 import { isMarketOpen } from '@/lib/utils/timezone'
+import { hasActiveMembership } from '@/lib/utils/membership'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -32,6 +33,10 @@ export async function POST(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!(await hasActiveMembership(user.id))) {
+    return NextResponse.json({ error: 'An approved membership is required before you can place an order.' }, { status: 403 })
+  }
 
   if (!isMarketOpen()) {
     return NextResponse.json(
@@ -328,7 +333,7 @@ export async function GET(request: NextRequest) {
     // Fetch full orders with only this farmer's items
     const { data: orders, error: ordersErr } = await adminSupabase
       .from('orders')
-      .select('*, order_items!inner(*, products(name, unit, image_url))')
+      .select('*, order_items!inner(*, products(name, unit, image_url)), profiles(full_name, business_name)')
       .in('id', uniqueOrderIds)
       .eq('order_items.farmer_id', farmer.id)
       .order('created_at', { ascending: false })
