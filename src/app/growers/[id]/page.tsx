@@ -23,6 +23,12 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
 
   if (!farmer) notFound()
 
+  const { data: fulfillmentOptions } = await admin
+    .from('farmer_fulfillment_options')
+    .select('type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes')
+    .eq('farmer_id', id)
+    .order('type', { ascending: true })
+
   const { data: products } = await admin
     .from('products')
     .select('id, name, category, unit, wholesale_price, b2c_markup_pct, b2c_available, image_url, is_gst_free')
@@ -149,6 +155,29 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                 </p>
               )}
             </div>
+
+            {/* Pickup & delivery options */}
+            {fulfillmentOptions && fulfillmentOptions.length > 0 && (
+              <div className="card reveal" style={{ padding: '1.5rem' }}>
+                <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '0.875rem' }}>Pickup &amp; Delivery</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {fulfillmentOptions.map((opt: any, i: number) => (
+                    <div key={i} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      <p style={{ fontWeight: 700, color: 'var(--navy)' }}>
+                        {opt.type === 'pickup' ? '🚜 Farm pickup' : '🚚 Delivery'}
+                        {opt.day_of_week && ` — ${opt.day_of_week.charAt(0).toUpperCase()}${opt.day_of_week.slice(1)}`}
+                        {opt.start_time && opt.end_time && ` ${opt.start_time}–${opt.end_time}`}
+                      </p>
+                      <p>
+                        {opt.cost_cents > 0 ? formatPrice(opt.cost_cents) : 'Free'}
+                        {opt.max_distance_km && ` · within ${opt.max_distance_km}km`}
+                      </p>
+                      {opt.notes && <p style={{ opacity: 0.8 }}>{opt.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Seasonal specialties */}
             {farmer.seasonal_specialties?.length > 0 && (

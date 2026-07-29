@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   // Public marketplace listing — only listed + active products
   let query = supabase
     .from('products')
-    .select('*, farmers(business_name, suburb, state, address, offers_farm_pickup)')
+    .select('*, farmers(business_name, suburb, state, address, offers_farm_pickup, farmer_fulfillment_options(type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes))')
     .eq('is_listed_this_week', true)
     .eq('is_active', true)
 

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const check = await requireAdmin()
   if ('error' in check) return NextResponse.json({ error: check.error }, { status: check.status })
 
-  const { name, region, coordinator_id } = await request.json()
+  const { name, region, coordinator_id, market_open_day, market_open_time, market_close_time } = await request.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Hub name is required' }, { status: 400 })
 
   const { data, error } = await check.admin
@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
       name: name.trim(),
       region: region?.trim() || null,
       coordinator_id: coordinator_id || null,
+      market_open_day: market_open_day || null,
+      market_open_time: market_open_time || null,
+      market_close_time: market_close_time || null,
       status: 'active',
     })
     .select(HUB_SELECT)
@@ -62,6 +65,9 @@ export async function PATCH(request: NextRequest) {
   if (body.name  !== undefined)          updates.name           = body.name.trim()
   if (body.region !== undefined)         updates.region         = body.region?.trim() || null
   if ('coordinator_id' in body)          updates.coordinator_id = body.coordinator_id || null
+  if ('market_open_day' in body)         updates.market_open_day    = body.market_open_day || null
+  if ('market_open_time' in body)        updates.market_open_time   = body.market_open_time || null
+  if ('market_close_time' in body)       updates.market_close_time  = body.market_close_time || null
 
   const { data, error } = await check.admin
     .from('hubs')

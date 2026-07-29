@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
-import { isMarketOpen } from '@/lib/utils/timezone'
+import { isMarketOpenForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { z } from 'zod'
 
@@ -36,13 +36,6 @@ export async function POST(request: NextRequest) {
 
   if (!(await hasActiveMembership(user.id))) {
     return NextResponse.json({ error: 'An approved membership is required before you can place an order.' }, { status: 403 })
-  }
-
-  if (!isMarketOpen()) {
-    return NextResponse.json(
-      { error: 'Market is currently closed. Opens Wednesday 8:00 AM AEST.' },
-      { status: 400 }
-    )
   }
 
   const { data: profile } = await supabase
@@ -82,6 +75,18 @@ export async function POST(request: NextRequest) {
 
   if (!products || products.length !== productIds.length) {
     return NextResponse.json({ error: 'One or more products not found' }, { status: 404 })
+  }
+
+  // Each grower can have their own open window (or the hub's) — if any
+  // grower in this cart is currently closed, the whole checkout is blocked
+  // rather than allowing a partial order through.
+  const distinctFarmerIds = [...new Set(products.map(p => p.farmer_id))]
+  const marketOpenChecks = await Promise.all(distinctFarmerIds.map(fid => isMarketOpenForFarmer(fid)))
+  if (marketOpenChecks.some(open => !open)) {
+    return NextResponse.json(
+      { error: 'One or more growers in your cart are currently closed for ordering. Please check back during their listed hours.' },
+      { status: 400 }
+    )
   }
 
   // Never trust the client's farm-pickup list — a grower must actually offer

@@ -30,7 +30,23 @@ export default function FarmerStorefrontPage() {
     seasonal_specialties: '',
     sustainability: '',
     offers_farm_pickup: false,
+    market_open_day_override: '',
+    market_open_time_override: '',
+    market_close_time_override: '',
   })
+
+  type FulfillmentOption = {
+    id?: string
+    type: 'pickup' | 'delivery'
+    day_of_week: string
+    start_time: string
+    end_time: string
+    cost_cents: number
+    max_distance_km: string
+    notes: string
+  }
+  const [fulfillmentOptions, setFulfillmentOptions] = useState<FulfillmentOption[]>([])
+  const [savingOptions, setSavingOptions] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -61,9 +77,72 @@ export default function FarmerStorefrontPage() {
         seasonal_specialties: (data.seasonal_specialties || []).join(', '),
         sustainability:       (data.sustainability || []).join(', '),
         offers_farm_pickup:   data.offers_farm_pickup || false,
+        market_open_day_override:   data.market_open_day_override || '',
+        market_open_time_override:  data.market_open_time_override || '',
+        market_close_time_override: data.market_close_time_override || '',
       })
+
+      const { data: options } = await supabase
+        .from('farmer_fulfillment_options')
+        .select('*')
+        .eq('farmer_id', data.id)
+        .order('created_at', { ascending: true })
+
+      setFulfillmentOptions((options || []).map((o: any) => ({
+        id: o.id,
+        type: o.type,
+        day_of_week: o.day_of_week || '',
+        start_time: o.start_time || '',
+        end_time: o.end_time || '',
+        cost_cents: o.cost_cents || 0,
+        max_distance_km: o.max_distance_km != null ? String(o.max_distance_km) : '',
+        notes: o.notes || '',
+      })))
     }
     setLoading(false)
+  }
+
+  function addFulfillmentOption(type: 'pickup' | 'delivery') {
+    setFulfillmentOptions(opts => [...opts, {
+      type, day_of_week: 'wednesday', start_time: '09:00', end_time: '17:00',
+      cost_cents: 0, max_distance_km: '', notes: '',
+    }])
+  }
+
+  function updateFulfillmentOption(index: number, patch: Partial<FulfillmentOption>) {
+    setFulfillmentOptions(opts => opts.map((o, i) => i === index ? { ...o, ...patch } : o))
+  }
+
+  function removeFulfillmentOption(index: number) {
+    setFulfillmentOptions(opts => opts.filter((_, i) => i !== index))
+  }
+
+  async function saveFulfillmentOptions() {
+    if (!farmer) return
+    setSavingOptions(true)
+    setError(null)
+
+    // Simplest consistent approach: replace the full set rather than diffing
+    // inserts/updates/deletes individually.
+    await supabase.from('farmer_fulfillment_options').delete().eq('farmer_id', farmer.id)
+    if (fulfillmentOptions.length > 0) {
+      const { error: insertErr } = await supabase.from('farmer_fulfillment_options').insert(
+        fulfillmentOptions.map(o => ({
+          farmer_id: farmer.id,
+          type: o.type,
+          day_of_week: o.day_of_week || null,
+          start_time: o.start_time || null,
+          end_time: o.end_time || null,
+          cost_cents: o.cost_cents || 0,
+          max_distance_km: o.type === 'delivery' && o.max_distance_km ? parseInt(o.max_distance_km) : null,
+          notes: o.notes || null,
+        }))
+      )
+      if (insertErr) setError(insertErr.message)
+    }
+    setSavingOptions(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
   }
 
   async function handleCreate() {
@@ -130,6 +209,9 @@ export default function FarmerStorefrontPage() {
         seasonal_specialties: form.seasonal_specialties ? form.seasonal_specialties.split(',').map(s => s.trim()).filter(Boolean) : [],
         sustainability:       form.sustainability ? form.sustainability.split(',').map(s => s.trim()).filter(Boolean) : [],
         offers_farm_pickup:   form.offers_farm_pickup,
+        market_open_day_override:   form.market_open_day_override || null,
+        market_open_time_override:  form.market_open_time_override || null,
+        market_close_time_override: form.market_close_time_override || null,
         updated_at:           new Date().toISOString(),
       })
       .eq('id', farmer.id)
@@ -319,6 +401,46 @@ export default function FarmerStorefrontPage() {
           </label>
         )}
 
+        {/* ABN / GST — read-only here, edited on the Membership page */}
+        {farmer && (
+          <div style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '0.8rem' }}>ABN &amp; GST status</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+              ABN: {farmer.abn || 'Not set'} {farmer.abn_verified ? '✓ Verified' : '· Not verified'}
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+              {farmer.gst_registered ? 'GST registered' : 'Not registered for GST'}
+            </p>
+            <p style={{ fontSize: '0.72rem', color: 'var(--forest)', opacity: 0.6 }}>
+              Edit these on the Membership page.
+            </p>
+          </div>
+        )}
+
+        {/* Market-open override */}
+        {farmer && (
+          <div style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '0.8rem' }}>Ordering window override (optional)</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.6 }}>
+              By default your hub's ordering window applies. Set all three fields to override it just for your farm — leave blank to use the hub's schedule.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+              <select
+                value={form.market_open_day_override}
+                onChange={e => setForm(f => ({ ...f, market_open_day_override: e.target.value }))}
+                style={inputStyle}
+              >
+                <option value="">No override</option>
+                {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                  <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                ))}
+              </select>
+              <input type="time" style={inputStyle} value={form.market_open_time_override} onChange={e => setForm(f => ({ ...f, market_open_time_override: e.target.value }))} />
+              <input type="time" style={inputStyle} value={form.market_close_time_override} onChange={e => setForm(f => ({ ...f, market_close_time_override: e.target.value }))} />
+            </div>
+          </div>
+        )}
+
         {/* Submit */}
         <button
           onClick={farmer ? handleSave : handleCreate}
@@ -341,6 +463,86 @@ export default function FarmerStorefrontPage() {
           {creating ? 'Creating profile...' : saving ? 'Saving...' : saved ? '✓ Saved' : farmer ? 'Save Changes' : 'Create Farmer Profile'}
         </button>
       </div>
+
+      {/* Pickup / delivery options */}
+      {farmer && (
+        <div style={{ background: 'white', borderRadius: 'var(--r-card)', padding: '1.75rem', border: '1px solid var(--olive)', marginTop: '1.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
+            Pickup &amp; Delivery Options
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--forest)', opacity: 0.6, marginBottom: '1.25rem' }}>
+            Days, times, costs, and rules buyers see on your products and public profile.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {fulfillmentOptions.map((opt, i) => (
+              <div key={i} style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '0.85rem' }}>
+                    {opt.type === 'pickup' ? '🚜 Farm pickup' : '🚚 Delivery'}
+                  </span>
+                  <button onClick={() => removeFulfillmentOption(i)} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                    Remove
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                  <select value={opt.day_of_week} onChange={e => updateFulfillmentOption(i, { day_of_week: e.target.value })} style={inputStyle}>
+                    {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                      <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input type="time" style={inputStyle} value={opt.start_time} onChange={e => updateFulfillmentOption(i, { start_time: e.target.value })} />
+                  <input type="time" style={inputStyle} value={opt.end_time} onChange={e => updateFulfillmentOption(i, { end_time: e.target.value })} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: opt.type === 'delivery' ? '1fr 1fr' : '1fr', gap: '0.6rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.7, marginBottom: '0.25rem' }}>Cost ($)</label>
+                    <input
+                      type="number" min={0} step={0.5} style={inputStyle}
+                      value={opt.cost_cents / 100}
+                      onChange={e => updateFulfillmentOption(i, { cost_cents: Math.round(parseFloat(e.target.value || '0') * 100) })}
+                    />
+                  </div>
+                  {opt.type === 'delivery' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.7, marginBottom: '0.25rem' }}>Max distance (km)</label>
+                      <input
+                        type="number" min={0} style={inputStyle}
+                        value={opt.max_distance_km}
+                        onChange={e => updateFulfillmentOption(i, { max_distance_km: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+                <input
+                  style={inputStyle}
+                  placeholder="Related rules (optional) — e.g. 48 hours notice required"
+                  value={opt.notes}
+                  onChange={e => updateFulfillmentOption(i, { notes: e.target.value })}
+                />
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => addFulfillmentOption('pickup')} className="btn btn-ghost btn-sm">+ Add pickup option</button>
+              <button onClick={() => addFulfillmentOption('delivery')} className="btn btn-ghost btn-sm">+ Add delivery option</button>
+            </div>
+
+            <button
+              onClick={saveFulfillmentOptions}
+              disabled={savingOptions}
+              style={{
+                marginTop: '0.5rem', padding: '0.75rem', borderRadius: '0.75rem',
+                background: 'var(--forest)', color: 'var(--cream)', border: 'none',
+                fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.9rem',
+                cursor: savingOptions ? 'wait' : 'pointer',
+              }}
+            >
+              {savingOptions ? 'Saving...' : 'Save Pickup & Delivery Options'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -11,6 +11,9 @@ type HubRow = {
   status: 'pending' | 'active' | 'inactive'
   created_at: string
   profiles?: { full_name: string | null; email: string | null } | null
+  market_open_day?: string | null
+  market_open_time?: string | null
+  market_close_time?: string | null
 }
 
 type Coordinator = { id: string; full_name: string | null; email: string | null }
@@ -137,6 +140,9 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
   const [name,          setName]          = useState(hub?.name           ?? '')
   const [region,        setRegion]        = useState(hub?.region         ?? '')
   const [coordinatorId, setCoordinatorId] = useState(hub?.coordinator_id ?? '')
+  const [marketOpenDay,   setMarketOpenDay]   = useState(hub?.market_open_day   ?? '')
+  const [marketOpenTime,  setMarketOpenTime]  = useState(hub?.market_open_time  ?? '')
+  const [marketCloseTime, setMarketCloseTime] = useState(hub?.market_close_time ?? '')
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
@@ -148,9 +154,12 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
     setSaving(true); setError(null)
 
     const body: Record<string, unknown> = {
-      name:           name.trim(),
-      region:         region.trim() || null,
-      coordinator_id: coordinatorId || null,
+      name:               name.trim(),
+      region:             region.trim() || null,
+      coordinator_id:     coordinatorId || null,
+      market_open_day:    marketOpenDay || null,
+      market_open_time:   marketOpenTime || null,
+      market_close_time:  marketCloseTime || null,
     }
     if (isEdit) body.id = hub.id
 
@@ -200,6 +209,23 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
                 No coordinator accounts yet. Assign the coordinator role to a user first.
               </p>
             )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Ordering Window</label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+              When buyers can order from growers in this hub (unless a grower overrides it individually). Leave blank to stay open at all times.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.6rem' }}>
+              <select className="input" value={marketOpenDay} onChange={e => setMarketOpenDay(e.target.value)}>
+                <option value="">No schedule</option>
+                {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                  <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                ))}
+              </select>
+              <input className="input" type="time" value={marketOpenTime} onChange={e => setMarketOpenTime(e.target.value)} />
+              <input className="input" type="time" value={marketCloseTime} onChange={e => setMarketCloseTime(e.target.value)} />
+            </div>
           </div>
 
           {error && (

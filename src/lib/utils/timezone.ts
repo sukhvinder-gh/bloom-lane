@@ -103,6 +103,37 @@ export function isMarketOpen(): boolean {
    return true // TEMP: always open for testing — remove before production
 }
 
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+/**
+ * Is "now" within a weekly recurring window (e.g. "wednesday" 08:00-20:00),
+ * evaluated in Sydney time? Pure — no DB access — used by the per-hub/farm
+ * market-open check in src/lib/utils/marketWindow.ts.
+ */
+export function isWithinWeeklyWindow(dayName: string, startTime: string, endTime: string): boolean {
+  const targetDay = DAY_NAMES.indexOf(dayName.toLowerCase())
+  if (targetDay === -1) return false
+
+  const sydneyNow = toZonedTime(new Date(), AU_TIMEZONE)
+  const sunday = new Date(sydneyNow)
+  sunday.setDate(sydneyNow.getDate() - sydneyNow.getDay())
+  sunday.setHours(0, 0, 0, 0)
+
+  const [openH, openM] = startTime.split(':').map(Number)
+  const [closeH, closeM] = endTime.split(':').map(Number)
+
+  const windowOpen = new Date(sunday)
+  windowOpen.setDate(sunday.getDate() + targetDay)
+  windowOpen.setHours(openH, openM || 0, 0, 0)
+
+  const windowClose = new Date(sunday)
+  windowClose.setDate(sunday.getDate() + targetDay)
+  windowClose.setHours(closeH, closeM || 0, 0, 0)
+
+  const now = new Date()
+  return now >= fromZonedTime(windowOpen, AU_TIMEZONE) && now <= fromZonedTime(windowClose, AU_TIMEZONE)
+}
+
 /**
  * Calculate dispute deadline (T + dispute_window_hrs)
  */

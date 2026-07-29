@@ -16,6 +16,10 @@ const CATEGORIES = [
   { id: 'honey', label: '🍯 Honey' }, { id: 'other', label: '📦 Other' },
 ]
 
+// Non-flower categories aren't fully supported yet — shown but disabled
+// with a "Coming soon" note rather than hidden entirely.
+const COMING_SOON_CATEGORIES = new Set(['vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other'])
+
 const CATEGORY_LABEL: Record<string, string> = {
   flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
   vegetables: 'Vegetables', herbs: 'Herbs', fruit: 'Fruit', eggs: 'Eggs', honey: 'Honey', other: 'Other',
@@ -211,8 +215,20 @@ function ProductDrawer({
             </div>
           )}
 
-          {/* Farm pickup */}
-          {product.farmers?.offers_farm_pickup && (
+          {/* Pickup / delivery options */}
+          {product.farmers?.farmer_fulfillment_options?.length > 0 ? (
+            <div style={{ background: 'var(--green-soft)', padding: '0.625rem 0.75rem', borderRadius: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+              {product.farmers.farmer_fulfillment_options.map((opt: any, i: number) => (
+                <p key={i} style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 600 }}>
+                  {opt.type === 'pickup' ? '🚜 Farm pickup' : '🚚 Delivery'}
+                  {opt.day_of_week && ` — ${opt.day_of_week.charAt(0).toUpperCase()}${opt.day_of_week.slice(1)}`}
+                  {opt.start_time && opt.end_time && ` ${opt.start_time}–${opt.end_time}`}
+                  {' · '}{opt.cost_cents > 0 ? formatPrice(opt.cost_cents) : 'Free'}
+                  {opt.max_distance_km && ` (within ${opt.max_distance_km}km)`}
+                </p>
+              ))}
+            </div>
+          ) : product.farmers?.offers_farm_pickup && (
             <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 600, background: 'var(--green-soft)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem' }}>
               🚜 Farm pickup available from this grower
             </p>
@@ -424,12 +440,16 @@ export default function MarketplacePage() {
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.75rem 1rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-          {visibleCategories.map(cat => (
-            <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
-              style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${category === cat.id ? 'var(--navy)' : 'var(--border)'}`, background: category === cat.id ? 'var(--navy)' : 'white', color: category === cat.id ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
-              {cat.label}
-            </button>
-          ))}
+          {visibleCategories.map(cat => {
+            const comingSoon = COMING_SOON_CATEGORIES.has(cat.id)
+            return (
+              <button key={cat.id} type="button" onClick={() => !comingSoon && setCategory(cat.id)} disabled={comingSoon}
+                title={comingSoon ? 'Coming soon' : undefined}
+                style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${category === cat.id ? 'var(--navy)' : 'var(--border)'}`, background: category === cat.id ? 'var(--navy)' : 'white', color: comingSoon ? 'var(--text-3)' : category === cat.id ? 'white' : 'var(--text-secondary)', opacity: comingSoon ? 0.55 : 1, fontSize: '0.8rem', fontWeight: 600, cursor: comingSoon ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                {cat.label}{comingSoon ? ' · Soon' : ''}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -469,12 +489,17 @@ export default function MarketplacePage() {
           )}
           <p className="label">Category</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
-            {visibleCategories.map(cat => (
-              <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
-                className={`nav-item ${category === cat.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
-                {cat.label}
-              </button>
-            ))}
+            {visibleCategories.map(cat => {
+              const comingSoon = COMING_SOON_CATEGORIES.has(cat.id)
+              return (
+                <button key={cat.id} type="button" onClick={() => !comingSoon && setCategory(cat.id)} disabled={comingSoon}
+                  title={comingSoon ? 'Coming soon' : undefined}
+                  className={`nav-item ${category === cat.id ? 'active' : ''}`}
+                  style={{ width: '100%', textAlign: 'left', opacity: comingSoon ? 0.5 : 1, cursor: comingSoon ? 'not-allowed' : 'pointer' }}>
+                  {cat.label}{comingSoon ? ' · Soon' : ''}
+                </button>
+              )
+            })}
           </div>
 
           <p className="label">Color</p>
