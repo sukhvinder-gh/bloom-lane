@@ -96,7 +96,7 @@ export default function RegisterForm() {
     { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: 'Buyer pricing with ABN' },
     { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Retail pricing' },
     { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: 'List & sell produce' },
-    { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub/group' },
+    { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub or collective' },
   ]
 
   const botanicals = (

@@ -295,7 +295,7 @@ export default function GrowerSubscriptionPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Growing Group' }); return }
+    if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Collective' }); return }
     if (gstRegistered && !rctiAgreed) { setMsg({ type: 'err', text: 'Please agree to the RCTI terms to continue' }); return }
     if (gstRegistered && !rctiFullName.trim()) { setMsg({ type: 'err', text: 'Please enter your full name to sign the RCTI agreement' }); return }
     setPendingConfirm(true)
@@ -483,12 +483,12 @@ export default function GrowerSubscriptionPage() {
         {/* Hub selection — only required for Hub Membership */}
         <div className="card" style={{ padding: '1.5rem' }}>
           <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
-            Hub / Growing Group {plan === 'hub_membership' ? '*' : <span style={{ fontWeight: 400, color: 'var(--moss)' }}>(optional)</span>}
+            Hub / Collective {plan === 'hub_membership' ? '*' : <span style={{ fontWeight: 400, color: 'var(--moss)' }}>(optional)</span>}
           </p>
           <p style={{ fontSize: '0.775rem', color: 'var(--moss)', marginBottom: '0.875rem' }}>Select the hub or collective you belong to</p>
           {hubs.length === 0 ? (
             <div style={{ padding: '1rem', background: '#FEF3C7', borderRadius: '0.75rem', fontSize: '0.8rem', color: '#92400E' }}>
-              No hubs registered yet. Please contact your group coordinator or The Green Guild admin.
+              No hubs or collectives registered yet. Please contact your coordinator or The Green Guild admin.
             </div>
           ) : (
             <select
@@ -498,14 +498,14 @@ export default function GrowerSubscriptionPage() {
               required={plan === 'hub_membership'}
               style={{ width: '100%' }}
             >
-              <option value="">— Select your hub —</option>
+              <option value="">— Select your hub / collective —</option>
               {hubs.map((h: any) => (
                 <option key={h.id} value={h.id}>{h.name}{h.region ? ` (${h.region})` : ''}</option>
               ))}
             </select>
           )}
           <p style={{ fontSize: '0.7rem', color: 'var(--moss)', marginTop: '0.5rem' }}>
-            If your group is not listed, it may not be registered yet. Contact your coordinator.
+            If your hub or collective is not listed, it may not be registered yet. Contact your coordinator.
           </p>
         </div>
 

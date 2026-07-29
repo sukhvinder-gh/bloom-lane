@@ -34,15 +34,15 @@ export default function CoordinatorHubRegisterPage() {
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '36rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Register a Hub</h1>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Register a Hub / Collective</h1>
       <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '2rem' }}>
-        Register your growing group or collective. Once approved, growers can join your hub.
+        Register your growing collective. Once approved, growers can join your hub.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           <div>
-            <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Hub / Group Name *</label>
+            <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Hub / Collective Name *</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Yarra Valley Growers Collective" style={{ width: '100%' }} />
           </div>
           <div>

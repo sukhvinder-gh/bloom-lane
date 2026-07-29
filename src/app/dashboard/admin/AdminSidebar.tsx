@@ -17,7 +17,7 @@ const NAV = [
   { href: '/dashboard/admin/inventory', label: 'Inventory', icon: '📦' },
   { href: '/dashboard/admin/buyers',    label: 'Buyers',    icon: '👥' },
   { href: '/dashboard/admin/orders',    label: 'Orders',    icon: '📋' },
-  { href: '/dashboard/admin/hubs',        label: 'Hubs',        icon: '🏛' },
+  { href: '/dashboard/admin/hubs',        label: 'Hubs & Collectives', icon: '🏛' },
   { href: '/dashboard/admin/memberships', label: 'Memberships', icon: '🎫' },
   { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '⚖️' },
   { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💳' },

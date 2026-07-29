@@ -116,8 +116,8 @@ export default async function HomePage() {
                 </svg>
               </div>
               <div>
-                <h4>Register – Hub</h4>
-                <p>Become a hub and connect your region.</p>
+                <h4>Register – Hub / Collective</h4>
+                <p>Become a hub or collective and connect your region.</p>
               </div>
             </Link>
 

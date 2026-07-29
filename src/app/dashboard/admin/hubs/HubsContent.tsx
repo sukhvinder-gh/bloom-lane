@@ -180,14 +180,14 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
       <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '30rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', fontWeight: 700 }}>
-            {isEdit ? 'Edit Hub' : 'Create Hub'}
+            {isEdit ? 'Edit Hub / Collective' : 'Create Hub / Collective'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-3)', padding: '0.2rem 0.4rem' }}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Hub Name *</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Hub / Collective Name *</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Yarra Valley Growers Collective" style={{ width: '100%' }} autoFocus />
           </div>
 
@@ -237,7 +237,7 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
             <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" style={{ minWidth: '5rem' }}>Cancel</button>
             <button type="submit" disabled={saving || !name.trim()} className="btn btn-sm btn-forest" style={{ minWidth: '7.5rem' }}>
-              {saving ? '…' : isEdit ? 'Save Changes' : 'Create Hub'}
+              {saving ? '…' : isEdit ? 'Save Changes' : 'Create Hub / Collective'}
             </button>
           </div>
         </form>
@@ -516,7 +516,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="type-heading reveal" style={{ color: 'var(--forest)', marginBottom: '0.25rem' }}>Hubs & Groups</h1>
+          <h1 className="type-heading reveal" style={{ color: 'var(--forest)', marginBottom: '0.25rem' }}>Hubs & Collectives</h1>
           <p className="type-label" style={{ color: 'var(--moss)' }}>{hubs.length} hub{hubs.length !== 1 ? 's' : ''} · {active} active · {inactive} inactive</p>
         </div>
         <button
@@ -524,7 +524,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
           className="btn btn-sm btn-forest"
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}
         >
-          + Create Hub
+          + Create Hub / Collective
         </button>
       </div>
 
@@ -546,7 +546,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-              {['Hub / Group', 'Region', 'Coordinator', 'Registered', 'Status', 'Actions'].map((h, i) => (
+              {['Hub / Collective', 'Region', 'Coordinator', 'Registered', 'Status', 'Actions'].map((h, i) => (
                 <th key={i} className="type-label-sm" style={{ padding: '1rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.15em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
