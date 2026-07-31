@@ -9,6 +9,7 @@ import { createPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
 import { isMarketOpenForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
+import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -252,15 +253,14 @@ export async function POST(request: NextRequest) {
   const testMode = process.env.NEXT_PUBLIC_TEST_MODE === 'true'
 
   if (testMode) {
-    // Auto-confirm without payment
-    await adminSupabase
-      .from('orders')
-      .update({
-        status: 'payment_confirmed',
-        stripe_payment_intent_id: 'test_mode_bypass',
-        stripe_payment_status: 'succeeded',
-      })
-      .eq('id', order.id)
+    // Auto-confirm without payment, but otherwise finalize exactly like a real
+    // successful payment would (via the Stripe webhook) — creates the
+    // purchase_orders row per grower and sends the confirmation/PO emails.
+    // Without this, test-mode orders were "paid" but invisible to growers:
+    // no PO status tracking, no harvest/pack list entry, no buyer<->grower
+    // messaging (all gated on a purchase_orders row that only the webhook
+    // used to create).
+    await finalizeOrderPayment(adminSupabase, order.id, 'test_mode_bypass')
 
     return NextResponse.json({
       data: {
