@@ -77,6 +77,25 @@ export interface Product {
   id: string
   farmer_id: string
   farmer?: Farmer
+  // Matches the `farmers(...)` join shape returned by GET /api/products —
+  // used to derive GST-inclusive prices and labels without a second fetch.
+  farmers?: {
+    business_name?: string
+    suburb?: string
+    state?: string
+    address?: string
+    offers_farm_pickup?: boolean
+    gst_registered?: boolean
+    farmer_fulfillment_options?: Array<{
+      type: string
+      day_of_week?: string
+      start_time?: string
+      end_time?: string
+      cost_cents?: number
+      max_distance_km?: number
+      notes?: string
+    }>
+  }
   name: string
   description?: string
   category: ProductCategory

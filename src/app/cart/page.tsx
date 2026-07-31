@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/hooks/useCart'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 
 const EMOJI: Record<string, string> = {
   flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦',
@@ -75,17 +75,16 @@ export default function CartPage() {
     setStockIssues(prev => prev.filter(i => i.product_id !== issue.product_id))
   }
 
-  // Totals
+  // Totals — GST per line is derived from the same gstAppliesToItem() rule the
+  // rest of the app uses (product not GST-free AND the grower is GST-registered),
+  // and subtracted from the already GST-inclusive unit_price_cents so the ex-GST
+  // total and GST total can never drift from what's actually being charged.
   const subtotal = subtotalCents()
   const gstAmount = isB2B
-    ? items.reduce((s, i) => {
-        if (i.product.is_gst_free) return s
-        const exGst = i.product.wholesale_price ?? Math.round(i.unit_price_cents / 1.1)
-        return s + Math.round(exGst * 0.1) * i.quantity
-      }, 0)
+    ? items.reduce((s, i) => s + getUnitGstCents(i.product, true, !!i.product.farmers?.gst_registered) * i.quantity, 0)
     : 0
   const subtotalExGst = isB2B
-    ? items.reduce((s, i) => s + (i.product.wholesale_price ?? (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
+    ? items.reduce((s, i) => s + (i.unit_price_cents - getUnitGstCents(i.product, true, !!i.product.farmers?.gst_registered)) * i.quantity, 0)
     : 0
 
   const hasIssues = stockIssues.length > 0
@@ -173,8 +172,13 @@ export default function CartPage() {
           {/* Items */}
           {items.map((item, idx) => {
             const hasIssue   = stockIssues.some(s => s.product_id === item.product_id)
-            const isGstFree  = item.product.is_gst_free
-            const exGstUnit  = item.product.wholesale_price ?? (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
+            const growerGstRegistered = !!item.product.farmers?.gst_registered
+            // "GST Free" is only a meaningful label for a registered grower's
+            // exempt product — an unregistered grower never charges GST at all,
+            // so labelling their items "GST Free" would misrepresent why.
+            const isGstFree  = item.product.is_gst_free && growerGstRegistered
+            const unitGst    = getUnitGstCents(item.product, isB2B, growerGstRegistered)
+            const exGstUnit  = item.unit_price_cents - unitGst
             const displayUnit = isB2B ? exGstUnit : item.unit_price_cents
             const lineTotal   = displayUnit * item.quantity
             const maxStock    = isB2B ? item.product.b2b_available : item.product.b2c_available

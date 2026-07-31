@@ -15,7 +15,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
       id, business_name, bio, suburb, state,
       brand_color, banner_url, logo_url,
       region, growing_practices, seasonal_specialties, sustainability,
-      offers_farm_pickup, created_at
+      offers_farm_pickup, gst_registered, created_at
     `)
     .eq('id', id)
     .eq('status', 'approved')
@@ -125,7 +125,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                       <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--navy)', marginBottom: '0.15rem' }}>{p.name}</p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.5rem' }}>per {p.unit} · {p.b2c_available} left</p>
                       <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>
-                        {formatPrice(getBuyerUnitPrice(p, false))}
+                        {formatPrice(getBuyerUnitPrice(p, false, farmer.gst_registered))}
                       </p>
                     </div>
                   ))}

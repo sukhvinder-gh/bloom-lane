@@ -56,9 +56,14 @@ function ProductDrawer({
   const displayPrice = isB2B
     ? (product.b2b_display_price ?? product.wholesale_price)
     : (product.b2c_display_price ?? product.buyer_unit_price ?? product.wholesale_price)
+  // "GST Free" only means something for a registered grower's exempt product —
+  // an unregistered grower never charges GST at all, so labelling their items
+  // "GST Free" implies a tax-exemption status that doesn't apply.
+  const showsGstFree = product.is_gst_free && !!product.farmers?.gst_registered
+  const gstApplies = !product.is_gst_free && !!product.farmers?.gst_registered
   const priceLabel = isB2B
-    ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
-    : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
+    ? (showsGstFree ? 'ex-GST · GST free' : 'ex-GST')
+    : (showsGstFree ? 'inc-GST · GST free' : 'inc-GST')
 
   // Close on Escape
   useEffect(() => {
@@ -110,7 +115,7 @@ function ProductDrawer({
               {EMOJI[product.category] || '🌿'}
             </div>
           )}
-          {product.is_gst_free && (
+          {showsGstFree && (
             <span className="badge badge-sage" style={{ position: 'absolute', top: '0.875rem', left: '0.875rem', fontSize: '0.75rem' }}>GST Free</span>
           )}
         </div>
@@ -176,7 +181,7 @@ function ProductDrawer({
                   <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginLeft: '0.4rem', opacity: 0.6 }}>wholesale</span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
-                  {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
+                  {showsGstFree ? 'ex-GST · GST free' : 'ex-GST'}
                   {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
                 </p>
               </div>
@@ -187,7 +192,7 @@ function ProductDrawer({
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
                   {priceLabel}
-                  {isB2B && !product.is_gst_free && (
+                  {isB2B && gstApplies && (
                     <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
                       · {formatPrice(product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))} inc-GST
                     </span>
@@ -541,9 +546,11 @@ export default function MarketplacePage() {
                 const displayPrice = isB2B
                   ? (product.b2b_display_price ?? product.wholesale_price)
                   : (product.b2c_display_price ?? product.buyer_unit_price ?? product.wholesale_price)
+                const showsGstFree = product.is_gst_free && !!product.farmers?.gst_registered
+                const gstApplies  = !product.is_gst_free && !!product.farmers?.gst_registered
                 const priceLabel  = isB2B
-                  ? (product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST')
-                  : (product.is_gst_free ? 'inc-GST · GST free' : 'inc-GST')
+                  ? (showsGstFree ? 'ex-GST · GST free' : 'ex-GST')
+                  : (showsGstFree ? 'inc-GST · GST free' : 'inc-GST')
                 const imgs        = productImages(product)
                 const cartQty     = getCartQty(product.id)
 
@@ -560,7 +567,7 @@ export default function MarketplacePage() {
                         ? <img src={imgs[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : EMOJI[product.category] || '🌿'
                       }
-                      {product.is_gst_free && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
+                      {showsGstFree && <span className="badge badge-sage" style={{ position: 'absolute', top: '0.625rem', left: '0.625rem' }}>GST Free</span>}
                       {imgs.length > 1 && (
                         <span style={{ position: 'absolute', bottom: '0.5rem', right: '0.5rem', background: 'rgba(0,0,0,0.55)', color: 'white', borderRadius: '99px', fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.45rem' }}>
                           +{imgs.length - 1} photo{imgs.length > 2 ? 's' : ''}
@@ -597,7 +604,7 @@ export default function MarketplacePage() {
                                 <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-body)', marginLeft: '0.3rem', opacity: 0.6 }}>wholesale</span>
                               </div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
-                                {product.is_gst_free ? 'ex-GST · GST free' : 'ex-GST'}
+                                {showsGstFree ? 'ex-GST · GST free' : 'ex-GST'}
                                 {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
                               </div>
                             </>
@@ -606,7 +613,7 @@ export default function MarketplacePage() {
                               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--forest)', letterSpacing: '-0.03em', textTransform: 'uppercase' }}>{formatPrice(displayPrice)}</div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
                                 {priceLabel}
-                                {isB2B && !product.is_gst_free && (
+                                {isB2B && gstApplies && (
                                   <span style={{ marginLeft: '0.35rem', opacity: 0.6 }}>· {formatPrice(product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))} inc-GST</span>
                                 )}
                               </div>

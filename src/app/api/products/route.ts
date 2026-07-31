@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   // Public marketplace listing — only listed + active products
   let query = supabase
     .from('products')
-    .select('*, farmers(business_name, suburb, state, address, offers_farm_pickup, farmer_fulfillment_options(type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes))')
+    .select('*, farmers(business_name, suburb, state, address, offers_farm_pickup, gst_registered, farmer_fulfillment_options(type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes))')
     .eq('is_listed_this_week', true)
     .eq('is_active', true)
 
@@ -74,8 +74,9 @@ export async function GET(request: NextRequest) {
 
   const { getBuyerUnitPrice } = await import('@/lib/utils/pricing')
   const withPrices = (data || []).map(p => {
-    const b2b_unit_price_inc_gst = getBuyerUnitPrice(p, true)   // wholesale + GST (checkout amount)
-    const b2c_unit_price_inc_gst = getBuyerUnitPrice(p, false)  // retail + GST (checkout amount)
+    const growerGstRegistered = !!(p as any).farmers?.gst_registered
+    const b2b_unit_price_inc_gst = getBuyerUnitPrice(p, true, growerGstRegistered)   // wholesale + GST (checkout amount)
+    const b2c_unit_price_inc_gst = getBuyerUnitPrice(p, false, growerGstRegistered)  // retail + GST (checkout amount)
     const b2c_retail_ex_gst = Math.round(p.wholesale_price * (1 + (p.b2c_markup_pct || 0.45)))
     return {
       ...p,

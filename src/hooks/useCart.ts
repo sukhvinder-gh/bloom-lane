@@ -72,7 +72,7 @@ export const useCart = create<CartStore>()(
         const result = await reserveOnServer(product.id, newQty, isB2B)
         if (!result.success) return result
 
-        const unit_price_cents = getBuyerUnitPrice(product, isB2B)
+        const unit_price_cents = getBuyerUnitPrice(product, isB2B, !!(product as any).farmers?.gst_registered)
 
         if (existing) {
           set(state => ({

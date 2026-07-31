@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/hooks/useCart'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 
 const DELIVERY_FEE = 2000
@@ -56,16 +56,15 @@ export default function CheckoutPage() {
 
   const deliveryFee = fulfillment_type === 'direct_delivery' && pooledItems.length > 0 ? DELIVERY_FEE : 0
 
-  // B2B totals
+  // B2B totals — GST per line mirrors the same gstAppliesToItem() rule used
+  // everywhere else (product not GST-free AND the grower is GST-registered),
+  // subtracted from the already GST-inclusive unit_price_cents so these totals
+  // can't drift from what's actually charged at order creation.
   const subtotalExGst = isB2B
-    ? items.reduce((s, i) => s + (i.product.wholesale_price ?? (i.product.is_gst_free ? i.unit_price_cents : Math.round(i.unit_price_cents / 1.1))) * i.quantity, 0)
+    ? items.reduce((s, i) => s + (i.unit_price_cents - getUnitGstCents(i.product, true, !!i.product.farmers?.gst_registered)) * i.quantity, 0)
     : 0
   const gstAmount = isB2B
-    ? items.reduce((s, i) => {
-        if (i.product.is_gst_free) return s
-        const exGst = i.product.wholesale_price ?? Math.round(i.unit_price_cents / 1.1)
-        return s + Math.round(exGst * 0.1) * i.quantity
-      }, 0)
+    ? items.reduce((s, i) => s + getUnitGstCents(i.product, true, !!i.product.farmers?.gst_registered) * i.quantity, 0)
     : 0
   const total = subtotalCents() + deliveryFee
 
@@ -147,8 +146,10 @@ export default function CheckoutPage() {
             {/* Read-only line items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
               {items.map(item => {
-                const isGstFree  = item.product.is_gst_free
-                const exGstUnit  = item.product.wholesale_price ?? (isGstFree ? item.unit_price_cents : Math.round(item.unit_price_cents / 1.1))
+                const growerGstRegistered = !!item.product.farmers?.gst_registered
+                const isGstFree  = item.product.is_gst_free && growerGstRegistered
+                const unitGst    = getUnitGstCents(item.product, isB2B, growerGstRegistered)
+                const exGstUnit  = item.unit_price_cents - unitGst
                 const displayUnit = isB2B ? exGstUnit : item.unit_price_cents
                 const lineTotal   = displayUnit * item.quantity
                 return (
