@@ -21,7 +21,7 @@ export default async function BuyerLayout({ children }: { children: ReactNode })
   if (!isBuyer && !isAdmin) redirect('/dashboard')
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="dashboard-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
       <BuyerSidebar
         role={role}
         userName={profile?.full_name || ''}

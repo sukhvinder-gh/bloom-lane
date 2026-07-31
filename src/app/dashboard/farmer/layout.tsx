@@ -25,7 +25,7 @@ export default async function FarmerLayout({ children }: { children: ReactNode }
     .maybeSingle()
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="dashboard-shell" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
       <FarmerSidebar
         role={role}
         userName={profile?.full_name || ''}
