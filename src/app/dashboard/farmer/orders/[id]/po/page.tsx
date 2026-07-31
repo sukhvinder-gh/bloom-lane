@@ -126,7 +126,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
       )}
 
       {/* ─── PRINTABLE DOCUMENT ─── */}
-      <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '3rem', fontFamily: 'var(--font-body)' }}>
+      <div className="po-doc" style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '3rem', fontFamily: 'var(--font-body)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem', borderBottom: '2px solid var(--forest)', paddingBottom: '1.5rem' }}>
@@ -144,7 +144,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
         </div>
 
         {/* To / From / Dates */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+        <div className="po-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
           <div>
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>To (Grower)</p>
             <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.2rem' }}>{farmer.business_name}</p>
@@ -161,18 +161,18 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
           <div>
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>Dates</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Order placed:</span>
+              <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Order placed:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>{formatAEST(order.created_at, 'dd MMM yyyy')}</span>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Fulfil by:</span>
+              <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Fulfil by:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
                   {order.grower_fulfillment_date ? formatAEST(order.grower_fulfillment_date, 'dd MMM yyyy, h:mm a') : 'TBC — see admin'}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
+              <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
                   {pickupMethod === 'farm_pickup' ? (
                     '🚜 Farm pickup — buyer collects directly from you'
@@ -184,8 +184,8 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                 </span>
               </div>
               {pickupMethod !== 'farm_pickup' && order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Collection window:</span>
+                <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                  <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Collection window:</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
                     {hubZone.hub_collection_day ? `${hubZone.hub_collection_day.charAt(0).toUpperCase()}${hubZone.hub_collection_day.slice(1)}` : ''}{' '}
                     {hubZone.hub_collection_time_start && hubZone.hub_collection_time_end ? `${hubZone.hub_collection_time_start} – ${hubZone.hub_collection_time_end}` : ''}

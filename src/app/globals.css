@@ -454,6 +454,15 @@ body {
 
   .admin-overview-grid  { grid-template-columns: 1fr !important; }
   .admin-quick-actions  { width: 100% !important; }
+
+  /* PO / invoice-style documents — the desktop 3-column To/From/Dates strip
+     and fixed 9rem date labels are wider than a phone screen, forcing long
+     values (hub address, collection window) to wrap into a squeezed column.
+     Stack everything on narrow viewports instead. */
+  .po-doc         { padding: 1.5rem !important; }
+  .po-grid        { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
+  .po-dates-row   { flex-direction: column !important; gap: 0.15rem !important; }
+  .po-dates-label { width: auto !important; }
 }
 
 @media (min-width: 768px) {
