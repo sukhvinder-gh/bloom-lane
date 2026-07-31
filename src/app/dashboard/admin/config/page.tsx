@@ -48,11 +48,14 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
     ],
   },
   {
-    title: 'Market Schedule', icon: '🗓', tier: 'platform_admin',
+    // Market open/close time is deliberately NOT here — it varies per hub and
+    // can be overridden per farm (see Hub management + grower storefront),
+    // so a single global open/close time no longer makes sense. Listing
+    // close time is still genuinely global: every grower submits stock for
+    // the same weekly cycle regardless of which hub they belong to.
+    title: 'Listing Schedule', icon: '🗓', tier: 'platform_admin',
     items: [
       { key: 'listing_window_close_time', label: 'Listing Close Time (AEST)', hint: 'e.g. 23:59 (Tuesday night)',   type: 'text' },
-      { key: 'market_open_time_aest',     label: 'Market Open Time (AEST)',   hint: 'e.g. 08:00 (Wednesday)',       type: 'text' },
-      { key: 'market_close_time_aest',    label: 'Market Close Time (AEST)',  hint: 'e.g. 20:00 (Wednesday)',       type: 'text' },
     ],
   },
   {
