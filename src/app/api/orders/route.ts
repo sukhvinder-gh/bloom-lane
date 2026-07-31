@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup)')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup, farmer_fulfillment_options(type, cost_cents))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -195,12 +195,24 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  // Get delivery fee — nothing to deliver if every item is going via farm pickup
+  // Get delivery fee — nothing to deliver if every item is going via farm pickup.
+  // Each pooled grower may have their own configured delivery cost (set on
+  // their storefront); sum those per-grower instead of one flat platform fee,
+  // falling back to the flat fee only for growers who haven't configured one.
   let deliveryFeeCents = 0
   if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
     const { data: config } = await supabase
       .from('config').select('value').eq('key', 'delivery_fee_cents').single()
-    deliveryFeeCents = parseInt(config?.value || '2000')
+    const fallbackFeeCents = parseInt(config?.value || '2000')
+
+    const pooledFarmerIds = [...new Set(
+      products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
+    )]
+    deliveryFeeCents = pooledFarmerIds.reduce((sum, fid) => {
+      const product = products.find(p => p.farmer_id === fid)
+      const deliveryOption = (product as any)?.farmers?.farmer_fulfillment_options?.find((o: any) => o.type === 'delivery')
+      return sum + (deliveryOption?.cost_cents ?? fallbackFeeCents)
+    }, 0)
   }
 
   const totals = calculateOrderTotals(orderItems, deliveryFeeCents)

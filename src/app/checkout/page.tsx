@@ -44,6 +44,23 @@ export default function CheckoutPage() {
   // Nothing left to pool through hub/delivery once every item's grower is farm-pickup.
   const pooledItems = items.filter(i => !farmPickupIds.has(i.product.farmer_id))
 
+  // Each pooled grower may have their own configured delivery cost/day/time
+  // (set on their storefront) — sum those per-grower instead of one flat fee,
+  // so the total actually reflects what each grower charges, falling back to
+  // the platform default only for growers who haven't configured delivery.
+  const pooledDeliveryInfo = (() => {
+    const seen = new Map<string, { farmer_id: string; business_name: string; option?: any }>()
+    for (const item of pooledItems) {
+      const f = (item.product as any).farmers
+      if (!seen.has(item.product.farmer_id)) {
+        const option = f?.farmer_fulfillment_options?.find((o: any) => o.type === 'delivery')
+        seen.set(item.product.farmer_id, { farmer_id: item.product.farmer_id, business_name: f?.business_name || 'Grower', option })
+      }
+    }
+    return [...seen.values()]
+  })()
+  const realDeliveryFeeCents = pooledDeliveryInfo.reduce((sum, f) => sum + (f.option?.cost_cents ?? DELIVERY_FEE), 0)
+
   useEffect(() => {
     const supabase = createClient()
     supabase.from('delivery_zones')
@@ -54,7 +71,7 @@ export default function CheckoutPage() {
       })
   }, [])
 
-  const deliveryFee = fulfillment_type === 'direct_delivery' && pooledItems.length > 0 ? DELIVERY_FEE : 0
+  const deliveryFee = fulfillment_type === 'direct_delivery' && pooledItems.length > 0 ? realDeliveryFeeCents : 0
 
   // B2B totals — GST per line mirrors the same gstAppliesToItem() rule used
   // everywhere else (product not GST-free AND the grower is GST-registered),
@@ -273,7 +290,7 @@ export default function CheckoutPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               {[
                 { id: 'hub_pickup',       icon: '🏭', label: 'Hub Pickup', sub: 'Collect from our central hub · Free' },
-                { id: 'direct_delivery',  icon: '🚚', label: 'Delivery',   sub: `To your door · ${formatPrice(DELIVERY_FEE)}` },
+                { id: 'direct_delivery',  icon: '🚚', label: 'Delivery',   sub: `To your door · ${formatPrice(realDeliveryFeeCents)}` },
               ].map(opt => (
                 <button key={opt.id} type="button" onClick={() => setFulfillmentType(opt.id as any)}
                   style={{
@@ -320,6 +337,30 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Per-grower delivery cost breakdown — the total above is the sum of these */}
+            {fulfillment_type === 'direct_delivery' && pooledDeliveryInfo.length > 0 && (
+              <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label className="label">Delivery breakdown</label>
+                {pooledDeliveryInfo.map(f => (
+                  <div key={f.farmer_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)' }}>{f.business_name}</p>
+                      {f.option ? (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>
+                          {f.option.day_of_week ? `${f.option.day_of_week.charAt(0).toUpperCase()}${f.option.day_of_week.slice(1)} · ` : ''}
+                          {f.option.start_time && f.option.end_time ? `${f.option.start_time}–${f.option.end_time}` : ''}
+                          {f.option.max_distance_km ? ` · within ${f.option.max_distance_km}km` : ''}
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>Standard delivery</p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(f.option?.cost_cents ?? DELIVERY_FEE)}</span>
+                  </div>
+                ))}
               </div>
             )}
             </>
