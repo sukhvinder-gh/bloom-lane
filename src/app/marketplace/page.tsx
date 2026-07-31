@@ -419,7 +419,7 @@ export default function MarketplacePage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--forest)', fontWeight: 600 }}>
             Showing products from {products[0]?.farmers?.business_name || 'this grower'}
           </p>
-          <Link href="/marketplace" className="btn btn-ghost btn-sm">View all growers →</Link>
+          <Link href="/marketplace" onClick={() => setFarmerId('')} className="btn btn-ghost btn-sm">View all growers →</Link>
         </div>
       )}
 
