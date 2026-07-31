@@ -290,7 +290,6 @@ export default function MarketplacePage() {
   const [marketOpen]              = useState(isMarketOpen())
   const [search, setSearch]       = useState('')
   const [selected, setSelected]   = useState<any>(null)
-  const [availableCategories, setAvailableCategories] = useState<Set<string>>(new Set())
   const [farmerId, setFarmerId]   = useState('')
   const [shopAsBuyer, setShopAsBuyer] = useState(false)
   const { addItem, updateQuantity, items, totalItems } = useCart()
@@ -330,16 +329,12 @@ export default function MarketplacePage() {
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
   }, [category, color, isB2B, farmerId])
 
-  // Which categories actually have purchasable stock right now — the filter
-  // list should reflect real availability, not every category that's ever existed.
-  useEffect(() => {
-    fetch(`/api/products?b2b=${isB2B}`)
-      .then(r => r.json())
-      .then(d => setAvailableCategories(new Set((d.data || []).map((p: any) => p.category))))
-  }, [isB2B])
 
-  // Always keep "All" and whatever's currently selected, even if it just emptied out.
-  const visibleCategories = CATEGORIES.filter(c => c.id === '' || c.id === category || availableCategories.has(c.id))
+  // Show every category chip always. Hiding chips for categories with zero
+  // current stock made newly-added categories (Dried, Natives, Foliage) and
+  // "coming soon" ones disappear entirely instead of reading as available-
+  // but-empty or visibly-disabled — worse than just showing them.
+  const visibleCategories = CATEGORIES
 
   const [cartError, setCartError] = useState('')
 
