@@ -96,7 +96,7 @@ export default function GrowersPage() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', maxWidth: '80rem', margin: '0 auto', padding: '2rem', gap: '2rem', alignItems: 'flex-start' }}>
+      <div className="growers-layout" style={{ display: 'flex', maxWidth: '80rem', margin: '0 auto', padding: '2rem', gap: '2rem', alignItems: 'flex-start' }}>
 
         {/* Sidebar filters — desktop */}
         <aside className="desktop-only" style={{ width: '14rem', flexShrink: 0, position: 'sticky', top: '5rem' }}>

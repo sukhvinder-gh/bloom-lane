@@ -447,6 +447,12 @@ body {
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   .market-layout  { flex-direction: column !important; }
+  /* Same class of bug as .dashboard-shell above: the growers-list row
+     (desktop sidebar + mobile filter strip + main) never switches to a
+     column, so the mobile filter strip's flexShrink:0 keeps it at its full
+     unwrapped chip width instead of the row's available width, pushing the
+     whole page ~270px wider than the viewport. */
+  .growers-layout { flex-direction: column !important; }
   .market-sidebar { display: none !important; }
   .market-cats-mobile { display: flex !important; }
 
