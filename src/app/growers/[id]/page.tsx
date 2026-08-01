@@ -84,7 +84,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 18rem', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="grower-profile-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 18rem', gap: '1.5rem', alignItems: 'start' }}>
 
           {/* Left column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

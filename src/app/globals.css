@@ -453,6 +453,10 @@ body {
      unwrapped chip width instead of the row's available width, pushing the
      whole page ~270px wider than the viewport. */
   .growers-layout { flex-direction: column !important; }
+  /* Same pattern again: the grower profile's fixed 1fr/18rem two-column
+     grid (main content + sidebar) doesn't fit a phone screen — collapse to
+     one column instead of overflowing. */
+  .grower-profile-grid { grid-template-columns: 1fr !important; }
   .market-sidebar { display: none !important; }
   .market-cats-mobile { display: flex !important; }
 
