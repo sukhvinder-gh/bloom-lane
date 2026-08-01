@@ -14,7 +14,7 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
     .select(`
       id, business_name, bio, suburb, state,
       brand_color, banner_url, logo_url,
-      region, growing_practices, seasonal_specialties, sustainability,
+      region, growing_practices, seasonal_specialties,
       offers_farm_pickup, gst_registered, created_at
     `)
     .eq('id', id)
@@ -77,13 +77,6 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                 📍 {[farmer.region, farmer.suburb, farmer.state].filter(Boolean).join(', ')}
                 {' · '}Member since {memberSince}
               </p>
-              {farmer.sustainability?.length > 0 && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {farmer.sustainability.map((s: string) => (
-                    <span key={s} className="badge badge-sage">{s}</span>
-                  ))}
-                </div>
-              )}
             </div>
             <Link href={`/marketplace?farmer_id=${farmer.id}`} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>
               Shop their products →
@@ -187,21 +180,6 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                   {farmer.seasonal_specialties.map((s: string) => (
                     <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: farmer.brand_color || 'var(--sage-new)', flexShrink: 0, display: 'block' }} />
-                      <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{s}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sustainability */}
-            {farmer.sustainability?.length > 0 && (
-              <div className="card reveal" style={{ padding: '1.5rem' }}>
-                <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '0.875rem' }}>Sustainability</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {farmer.sustainability.map((s: string) => (
-                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                      <span style={{ fontSize: '0.875rem' }}>✓</span>
                       <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{s}</span>
                     </div>
                   ))}

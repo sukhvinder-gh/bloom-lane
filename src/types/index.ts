@@ -81,6 +81,7 @@ export interface Product {
   // used to derive GST-inclusive prices and labels without a second fetch.
   farmers?: {
     business_name?: string
+    region?: string
     suburb?: string
     state?: string
     address?: string

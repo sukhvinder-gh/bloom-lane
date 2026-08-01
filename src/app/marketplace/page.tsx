@@ -289,6 +289,8 @@ export default function MarketplacePage() {
   const [loading, setLoading]     = useState(true)
   const [category, setCategory]   = useState('')
   const [color, setColor]         = useState('')
+  const [farmFilter, setFarmFilter]     = useState('')
+  const [regionFilter, setRegionFilter] = useState('')
   const [isB2B, setIsB2B]         = useState(false)
   const [userRole, setUserRole]   = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
@@ -363,7 +365,15 @@ export default function MarketplacePage() {
     return items.find(i => i.product_id === productId)?.quantity || 0
   }
 
+  // Farm and region options are derived from whatever this category/color/b2b
+  // fetch actually returned, so the dropdowns never offer a combination with
+  // zero results.
+  const farmOptions = [...new Set(products.map(p => p.farmers?.business_name).filter(Boolean))].sort()
+  const regionOptions = [...new Set(products.map(p => p.farmers?.region).filter(Boolean))].sort()
+
   const filtered = products.filter(p => {
+    if (farmFilter && p.farmers?.business_name !== farmFilter) return false
+    if (regionFilter && p.farmers?.region !== regionFilter) return false
     if (!search) return true
     const q = search.toLowerCase()
     return (
@@ -451,6 +461,16 @@ export default function MarketplacePage() {
             )
           })}
         </div>
+        <div style={{ display: 'flex', gap: '0.5rem', padding: '0 1rem 0.75rem' }}>
+          <select className="input" style={{ fontSize: '0.8rem', flex: 1 }} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
+            <option value="">All farms</option>
+            {farmOptions.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <select className="input" style={{ fontSize: '0.8rem', flex: 1 }} value={regionFilter} onChange={e => setRegionFilter(e.target.value)}>
+            <option value="">All regions</option>
+            {regionOptions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Market status banner */}
@@ -503,7 +523,7 @@ export default function MarketplacePage() {
           </div>
 
           <p className="label">Color</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
             <button type="button" onClick={() => setColor('')}
               className={`nav-item ${color === '' ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
               All colors
@@ -516,6 +536,18 @@ export default function MarketplacePage() {
               </button>
             ))}
           </div>
+
+          <p className="label">Farm</p>
+          <select className="input" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
+            <option value="">All farms</option>
+            {farmOptions.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+
+          <p className="label">Region</p>
+          <select className="input" style={{ fontSize: '0.85rem' }} value={regionFilter} onChange={e => setRegionFilter(e.target.value)}>
+            <option value="">All regions</option>
+            {regionOptions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
         </aside>
 
         {/* Product grid */}

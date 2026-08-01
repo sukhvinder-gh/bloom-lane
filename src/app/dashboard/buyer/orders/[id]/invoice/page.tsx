@@ -60,15 +60,6 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
     return { farmerId, farmer, items: farmerItems, subtotal, gst, isTaxInvoice }
   })
 
-  const grandSubtotal = growerDocs.reduce((s, g) => s + g.subtotal, 0)
-  const grandGst = growerDocs.reduce((s, g) => s + g.gst, 0)
-
-  const BUYER_STATUS: Record<string, string> = {
-    payment_confirmed: 'Processing', preparing: 'Processing',
-    ready_for_pickup: 'Ready for delivery', out_for_delivery: 'Ready for delivery',
-    delivered: 'Completed', disputed: 'Disputed',
-  }
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', padding: '2rem' }}>
 
@@ -94,7 +85,6 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
                 {isTaxInvoice && farmer?.abn && (
                   <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: {farmer.abn}</div>
                 )}
-                <div style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.35rem' }}>Fulfilled via The Green Guild</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
@@ -166,73 +156,12 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
           </div>
         ))}
 
-        {/* Consolidated statement — NOT a tax invoice, summarises the whole order */}
-        <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '3rem', fontFamily: 'var(--font-body)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '2px solid var(--forest)', paddingBottom: '1.5rem' }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.03em', marginBottom: '0.25rem' }}>THE GREEN GUILD</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Consolidated Order Statement (not a tax invoice)</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.875rem', color: 'var(--moss)' }}>Order #{order.order_number}</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.1rem' }}>{formatAEST(order.created_at, 'dd MMMM yyyy')}</div>
-              <div style={{ marginTop: '0.5rem' }}>
-                <span style={{ background: 'var(--olive)', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>
-                  {BUYER_STATUS[order.status] || order.status}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--forest)' }}>
-                {['Grower', 'Subtotal', 'GST'].map((h, i) => (
-                  <th key={h} style={{ padding: '0.625rem 0.75rem', textAlign: i >= 1 ? 'right' : 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--forest)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {growerDocs.map(({ farmerId, farmer, subtotal, gst }) => (
-                <tr key={farmerId} style={{ borderBottom: '1px solid var(--olive)' }}>
-                  <td style={{ padding: '0.75rem', color: 'var(--forest)', fontWeight: 600 }}>{farmer?.business_name || 'Grower'}</td>
-                  <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(subtotal)}</td>
-                  <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--moss)' }}>{gst > 0 ? formatPrice(gst) : 'N/A'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
-            <div style={{ width: '18rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--olive)' }}>
-                <span style={{ fontSize: '0.875rem', color: 'var(--moss)' }}>Items subtotal</span>
-                <span style={{ color: 'var(--forest)' }}>{formatPrice(grandSubtotal)}</span>
-              </div>
-              {order.delivery_fee_cents > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--olive)' }}>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--moss)' }}>{order.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery'}</span>
-                  <span style={{ color: 'var(--forest)' }}>{formatPrice(order.delivery_fee_cents)}</span>
-                </div>
-              )}
-              {grandGst > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--olive)' }}>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--moss)' }}>GST breakdown (total)</span>
-                  <span style={{ color: 'var(--moss)' }}>{formatPrice(grandGst)}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.75rem' }}>
-                <span style={{ fontWeight: 700, color: 'var(--forest)' }}>Total paid</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', letterSpacing: '-0.03em' }}>{formatPrice(order.total_cents)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
-            <p>This statement summarises your order across {growerDocs.length} {growerDocs.length === 1 ? 'grower' : 'growers'}. Each grower's individual invoice above is the legal supply document for that grower — this page is a convenience summary only.</p>
-            <p style={{ marginTop: '0.25rem' }}>Order #{order.order_number} · Generated {formatAEST(new Date().toISOString(), 'dd MMM yyyy')}</p>
-          </div>
-        </div>
+        {/* Each grower's invoice above is the complete, self-contained supply
+            document from that grower. The only platform mention on this page
+            is this single closing line. */}
+        <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--moss)' }}>
+          Thank you for choosing The Green Guild.
+        </p>
       </div>
     </div>
   )
