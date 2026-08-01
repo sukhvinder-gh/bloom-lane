@@ -57,17 +57,21 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
 <body style="margin:0;padding:0;background:#f5f5f7;font-family:system-ui,-apple-system,sans-serif">
   <div style="max-width:600px;margin:40px auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
 
-    <!-- Header -->
-    <div style="background:#1a3a2a;padding:32px 40px;display:flex;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
-        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">Order Confirmation</div>
-      </div>
-      <div style="text-align:right">
-        <div style="color:white;font-size:14px;font-weight:700">${data.order_number}</div>
-        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${fmtDate(data.created_at)}</div>
-      </div>
-    </div>
+    <!-- Header — table layout, not flex: email clients (Gmail webmail
+         included) strip display:flex, collapsing this into run-together
+         unreadable text instead of a two-column header. -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a3a2a">
+      <tr>
+        <td style="padding:32px 40px" valign="top" align="left">
+          <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
+          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">Order Confirmation</div>
+        </td>
+        <td style="padding:32px 40px" valign="top" align="right">
+          <div style="color:white;font-size:14px;font-weight:700">${data.order_number}</div>
+          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${fmtDate(data.created_at)}</div>
+        </td>
+      </tr>
+    </table>
 
     <div style="padding:32px 40px">
 
@@ -79,20 +83,22 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
 
       <!-- Order info -->
       <div style="background:#f5f9f5;border-radius:10px;padding:16px 20px;margin-bottom:24px">
-        <div style="display:flex;gap:32px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Order</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">${data.order_number}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Date</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(data.created_at)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Fulfillment</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fulfillmentText}</div>
-          </div>
-        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="33%" valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Order</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">${data.order_number}</div>
+            </td>
+            <td width="33%" valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Date</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(data.created_at)}</div>
+            </td>
+            <td valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Fulfillment</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fulfillmentText}</div>
+            </td>
+          </tr>
+        </table>
       </div>
 
       <!-- Items -->
@@ -110,27 +116,31 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
       </table>
 
       <!-- Order totals -->
-      <div style="display:flex;justify-content:flex-end;margin-bottom:28px">
-        <div style="width:240px">
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e8f0e8">
-            <span style="color:#4a7a5a;font-size:13px">Subtotal</span>
-            <span style="color:#1a3a2a;font-weight:700;font-size:13px">${fmt(data.subtotal_cents)}</span>
-          </div>
-          ${data.gst_cents > 0 ? `
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e8f0e8">
-            <span style="color:#4a7a5a;font-size:13px">GST (10%)</span>
-            <span style="color:#1a3a2a;font-size:13px">${fmt(data.gst_cents)}</span>
-          </div>` : ''}
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e8f0e8">
-            <span style="color:#4a7a5a;font-size:13px">${data.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery'}</span>
-            <span style="color:#1a3a2a;font-size:13px">${data.delivery_fee_cents === 0 ? 'Free' : fmt(data.delivery_fee_cents)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0 0">
-            <span style="color:#1a3a2a;font-weight:700;font-size:14px">Total (inc-GST)</span>
-            <span style="color:#1a3a2a;font-weight:800;font-size:18px">${fmt(data.total_cents)}</span>
-          </div>
-        </div>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+        <tr>
+          <td>
+            <table role="presentation" cellpadding="0" cellspacing="0" align="right" style="width:240px">
+              <tr style="border-bottom:1px solid #e8f0e8">
+                <td style="padding:8px 0;color:#4a7a5a;font-size:13px">Subtotal</td>
+                <td style="padding:8px 0;text-align:right;color:#1a3a2a;font-weight:700;font-size:13px">${fmt(data.subtotal_cents)}</td>
+              </tr>
+              ${data.gst_cents > 0 ? `
+              <tr style="border-bottom:1px solid #e8f0e8">
+                <td style="padding:8px 0;color:#4a7a5a;font-size:13px">GST (10%)</td>
+                <td style="padding:8px 0;text-align:right;color:#1a3a2a;font-size:13px">${fmt(data.gst_cents)}</td>
+              </tr>` : ''}
+              <tr style="border-bottom:1px solid #e8f0e8">
+                <td style="padding:8px 0;color:#4a7a5a;font-size:13px">${data.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery'}</td>
+                <td style="padding:8px 0;text-align:right;color:#1a3a2a;font-size:13px">${data.delivery_fee_cents === 0 ? 'Free' : fmt(data.delivery_fee_cents)}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0 0;color:#1a3a2a;font-weight:700;font-size:14px">Total (inc-GST)</td>
+                <td style="padding:10px 0 0;text-align:right;color:#1a3a2a;font-weight:800;font-size:18px">${fmt(data.total_cents)}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
 
       <!-- CTA -->
       <div style="text-align:center;margin-bottom:28px">

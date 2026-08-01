@@ -344,13 +344,6 @@ export default function FarmerStorefrontPage() {
           <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Comma-separated list of your seasonal or specialty offerings</p>
         </div>
 
-        {/* Sustainability */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Sustainability Practices</label>
-          <input style={inputStyle} value={form.sustainability} onChange={e => setForm(f => ({ ...f, sustainability: e.target.value }))} placeholder="e.g. Organic, Spray-free, Composting, Rainwater harvesting" />
-          <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Comma-separated — shown as green badges on your public profile</p>
-        </div>
-
         {/* Brand colour */}
         <div>
           <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Brand Colour</label>

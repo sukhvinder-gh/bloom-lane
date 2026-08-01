@@ -41,17 +41,21 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 <body style="margin:0;padding:0;background:#f5f5f7;font-family:system-ui,-apple-system,sans-serif">
   <div style="max-width:600px;margin:40px auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
 
-    <!-- Header -->
-    <div style="background:#1a3a2a;padding:32px 40px;display:flex;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
-        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${po.farmer_gst_registered ? 'GST registered' : 'Not registered for GST'}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="color:white;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">PURCHASE ORDER</div>
-        <div style="color:#a8c8a8;font-size:12px;margin-top:4px">PO for ${po.order_number}</div>
-      </div>
-    </div>
+    <!-- Header — table layout, not flex: many email clients (Gmail webmail
+         included) strip display:flex, which collapses this into unreadable
+         run-together text instead of a two-column header. -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a3a2a">
+      <tr>
+        <td style="padding:32px 40px" valign="top" align="left">
+          <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
+          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${po.farmer_gst_registered ? 'GST registered' : 'Not registered for GST'}</div>
+        </td>
+        <td style="padding:32px 40px" valign="top" align="right">
+          <div style="color:white;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">PURCHASE ORDER</div>
+          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">PO for ${po.order_number}</div>
+        </td>
+      </tr>
+    </table>
 
     <div style="padding:32px 40px">
 
@@ -71,24 +75,26 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 
       <!-- Dates -->
       <div style="background:#f5f9f5;border-radius:10px;padding:16px 20px;margin-bottom:24px">
-        <div style="display:flex;gap:32px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Order Placed</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(po.created_at)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Fulfil By</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(po.grower_fulfillment_date)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Delivery Method</div>
-            <div style="color:#1a3a2a;font-size:14px;font-weight:600">
-              ${po.fulfillment_type === 'hub_pickup'
-                ? po.hub_address ? `Hub drop-off — ${po.hub_address}` : 'Hub drop-off (admin to confirm)'
-                : 'Direct delivery to florist'}
-            </div>
-          </div>
-        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="33%" valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Order Placed</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(po.created_at)}</div>
+            </td>
+            <td width="33%" valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Fulfil By</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">${fmtDate(po.grower_fulfillment_date)}</div>
+            </td>
+            <td valign="top">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Delivery Method</div>
+              <div style="color:#1a3a2a;font-size:14px;font-weight:600">
+                ${po.fulfillment_type === 'hub_pickup'
+                  ? po.hub_address ? `Hub drop-off — ${po.hub_address}` : 'Hub drop-off (admin to confirm)'
+                  : 'Direct delivery to florist'}
+              </div>
+            </td>
+          </tr>
+        </table>
       </div>
 
       <!-- Line items table -->
@@ -109,22 +115,26 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
       </table>
 
       <!-- Commission summary -->
-      <div style="display:flex;justify-content:flex-end;margin-bottom:28px">
-        <div style="width:240px">
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e8f0e8">
-            <span style="color:#4a7a5a;font-size:13px">Gross value</span>
-            <span style="color:#1a3a2a;font-weight:700;font-size:13px">${fmt(gross)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e8f0e8">
-            <span style="color:#4a7a5a;font-size:13px">Platform commission (${commissionPct}%)</span>
-            <span style="color:#b91c1c;font-size:13px">− ${fmt(commission)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0 0">
-            <span style="color:#1a3a2a;font-weight:700;font-size:14px">Net payable to you</span>
-            <span style="color:#1a3a2a;font-weight:800;font-size:18px">${fmt(net)}</span>
-          </div>
-        </div>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+        <tr>
+          <td>
+            <table role="presentation" cellpadding="0" cellspacing="0" align="right" style="width:240px">
+              <tr style="border-bottom:1px solid #e8f0e8">
+                <td style="padding:8px 0;color:#4a7a5a;font-size:13px">Gross value</td>
+                <td style="padding:8px 0;text-align:right;color:#1a3a2a;font-weight:700;font-size:13px">${fmt(gross)}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e8f0e8">
+                <td style="padding:8px 0;color:#4a7a5a;font-size:13px">Platform commission (${commissionPct}%)</td>
+                <td style="padding:8px 0;text-align:right;color:#b91c1c;font-size:13px">− ${fmt(commission)}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0 0;color:#1a3a2a;font-weight:700;font-size:14px">Net payable to you</td>
+                <td style="padding:10px 0 0;text-align:right;color:#1a3a2a;font-weight:800;font-size:18px">${fmt(net)}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
 
       <!-- CTA -->
       <div style="text-align:center;margin-bottom:28px">

@@ -229,13 +229,6 @@ export default function EditFarmerForm({ farmer: initial, requesterRole }: { far
           </div>
 
           <div>
-            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>
-              Sustainability <span style={{ fontWeight: 400, opacity: 0.6 }}>(comma-separated)</span>
-            </label>
-            <input className="input" value={form.sustainability} onChange={e => set('sustainability', e.target.value)} placeholder="Pesticide-free, Rainwater irrigation" style={{ width: '100%' }} />
-          </div>
-
-          <div>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Banner URL</label>
             <input className="input" value={form.banner_url} onChange={e => set('banner_url', e.target.value)} placeholder="https://..." style={{ width: '100%' }} />
           </div>

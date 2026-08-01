@@ -379,6 +379,7 @@ export default function MarketplacePage() {
     return (
       p.name.toLowerCase().includes(q) ||
       p.farmers?.business_name?.toLowerCase().includes(q) ||
+      p.farmers?.region?.toLowerCase().includes(q) ||
       p.latin_name?.toLowerCase().includes(q) ||
       p.common_name?.toLowerCase().includes(q)
     )
@@ -404,7 +405,7 @@ export default function MarketplacePage() {
         </Link>
         <div style={{ flex: 1, minWidth: '10rem', position: 'relative' }}>
           <svg style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', width: '1rem', height: '1rem', color: 'var(--moss)', pointerEvents: 'none' }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          <input className="input" style={{ paddingLeft: '2.5rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }} placeholder="Search products or farms…" value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input" style={{ paddingLeft: '2.5rem', paddingTop: '0.6rem', paddingBottom: '0.6rem' }} placeholder="Search products, farms or regions…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
           {authLoaded && userRole && (

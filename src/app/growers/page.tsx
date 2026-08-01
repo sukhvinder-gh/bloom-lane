@@ -17,11 +17,6 @@ const FLOWER_TYPES = [
   { id: 'other',         label: '📦 Other' },
 ]
 
-const SUSTAINABILITY_OPTIONS = [
-  'Organic', 'Spray-free', 'Regenerative', 'Composting',
-  'Rainwater harvesting', 'Solar powered', 'No pesticides',
-]
-
 export default function GrowersPage() {
   const router = useRouter()
   const [growers, setGrowers]       = useState<any[]>([])
@@ -29,7 +24,6 @@ export default function GrowersPage() {
   const [search, setSearch]         = useState('')
   const [region, setRegion]         = useState('')
   const [flowerType, setFlowerType] = useState('')
-  const [sustain, setSustain]       = useState('')
   const [regions, setRegions]       = useState<string[]>([])
   const [openMenu, setOpenMenu]     = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -48,7 +42,6 @@ export default function GrowersPage() {
     setLoading(true)
     const params = new URLSearchParams()
     if (region)     params.set('region', region)
-    if (sustain)    params.set('sustainability', sustain)
     if (flowerType) params.set('flower_type', flowerType)
 
     fetch(`/api/growers?${params}`)
@@ -60,7 +53,7 @@ export default function GrowersPage() {
         setRegions(uniqueRegions.sort())
         setLoading(false)
       })
-  }, [region, flowerType, sustain])
+  }, [region, flowerType])
 
   const filtered = growers.filter(g =>
     !search ||
@@ -125,23 +118,6 @@ export default function GrowersPage() {
               </div>
             </div>
 
-            {/* Sustainability */}
-            <div>
-              <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.5rem' }}>Sustainability</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <button onClick={() => setSustain('')}
-                  className={`nav-item${sustain === '' ? ' active' : ''}`}
-                  style={{ textAlign: 'left', fontSize: '0.8rem' }}>All practices</button>
-                {SUSTAINABILITY_OPTIONS.map(s => (
-                  <button key={s} onClick={() => setSustain(sustain === s ? '' : s)}
-                    className={`nav-item${sustain === s ? ' active' : ''}`}
-                    style={{ textAlign: 'left', fontSize: '0.8rem' }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
           </div>
         </aside>
 
@@ -161,8 +137,8 @@ export default function GrowersPage() {
             <h2 className="type-subheading" style={{ color: 'var(--navy)' }}>
               {loading ? '…' : `${filtered.length} grower${filtered.length !== 1 ? 's' : ''}`}
             </h2>
-            {(region || flowerType || sustain) && (
-              <button onClick={() => { setRegion(''); setFlowerType(''); setSustain('') }}
+            {(region || flowerType) && (
+              <button onClick={() => { setRegion(''); setFlowerType('') }}
                 className="btn btn-ghost btn-sm">Clear filters</button>
             )}
           </div>
@@ -233,14 +209,6 @@ export default function GrowersPage() {
                           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             {grower.bio}
                           </p>
-                        )}
-
-                        {grower.sustainability?.length > 0 && (
-                          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                            {grower.sustainability.slice(0, 3).map((s: string) => (
-                              <span key={s} className="badge badge-sage" style={{ fontSize: '0.65rem' }}>{s}</span>
-                            ))}
-                          </div>
                         )}
 
                         {grower.seasonal_specialties?.length > 0 && (
