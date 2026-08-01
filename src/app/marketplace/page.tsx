@@ -335,11 +335,11 @@ export default function MarketplacePage() {
   }, [category, color, isB2B, farmerId])
 
 
-  // Show every category chip always. Hiding chips for categories with zero
-  // current stock made newly-added categories (Dried, Natives, Foliage) and
-  // "coming soon" ones disappear entirely instead of reading as available-
-  // but-empty or visibly-disabled — worse than just showing them.
-  const visibleCategories = CATEGORIES
+  // Show every flower category chip always — hiding chips for zero-stock
+  // categories made newly-added ones (Dried, Natives, Foliage) disappear
+  // instead of reading as available-but-empty. Coming-soon (non-flower)
+  // categories are hidden entirely for now rather than shown disabled.
+  const visibleCategories = CATEGORIES.filter(c => c.id === '' || !COMING_SOON_CATEGORIES.has(c.id))
 
   const [cartError, setCartError] = useState('')
 
