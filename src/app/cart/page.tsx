@@ -125,7 +125,7 @@ export default function CartPage() {
         </h1>
       </nav>
 
-      <div style={{ maxWidth: '68rem', margin: '0 auto', padding: '2.5rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 22rem', gap: '2rem', alignItems: 'start' }}>
+      <div className="cart-layout" style={{ maxWidth: '68rem', margin: '0 auto', padding: '2.5rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 22rem', gap: '2rem', alignItems: 'start' }}>
 
         {/* ── Left: Item list ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>

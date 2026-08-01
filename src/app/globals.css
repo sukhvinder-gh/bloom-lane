@@ -457,6 +457,15 @@ body {
      grid (main content + sidebar) doesn't fit a phone screen — collapse to
      one column instead of overflowing. */
   .grower-profile-grid { grid-template-columns: 1fr !important; }
+  /* Cart and checkout: same pattern — a fixed-width or fr-ratio sidebar
+     column that doesn't collapse on mobile. Checkout's summary panel also
+     uses explicit grid-column/grid-row placement to sit beside the form on
+     desktop, which must be reset to auto or it'll create an overflowing
+     implicit column once the template drops to one column. */
+  .cart-layout     { grid-template-columns: 1fr !important; }
+  .checkout-layout { grid-template-columns: 1fr !important; }
+  .checkout-summary { grid-column: 1 !important; grid-row: auto !important; }
+  .checkout-form     { grid-column: 1 !important; }
   .market-sidebar { display: none !important; }
   .market-cats-mobile { display: flex !important; }
 

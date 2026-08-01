@@ -150,10 +150,10 @@ export default function CheckoutPage() {
         <h1 className="type-subheading" style={{ color: 'var(--forest)', fontSize: '1.75rem' }}>Checkout</h1>
       </nav>
 
-      <div style={{ maxWidth: '60rem', margin: '0 auto', padding: '2.5rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="checkout-layout" style={{ maxWidth: '60rem', margin: '0 auto', padding: '2.5rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '2rem', alignItems: 'start' }}>
 
         {/* ── Right: Read-only order summary ── */}
-        <div style={{ gridColumn: '2', gridRow: '1 / 3' }}>
+        <div className="checkout-summary" style={{ gridColumn: '2', gridRow: '1 / 3' }}>
           <div className="card reveal" style={{ padding: '2rem', position: 'sticky', top: '2rem', background: 'var(--forest)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 className="type-label-lg" style={{ color: 'var(--sage)' }}>Order summary</h2>
@@ -251,7 +251,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* ── Left: Delivery form ── */}
-        <div style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="checkout-form" style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Farm pickup — per grower, on top of the pooled hub/delivery choice below */}
           {pickupEligibleFarmers.length > 0 && (
