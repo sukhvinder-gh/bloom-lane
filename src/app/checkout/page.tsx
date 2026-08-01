@@ -19,6 +19,9 @@ export default function CheckoutPage() {
   const [hubs, setHubs]                 = useState<any[]>([])
   const [selectedHubId, setSelectedHubId] = useState<string>('')
   const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
+  // farmer_id -> chosen farmer_fulfillment_options.id, for growers who
+  // configured more than one delivery slot (different day/time/cost).
+  const [deliveryOptionIds, setDeliveryOptionIds] = useState<Record<string, string>>({})
 
   // Growers in this cart who offer farm pickup — pulled from whatever the
   // marketplace fetch attached to each product, so no extra request needed.
@@ -48,18 +51,31 @@ export default function CheckoutPage() {
   // (set on their storefront) — sum those per-grower instead of one flat fee,
   // so the total actually reflects what each grower charges, falling back to
   // the platform default only for growers who haven't configured delivery.
+  // A grower can configure more than one delivery slot (e.g. Monday $10 vs
+  // Thursday $8) — expose all of them so the buyer can pick.
   const pooledDeliveryInfo = (() => {
-    const seen = new Map<string, { farmer_id: string; business_name: string; option?: any }>()
+    const seen = new Map<string, { farmer_id: string; business_name: string; options: any[] }>()
     for (const item of pooledItems) {
       const f = (item.product as any).farmers
       if (!seen.has(item.product.farmer_id)) {
-        const option = f?.farmer_fulfillment_options?.find((o: any) => o.type === 'delivery')
-        seen.set(item.product.farmer_id, { farmer_id: item.product.farmer_id, business_name: f?.business_name || 'Grower', option })
+        const options = (f?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'delivery')
+        seen.set(item.product.farmer_id, { farmer_id: item.product.farmer_id, business_name: f?.business_name || 'Grower', options })
       }
     }
     return [...seen.values()]
   })()
-  const realDeliveryFeeCents = pooledDeliveryInfo.reduce((sum, f) => sum + (f.option?.cost_cents ?? DELIVERY_FEE), 0)
+
+  // The buyer's pick if they chose one, else the first configured slot —
+  // matches the old single-option behaviour when there's nothing to choose.
+  function selectedDeliveryOption(farmerId: string, options: any[]) {
+    const chosenId = deliveryOptionIds[farmerId]
+    return (chosenId && options.find(o => o.id === chosenId)) || options[0] || null
+  }
+
+  const realDeliveryFeeCents = pooledDeliveryInfo.reduce((sum, f) => {
+    const opt = f.options.length > 0 ? selectedDeliveryOption(f.farmer_id, f.options) : null
+    return sum + (opt?.cost_cents ?? DELIVERY_FEE)
+  }, 0)
 
   useEffect(() => {
     const supabase = createClient()
@@ -118,6 +134,14 @@ export default function CheckoutPage() {
           delivery_postcode: address.postcode,
           notes,
           farm_pickup_farmer_ids: [...farmPickupIds],
+          fulfillment_option_selections: fulfillment_type === 'direct_delivery'
+            ? Object.fromEntries(
+                pooledDeliveryInfo
+                  .filter(f => f.options.length > 0)
+                  .map(f => [f.farmer_id, selectedDeliveryOption(f.farmer_id, f.options)?.id])
+                  .filter(([, id]) => id)
+              )
+            : {},
         }),
       })
       const orderData = await res.json()
@@ -340,27 +364,52 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Per-grower delivery cost breakdown — the total above is the sum of these */}
+            {/* Per-grower delivery cost breakdown — the total above is the sum of these.
+                A grower with more than one configured delivery slot gets a picker;
+                one slot (or none) just displays, same as before. */}
             {fulfillment_type === 'direct_delivery' && pooledDeliveryInfo.length > 0 && (
               <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label className="label">Delivery breakdown</label>
-                {pooledDeliveryInfo.map(f => (
-                  <div key={f.farmer_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
-                    <div>
-                      <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)' }}>{f.business_name}</p>
-                      {f.option ? (
-                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>
-                          {f.option.day_of_week ? `${f.option.day_of_week.charAt(0).toUpperCase()}${f.option.day_of_week.slice(1)} · ` : ''}
-                          {f.option.start_time && f.option.end_time ? `${f.option.start_time}–${f.option.end_time}` : ''}
-                          {f.option.max_distance_km ? ` · within ${f.option.max_distance_km}km` : ''}
-                        </p>
-                      ) : (
-                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>Standard delivery</p>
-                      )}
+                {pooledDeliveryInfo.map(f => {
+                  const optionLabel = (o: any) => [
+                    o.day_of_week ? `${o.day_of_week.charAt(0).toUpperCase()}${o.day_of_week.slice(1)}` : '',
+                    o.start_time && o.end_time ? `${o.start_time}–${o.end_time}` : '',
+                    o.max_distance_km ? `within ${o.max_distance_km}km` : '',
+                  ].filter(Boolean).join(' · ')
+
+                  if (f.options.length > 1) {
+                    const chosen = selectedDeliveryOption(f.farmer_id, f.options)
+                    return (
+                      <div key={f.farmer_id} style={{ padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                        <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)', marginBottom: '0.5rem' }}>{f.business_name} — choose a delivery slot</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          {f.options.map((o: any) => (
+                            <label key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input type="radio" name={`delivery-opt-${f.farmer_id}`} checked={chosen?.id === o.id}
+                                  onChange={() => setDeliveryOptionIds(s => ({ ...s, [f.farmer_id]: o.id }))}
+                                  style={{ accentColor: 'var(--forest)' }} />
+                                <span style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>{optionLabel(o) || 'Delivery'}</span>
+                              </span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(o.cost_cents)}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  const only = f.options[0]
+                  return (
+                    <div key={f.farmer_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)' }}>{f.business_name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>{only ? (optionLabel(only) || 'Delivery') : 'Standard delivery'}</p>
+                      </div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(only?.cost_cents ?? DELIVERY_FEE)}</span>
                     </div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(f.option?.cost_cents ?? DELIVERY_FEE)}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
             </>

@@ -26,6 +26,10 @@ const checkoutSchema = z.object({
   hub_id: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
   farm_pickup_farmer_ids: z.array(z.string().uuid()).max(50).optional().default([]),
+  // farmer_id -> chosen farmer_fulfillment_options.id, for growers with more
+  // than one configured delivery slot. Never trusted as-is — validated below
+  // against that farmer's real options before it affects price.
+  fulfillment_option_selections: z.record(z.string().uuid(), z.string().uuid()).optional().default({}),
 })
 
 export async function POST(request: NextRequest) {
@@ -63,7 +67,8 @@ export async function POST(request: NextRequest) {
 
   const { items, fulfillment_type, hub_id, delivery_address,
     delivery_suburb, delivery_state, delivery_postcode, notes,
-    farm_pickup_farmer_ids: requestedFarmPickupIds } = parsed.data
+    farm_pickup_farmer_ids: requestedFarmPickupIds,
+    fulfillment_option_selections: requestedOptionSelections } = parsed.data
 
   // Fetch product details first for validation
   // farmers(gst_registered, offers_farm_pickup) is joined so GST and farm
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup, farmer_fulfillment_options(type, cost_cents))')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -200,6 +205,12 @@ export async function POST(request: NextRequest) {
   // their storefront); sum those per-grower instead of one flat platform fee,
   // falling back to the flat fee only for growers who haven't configured one.
   let deliveryFeeCents = 0
+  // Sanitized version of the buyer's selections — only entries that survived
+  // validation against that farmer's real delivery options, and only when
+  // one was actually used to price the order. This (not the raw request) is
+  // what gets stored, so a farmer's PO can never claim an option that wasn't
+  // genuinely theirs or wasn't the one actually charged.
+  const validatedOptionSelections: Record<string, string> = {}
   if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
     const { data: config } = await supabase
       .from('config').select('value').eq('key', 'delivery_fee_cents').single()
@@ -210,8 +221,11 @@ export async function POST(request: NextRequest) {
     )]
     deliveryFeeCents = pooledFarmerIds.reduce((sum, fid) => {
       const product = products.find(p => p.farmer_id === fid)
-      const deliveryOption = (product as any)?.farmers?.farmer_fulfillment_options?.find((o: any) => o.type === 'delivery')
-      return sum + (deliveryOption?.cost_cents ?? fallbackFeeCents)
+      const deliveryOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'delivery')
+      const requestedId = requestedOptionSelections[fid]
+      const chosen = (requestedId && deliveryOptions.find((o: any) => o.id === requestedId)) || deliveryOptions[0]
+      if (chosen) validatedOptionSelections[fid] = chosen.id
+      return sum + (chosen?.cost_cents ?? fallbackFeeCents)
     }, 0)
   }
 
@@ -236,6 +250,7 @@ export async function POST(request: NextRequest) {
       buyer_is_b2b: isB2B,
       notes,
       farm_pickup_farmer_ids: farmPickupFarmerIds,
+      fulfillment_option_selections: validatedOptionSelections,
     })
     .select()
     .single()

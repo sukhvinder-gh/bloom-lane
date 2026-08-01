@@ -59,10 +59,11 @@ export async function finalizeOrderPayment(
 
     const { data: orderRow } = await supabase
       .from('orders')
-      .select('farm_pickup_farmer_ids')
+      .select('farm_pickup_farmer_ids, fulfillment_option_selections')
       .eq('id', orderId)
       .single()
     const farmPickupIds = new Set((orderRow as any)?.farm_pickup_farmer_ids || [])
+    const optionSelections: Record<string, string> = (orderRow as any)?.fulfillment_option_selections || {}
 
     if (orderItems && orderItems.length > 0) {
       const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
@@ -74,6 +75,7 @@ export async function finalizeOrderPayment(
             farmer_id: farmerId,
             status: 'pending',
             pickup_method: farmPickupIds.has(farmerId) ? 'farm_pickup' : 'standard',
+            fulfillment_option_id: optionSelections[farmerId] || null,
           })),
           { onConflict: 'order_id,farmer_id', ignoreDuplicates: true }
         )

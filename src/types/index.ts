@@ -88,6 +88,7 @@ export interface Product {
     offers_farm_pickup?: boolean
     gst_registered?: boolean
     farmer_fulfillment_options?: Array<{
+      id: string
       type: string
       day_of_week?: string
       start_time?: string

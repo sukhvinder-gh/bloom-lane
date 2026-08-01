@@ -79,12 +79,25 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch existing PO status (if any)
   const { data: poRecord } = await admin
     .from('purchase_orders')
-    .select('status, rejection_reason, rejected_at, pickup_method')
+    .select('status, rejection_reason, rejected_at, pickup_method, fulfillment_option_id')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
     .maybeSingle()
 
   const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
+
+  // If the buyer picked a specific delivery slot (a grower with more than
+  // one configured), show that slot's real day/time/cost instead of the
+  // generic "Direct delivery" line.
+  let deliveryOption: { day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null } | null = null
+  if ((poRecord as any)?.fulfillment_option_id) {
+    const { data } = await admin
+      .from('farmer_fulfillment_options')
+      .select('day_of_week, start_time, end_time, cost_cents, notes')
+      .eq('id', (poRecord as any).fulfillment_option_id)
+      .maybeSingle()
+    deliveryOption = data
+  }
 
   const commissionRate: number = (farmer as any).commission_rate ?? 0.10
   const gross = items.reduce((s, i) => s + i.subtotal_cents, 0)
@@ -180,6 +193,8 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                     hubZone
                       ? `Hub drop-off — ${[hubZone.hub_address, hubZone.hub_suburb, hubZone.hub_state].filter(Boolean).join(', ')}`
                       : 'Hub drop-off (admin to confirm location)'
+                  ) : deliveryOption ? (
+                    `Delivery${deliveryOption.day_of_week ? ` — ${deliveryOption.day_of_week.charAt(0).toUpperCase()}${deliveryOption.day_of_week.slice(1)}` : ''}${deliveryOption.start_time && deliveryOption.end_time ? ` ${deliveryOption.start_time}–${deliveryOption.end_time}` : ''} · ${formatPrice(deliveryOption.cost_cents)}${deliveryOption.notes ? ` · ${deliveryOption.notes}` : ''}`
                   ) : 'Direct delivery to florist'}
                 </span>
               </div>
