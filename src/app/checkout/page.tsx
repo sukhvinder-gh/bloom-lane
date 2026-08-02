@@ -20,17 +20,22 @@ export default function CheckoutPage() {
   const [selectedHubId, setSelectedHubId] = useState<string>('')
   const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
   // farmer_id -> chosen farmer_fulfillment_options.id, for growers who
-  // configured more than one delivery slot (different day/time/cost).
-  const [deliveryOptionIds, setDeliveryOptionIds] = useState<Record<string, string>>({})
+  // configured more than one pickup or delivery slot (different day/time,
+  // and for delivery, cost). A farmer only ever appears as either a pickup
+  // or a pooled-delivery entry per order, so one map safely covers both.
+  const [fulfillmentOptionIds, setFulfillmentOptionIds] = useState<Record<string, string>>({})
 
   // Growers in this cart who offer farm pickup — pulled from whatever the
   // marketplace fetch attached to each product, so no extra request needed.
+  // A grower can configure more than one pickup slot (e.g. Monday morning
+  // vs Wednesday afternoon) — expose all of them so the buyer can pick.
   const pickupEligibleFarmers = (() => {
     const seen = new Map<string, any>()
     for (const item of items) {
       const f = (item.product as any).farmers
       if (f?.offers_farm_pickup && !seen.has(item.product.farmer_id)) {
-        seen.set(item.product.farmer_id, { ...f, farmer_id: item.product.farmer_id })
+        const options = (f?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'pickup')
+        seen.set(item.product.farmer_id, { ...f, farmer_id: item.product.farmer_id, options })
       }
     }
     return [...seen.values()]
@@ -67,13 +72,13 @@ export default function CheckoutPage() {
 
   // The buyer's pick if they chose one, else the first configured slot —
   // matches the old single-option behaviour when there's nothing to choose.
-  function selectedDeliveryOption(farmerId: string, options: any[]) {
-    const chosenId = deliveryOptionIds[farmerId]
+  function selectedOption(farmerId: string, options: any[]) {
+    const chosenId = fulfillmentOptionIds[farmerId]
     return (chosenId && options.find(o => o.id === chosenId)) || options[0] || null
   }
 
   const realDeliveryFeeCents = pooledDeliveryInfo.reduce((sum, f) => {
-    const opt = f.options.length > 0 ? selectedDeliveryOption(f.farmer_id, f.options) : null
+    const opt = f.options.length > 0 ? selectedOption(f.farmer_id, f.options) : null
     return sum + (opt?.cost_cents ?? DELIVERY_FEE)
   }, 0)
 
@@ -134,14 +139,26 @@ export default function CheckoutPage() {
           delivery_postcode: address.postcode,
           notes,
           farm_pickup_farmer_ids: [...farmPickupIds],
-          fulfillment_option_selections: fulfillment_type === 'direct_delivery'
-            ? Object.fromEntries(
-                pooledDeliveryInfo
-                  .filter(f => f.options.length > 0)
-                  .map(f => [f.farmer_id, selectedDeliveryOption(f.farmer_id, f.options)?.id])
-                  .filter(([, id]) => id)
-              )
-            : {},
+          fulfillment_option_selections: {
+            // Which specific pickup slot, for growers opted into farm pickup
+            // who configured more than one.
+            ...Object.fromEntries(
+              pickupEligibleFarmers
+                .filter(f => farmPickupIds.has(f.farmer_id) && f.options.length > 0)
+                .map(f => [f.farmer_id, selectedOption(f.farmer_id, f.options)?.id])
+                .filter(([, id]) => id)
+            ),
+            // Which specific delivery slot, for pooled growers with more than
+            // one — only meaningful when Delivery is the chosen method.
+            ...(fulfillment_type === 'direct_delivery'
+              ? Object.fromEntries(
+                  pooledDeliveryInfo
+                    .filter(f => f.options.length > 0)
+                    .map(f => [f.farmer_id, selectedOption(f.farmer_id, f.options)?.id])
+                    .filter(([, id]) => id)
+                )
+              : {}),
+          },
         }),
       })
       const orderData = await res.json()
@@ -285,18 +302,50 @@ export default function CheckoutPage() {
                 These growers let you collect directly from the farm instead of the hub or delivery.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {pickupEligibleFarmers.map(f => (
-                  <label key={f.farmer_id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '1rem', background: farmPickupIds.has(f.farmer_id) ? 'var(--forest)' : 'var(--olive)', borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}>
-                    <input type="checkbox" checked={farmPickupIds.has(f.farmer_id)} onChange={() => toggleFarmPickup(f.farmer_id)}
-                      style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0, marginTop: '0.1rem' }} />
-                    <div>
-                      <p style={{ fontWeight: 700, fontSize: '0.875rem', color: farmPickupIds.has(f.farmer_id) ? 'var(--cream)' : 'var(--forest)' }}>{f.business_name}</p>
-                      <p style={{ fontSize: '0.78rem', color: farmPickupIds.has(f.farmer_id) ? 'var(--sage)' : 'var(--moss)', marginTop: '0.15rem' }}>
-                        {[f.address, f.suburb, f.state].filter(Boolean).join(', ')}
-                      </p>
+                {pickupEligibleFarmers.map(f => {
+                  const checked = farmPickupIds.has(f.farmer_id)
+                  const optionLabel = (o: any) => [
+                    o.day_of_week ? `${o.day_of_week.charAt(0).toUpperCase()}${o.day_of_week.slice(1)}` : '',
+                    o.start_time && o.end_time ? `${o.start_time}–${o.end_time}` : '',
+                  ].filter(Boolean).join(' · ')
+                  const chosen = checked && f.options.length > 0 ? selectedOption(f.farmer_id, f.options) : null
+
+                  return (
+                    <div key={f.farmer_id}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '1rem', background: checked ? 'var(--forest)' : 'var(--olive)', borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleFarmPickup(f.farmer_id)}
+                          style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0, marginTop: '0.1rem' }} />
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: checked ? 'var(--cream)' : 'var(--forest)' }}>{f.business_name}</p>
+                          <p style={{ fontSize: '0.78rem', color: checked ? 'var(--sage)' : 'var(--moss)', marginTop: '0.15rem' }}>
+                            {[f.address, f.suburb, f.state].filter(Boolean).join(', ')}
+                          </p>
+                          {checked && f.options.length === 1 && optionLabel(f.options[0]) && (
+                            <p style={{ fontSize: '0.75rem', color: 'var(--sage)', marginTop: '0.3rem' }}>{optionLabel(f.options[0])}</p>
+                          )}
+                        </div>
+                      </label>
+
+                      {/* More than one pickup slot configured — let the buyer choose which */}
+                      {checked && f.options.length > 1 && (
+                        <div style={{ marginTop: '0.5rem', marginLeft: '1rem', padding: '0.875rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.4rem' }}>Choose a pickup slot</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {f.options.map((o: any) => (
+                              <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name={`pickup-opt-${f.farmer_id}`} checked={chosen?.id === o.id}
+                                  onChange={() => setFulfillmentOptionIds(s => ({ ...s, [f.farmer_id]: o.id }))}
+                                  style={{ accentColor: 'var(--forest)' }} />
+                                <span style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>{optionLabel(o) || 'Pickup'}</span>
+                                {o.notes && <span style={{ fontSize: '0.72rem', color: 'var(--moss)' }}>· {o.notes}</span>}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </label>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -378,7 +427,7 @@ export default function CheckoutPage() {
                   ].filter(Boolean).join(' · ')
 
                   if (f.options.length > 1) {
-                    const chosen = selectedDeliveryOption(f.farmer_id, f.options)
+                    const chosen = selectedOption(f.farmer_id, f.options)
                     return (
                       <div key={f.farmer_id} style={{ padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
                         <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)', marginBottom: '0.5rem' }}>{f.business_name} — choose a delivery slot</p>
@@ -387,7 +436,7 @@ export default function CheckoutPage() {
                             <label key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <input type="radio" name={`delivery-opt-${f.farmer_id}`} checked={chosen?.id === o.id}
-                                  onChange={() => setDeliveryOptionIds(s => ({ ...s, [f.farmer_id]: o.id }))}
+                                  onChange={() => setFulfillmentOptionIds(s => ({ ...s, [f.farmer_id]: o.id }))}
                                   style={{ accentColor: 'var(--forest)' }} />
                                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>{optionLabel(o) || 'Delivery'}</span>
                               </span>

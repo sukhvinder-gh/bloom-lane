@@ -104,6 +104,19 @@ export async function POST(request: NextRequest) {
   )]
   const hasPooledItems = products.some(p => !farmPickupFarmerIds.includes(p.farmer_id))
 
+  // Sanitized version of the buyer's fulfillment-slot picks — only entries
+  // that survived validation against that farmer's real options, keyed by
+  // farmer_id. Delivery entries are added later (they affect price); pickup
+  // entries are validated here (day/time only — farm pickup carries no fee).
+  const validatedOptionSelections: Record<string, string> = {}
+  for (const fid of farmPickupFarmerIds) {
+    const product = products.find(p => p.farmer_id === fid)
+    const pickupOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'pickup')
+    const requestedId = requestedOptionSelections[fid]
+    const chosen = (requestedId && pickupOptions.find((o: any) => o.id === requestedId)) || pickupOptions[0]
+    if (chosen) validatedOptionSelections[fid] = chosen.id
+  }
+
   if (hasPooledItems) {
     if (fulfillment_type === 'hub_pickup' && !hub_id) {
       return NextResponse.json({ error: 'Hub ID required for hub pickup' }, { status: 400 })
@@ -205,12 +218,6 @@ export async function POST(request: NextRequest) {
   // their storefront); sum those per-grower instead of one flat platform fee,
   // falling back to the flat fee only for growers who haven't configured one.
   let deliveryFeeCents = 0
-  // Sanitized version of the buyer's selections — only entries that survived
-  // validation against that farmer's real delivery options, and only when
-  // one was actually used to price the order. This (not the raw request) is
-  // what gets stored, so a farmer's PO can never claim an option that wasn't
-  // genuinely theirs or wasn't the one actually charged.
-  const validatedOptionSelections: Record<string, string> = {}
   if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
     const { data: config } = await supabase
       .from('config').select('value').eq('key', 'delivery_fee_cents').single()

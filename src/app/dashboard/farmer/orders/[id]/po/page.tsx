@@ -86,17 +86,17 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
 
   const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
 
-  // If the buyer picked a specific delivery slot (a grower with more than
-  // one configured), show that slot's real day/time/cost instead of the
-  // generic "Direct delivery" line.
-  let deliveryOption: { day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null } | null = null
+  // If the buyer picked a specific pickup or delivery slot (a grower with
+  // more than one configured), show that slot's real day/time/cost instead
+  // of the generic "Direct delivery" / "Farm pickup" line.
+  let selectedFulfillmentOption: { type: string; day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null } | null = null
   if ((poRecord as any)?.fulfillment_option_id) {
     const { data } = await admin
       .from('farmer_fulfillment_options')
-      .select('day_of_week, start_time, end_time, cost_cents, notes')
+      .select('type, day_of_week, start_time, end_time, cost_cents, notes')
       .eq('id', (poRecord as any).fulfillment_option_id)
       .maybeSingle()
-    deliveryOption = data
+    selectedFulfillmentOption = data
   }
 
   const commissionRate: number = (farmer as any).commission_rate ?? 0.10
@@ -188,13 +188,15 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                 <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
                   {pickupMethod === 'farm_pickup' ? (
-                    '🚜 Farm pickup — buyer collects directly from you'
+                    selectedFulfillmentOption
+                      ? `🚜 Farm pickup${selectedFulfillmentOption.day_of_week ? ` — ${selectedFulfillmentOption.day_of_week.charAt(0).toUpperCase()}${selectedFulfillmentOption.day_of_week.slice(1)}` : ''}${selectedFulfillmentOption.start_time && selectedFulfillmentOption.end_time ? ` ${selectedFulfillmentOption.start_time}–${selectedFulfillmentOption.end_time}` : ''}${selectedFulfillmentOption.notes ? ` · ${selectedFulfillmentOption.notes}` : ''}`
+                      : '🚜 Farm pickup — buyer collects directly from you'
                   ) : order.fulfillment_type === 'hub_pickup' ? (
                     hubZone
                       ? `Hub drop-off — ${[hubZone.hub_address, hubZone.hub_suburb, hubZone.hub_state].filter(Boolean).join(', ')}`
                       : 'Hub drop-off (admin to confirm location)'
-                  ) : deliveryOption ? (
-                    `Delivery${deliveryOption.day_of_week ? ` — ${deliveryOption.day_of_week.charAt(0).toUpperCase()}${deliveryOption.day_of_week.slice(1)}` : ''}${deliveryOption.start_time && deliveryOption.end_time ? ` ${deliveryOption.start_time}–${deliveryOption.end_time}` : ''} · ${formatPrice(deliveryOption.cost_cents)}${deliveryOption.notes ? ` · ${deliveryOption.notes}` : ''}`
+                  ) : selectedFulfillmentOption ? (
+                    `Delivery${selectedFulfillmentOption.day_of_week ? ` — ${selectedFulfillmentOption.day_of_week.charAt(0).toUpperCase()}${selectedFulfillmentOption.day_of_week.slice(1)}` : ''}${selectedFulfillmentOption.start_time && selectedFulfillmentOption.end_time ? ` ${selectedFulfillmentOption.start_time}–${selectedFulfillmentOption.end_time}` : ''} · ${formatPrice(selectedFulfillmentOption.cost_cents)}${selectedFulfillmentOption.notes ? ` · ${selectedFulfillmentOption.notes}` : ''}`
                   ) : 'Direct delivery to florist'}
                 </span>
               </div>
