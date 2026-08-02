@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 
-const FROM = 'The Green Guild <onboarding@resend.dev>'
+const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 export async function POST(request: NextRequest) {

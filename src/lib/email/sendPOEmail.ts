@@ -160,7 +160,10 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 </html>`
 
   await resend.emails.send({
-    from: 'The Green Guild <onboarding@resend.dev>',
+    // Resend's onboarding@resend.dev sandbox address only ever delivers to
+    // the Resend account's own email — real recipients need EMAIL_FROM set
+    // to a verified sending domain.
+    from: `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
     to: farmerEmail,
     subject: `Purchase Order #${po.order_number} – Please fulfil by ${fmtDate(po.grower_fulfillment_date, 'TBC')}`,
     html,

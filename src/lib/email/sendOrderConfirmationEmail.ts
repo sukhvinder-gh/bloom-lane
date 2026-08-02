@@ -163,7 +163,10 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
 </html>`
 
   await resend.emails.send({
-    from: 'The Green Guild <onboarding@resend.dev>',
+    // Resend's onboarding@resend.dev sandbox address only ever delivers to
+    // the Resend account's own email — real recipients need EMAIL_FROM set
+    // to a verified sending domain.
+    from: `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
     to: data.buyer_email,
     subject: `Order confirmed – ${data.order_number}`,
     html,

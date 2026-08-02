@@ -3,7 +3,7 @@ import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/se
 import { isAdminRole } from '@/lib/utils/permissions'
 import { Resend } from 'resend'
 
-const FROM = 'The Green Guild <onboarding@resend.dev>'
+const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 async function requireAdmin() {

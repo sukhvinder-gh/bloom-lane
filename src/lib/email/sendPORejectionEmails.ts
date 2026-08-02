@@ -17,6 +17,10 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
   const resend = new Resend(process.env.RESEND_API_KEY)
   const admin = createAdminClient()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
+  // Resend's onboarding@resend.dev sandbox address only ever delivers to the
+  // Resend account's own email — real recipients need EMAIL_FROM set to a
+  // verified sending domain.
+  const fromAddress = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 
   const { data: order } = await admin
     .from('orders')
@@ -51,7 +55,7 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
   if (buyer?.email) {
     try {
       await resend.emails.send({
-        from: 'The Green Guild <onboarding@resend.dev>',
+        from: fromAddress,
         to: buyer.email,
         subject: `Update on your order ${order.order_number}`,
         html: `
@@ -111,7 +115,7 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
   if (adminEmails.length > 0) {
     try {
       await resend.emails.send({
-        from: 'The Green Guild <onboarding@resend.dev>',
+        from: fromAddress,
         to: adminEmails,
         subject: `PO rejected — Order ${order.order_number} needs resolution`,
         html: `

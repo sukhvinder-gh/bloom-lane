@@ -2,7 +2,10 @@ import { Resend } from 'resend'
 
 function fmt(cents: number) { return `$${(cents / 100).toFixed(2)}` }
 
-const FROM = 'The Green Guild <onboarding@resend.dev>'
+// EMAIL_FROM is configured on the server (Resend requires a verified
+// sending domain to deliver to real recipients — their onboarding@resend.dev
+// sandbox address only ever delivers to the Resend account's own email).
+const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE  = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 function baseLayout(content: string) {
