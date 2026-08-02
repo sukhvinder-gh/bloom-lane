@@ -1,4 +1,4 @@
-import { Resend } from 'resend'
+import { sendEmail } from './mailer'
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -33,7 +33,6 @@ export interface OrderConfirmationData {
 }
 
 export async function sendOrderConfirmationEmail(data: OrderConfirmationData): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
   const itemRows = data.items.map(item => `
@@ -162,11 +161,7 @@ export async function sendOrderConfirmationEmail(data: OrderConfirmationData): P
 </body>
 </html>`
 
-  await resend.emails.send({
-    // Resend's onboarding@resend.dev sandbox address only ever delivers to
-    // the Resend account's own email — real recipients need EMAIL_FROM set
-    // to a verified sending domain.
-    from: `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+  await sendEmail({
     to: data.buyer_email,
     subject: `Order confirmed – ${data.order_number}`,
     html,

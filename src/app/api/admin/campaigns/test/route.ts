@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { Resend } from 'resend'
+import { sendEmail } from '@/lib/email/mailer'
 
-const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 export async function POST(request: NextRequest) {
@@ -45,8 +44,10 @@ export async function POST(request: NextRequest) {
   </div>
 </div></body></html>`
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  const { error } = await resend.emails.send({ from: FROM, to: to.trim(), subject: `[TEST] ${subject}`, html })
-  if (error) return NextResponse.json({ error: String(error) }, { status: 500 })
+  try {
+    await sendEmail({ to: to.trim(), subject: `[TEST] ${subject}`, html })
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }

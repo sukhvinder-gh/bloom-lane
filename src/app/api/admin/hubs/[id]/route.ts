@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
-import { Resend } from 'resend'
+import { sendEmail } from '@/lib/email/mailer'
 
-const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 async function requireAdmin() {
@@ -39,7 +38,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'This hub has no coordinator assigned' }, { status: 400 })
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f5f5f7;font-family:system-ui,-apple-system,sans-serif">
 <div style="max-width:600px;margin:40px auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
@@ -61,8 +59,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   </div>
 </div></body></html>`
 
-  const { error } = await resend.emails.send({ from: FROM, to: coord.email, subject: subject.trim(), html })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    await sendEmail({ to: coord.email, subject: subject.trim(), html })
+  } catch (error) {
+    return NextResponse.json({ error: String(error) }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }

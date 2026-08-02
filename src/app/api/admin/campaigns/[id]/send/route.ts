@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { Resend } from 'resend'
+import { sendEmail } from '@/lib/email/mailer'
 
-const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 function buildHtml(subject: string, body: string) {
@@ -49,11 +48,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'No active subscribers' }, { status: 400 })
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const html = buildHtml(campaign.subject, campaign.body)
 
   const results = await Promise.allSettled(
-    subscribers.map(s => resend.emails.send({ from: FROM, to: s.email, subject: campaign.subject, html }))
+    subscribers.map(s => sendEmail({ to: s.email, subject: campaign.subject, html }))
   )
   const sent = results.filter(r => r.status === 'fulfilled').length
   const failed = results.length - sent

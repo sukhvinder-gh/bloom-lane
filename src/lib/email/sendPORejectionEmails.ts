@@ -5,22 +5,17 @@
 // order needs attention) and every admin (manual resolution — refund,
 // substitute grower, etc. — is needed) by email.
 
-import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/server'
 import { formatAEST } from '@/lib/utils/timezone'
+import { sendEmail } from './mailer'
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
 export async function notifyPORejection(orderId: string, farmerId: string, reason: string): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const admin = createAdminClient()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
-  // Resend's onboarding@resend.dev sandbox address only ever delivers to the
-  // Resend account's own email — real recipients need EMAIL_FROM set to a
-  // verified sending domain.
-  const fromAddress = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 
   const { data: order } = await admin
     .from('orders')
@@ -54,8 +49,7 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
   // --- 1. Buyer notification ---
   if (buyer?.email) {
     try {
-      await resend.emails.send({
-        from: fromAddress,
+      await sendEmail({
         to: buyer.email,
         subject: `Update on your order ${order.order_number}`,
         html: `
@@ -114,8 +108,7 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
 
   if (adminEmails.length > 0) {
     try {
-      await resend.emails.send({
-        from: fromAddress,
+      await sendEmail({
         to: adminEmails,
         subject: `PO rejected — Order ${order.order_number} needs resolution`,
         html: `

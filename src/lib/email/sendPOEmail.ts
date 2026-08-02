@@ -1,6 +1,6 @@
-import { Resend } from 'resend'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { PODocument, type POData } from '@/lib/pdf/PODocument'
+import { sendEmail } from './mailer'
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
@@ -14,7 +14,6 @@ function fmtDate(iso: string | null, fallback = 'TBC') {
 }
 
 export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void> {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const gross = po.items.reduce((s, i) => s + i.subtotal_cents, 0)
   const commission = Math.round(gross * po.commission_rate)
   const net = gross - commission
@@ -159,18 +158,14 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 </body>
 </html>`
 
-  await resend.emails.send({
-    // Resend's onboarding@resend.dev sandbox address only ever delivers to
-    // the Resend account's own email — real recipients need EMAIL_FROM set
-    // to a verified sending domain.
-    from: `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+  await sendEmail({
     to: farmerEmail,
     subject: `Purchase Order #${po.order_number} – Please fulfil by ${fmtDate(po.grower_fulfillment_date, 'TBC')}`,
     html,
     attachments: [
       {
         filename: `PO-${po.order_number}-${po.farmer_business_name.replace(/\s+/g, '-')}.pdf`,
-        content: pdfBuffer.toString('base64'),
+        content: pdfBuffer,
       },
     ],
   })

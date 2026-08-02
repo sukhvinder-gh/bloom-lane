@@ -1,11 +1,7 @@
-import { Resend } from 'resend'
+import { sendEmail } from './mailer'
 
 function fmt(cents: number) { return `$${(cents / 100).toFixed(2)}` }
 
-// EMAIL_FROM is configured on the server (Resend requires a verified
-// sending domain to deliver to real recipients — their onboarding@resend.dev
-// sandbox address only ever delivers to the Resend account's own email).
-const FROM = `The Green Guild <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`
 const SITE  = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
 function baseLayout(content: string) {
@@ -26,7 +22,6 @@ function baseLayout(content: string) {
 export async function sendSubscriptionConfirmation(data: {
   to: string; name: string; plan: string; billing: string; amount_cents: number; gst_registered?: boolean
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const planLabel = data.plan === 'hub_membership' ? 'Hub Membership'
     : data.plan === 'wholesale_collection' ? 'Free Grower Listing'
     : data.plan === 'mailing_list' ? 'Florist Mailing List'
@@ -48,14 +43,13 @@ export async function sendSubscriptionConfirmation(data: {
     </div>
   `)
 
-  await resend.emails.send({ from: FROM, to: data.to, subject: `Subscription confirmed — ${planLabel}`, html })
+  await sendEmail({ to: data.to, subject: `Subscription confirmed — ${planLabel}`, html })
 }
 
 // ── Subscription expiry warning ──────────────────────────────────────────────
 export async function sendSubscriptionExpiryWarning(data: {
   to: string; name: string; plan: string; expires_at: string
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const planLabel = data.plan === 'hub_membership' ? 'Hub Membership' : data.plan
   const expDate = new Date(data.expires_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' })
 
@@ -73,7 +67,7 @@ export async function sendSubscriptionExpiryWarning(data: {
     </div>
   `)
 
-  await resend.emails.send({ from: FROM, to: data.to, subject: `Action required — your subscription expires ${expDate}`, html })
+  await sendEmail({ to: data.to, subject: `Action required — your subscription expires ${expDate}`, html })
 }
 
 // ── Weekly availability digest (florist mailing list) ───────────────────────
@@ -81,7 +75,6 @@ export async function sendWeeklyAvailabilityDigest(data: {
   to: string; name: string;
   products: Array<{ name: string; farmer: string; unit: string; b2b_price: number; category: string }>
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const rows = data.products.slice(0, 20).map(p => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;color:#1a3a2a;font-weight:600">${p.name}</td>
@@ -109,14 +102,13 @@ export async function sendWeeklyAvailabilityDigest(data: {
     <p style="color:#9ab0a0;font-size:11px;text-align:center;margin:0">You're receiving this as a Green Guild Florist Mailing List subscriber. <a href="${SITE}/dashboard/buyer/membership" style="color:#4a7a5a">Manage membership</a></p>
   `)
 
-  await resend.emails.send({ from: FROM, to: data.to, subject: `This week's availability — The Green Guild 🌸`, html })
+  await sendEmail({ to: data.to, subject: `This week's availability — The Green Guild 🌸`, html })
 }
 
 // ── Market open notification (all buyers) ───────────────────────────────────
 export async function sendMarketOpenNotification(data: {
   to: string; name: string; productCount: number
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const html = baseLayout(`
     <p style="color:#1a3a2a;font-size:16px;margin:0 0 8px">Hi ${data.name},</p>
     <p style="color:#4a7a5a;font-size:14px;margin:0 0 24px;line-height:1.6">
@@ -132,7 +124,7 @@ export async function sendMarketOpenNotification(data: {
     </div>
     <p style="color:#9ab0a0;font-size:11px;text-align:center;margin:0">You're receiving this as a registered Green Guild buyer.</p>
   `)
-  await resend.emails.send({ from: FROM, to: data.to, subject: `The market is open — shop this week's fresh produce 🌿`, html })
+  await sendEmail({ to: data.to, subject: `The market is open — shop this week's fresh produce 🌿`, html })
 }
 
 // ── PO notification to grower ────────────────────────────────────────────────
@@ -140,7 +132,6 @@ export async function sendPONotification(data: {
   to: string; grower_name: string; order_number: string; order_id: string;
   items: Array<{ product_name: string; quantity: number; unit: string; subtotal_cents: number }>
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const rows = data.items.map(i => `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #e8f0e8;color:#1a3a2a;font-weight:600">${i.product_name}</td>
@@ -166,5 +157,5 @@ export async function sendPONotification(data: {
     </div>
   `)
 
-  await resend.emails.send({ from: FROM, to: data.to, subject: `New purchase order — ${data.order_number}`, html })
+  await sendEmail({ to: data.to, subject: `New purchase order — ${data.order_number}`, html })
 }
