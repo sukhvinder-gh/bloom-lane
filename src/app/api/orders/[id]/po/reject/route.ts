@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { notifyPORejection } from '@/lib/email/sendPORejectionEmails'
 
 // POST /api/orders/[id]/po/reject
-// Grower rejects their PO for this order. Admin is notified via a flag in purchase_orders.
+// Grower rejects their PO for this order. Buyer and admins are emailed —
+// manual resolution (refund, substitute, contact buyer) is needed.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -51,6 +53,12 @@ export async function POST(
     .from('orders')
     .update({ has_partial_rejection: true, updated_at: new Date().toISOString() })
     .eq('id', orderId)
+
+  // Best-effort — the rejection itself has already succeeded regardless of
+  // whether these emails send.
+  notifyPORejection(orderId, farmer.id, reason.trim()).catch(err =>
+    console.error('[PO-REJECT-EMAIL] notifyPORejection failed for order', orderId, err)
+  )
 
   return NextResponse.json({ data })
 }
