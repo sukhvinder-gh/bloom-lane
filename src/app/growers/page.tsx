@@ -3,18 +3,15 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+// Non-flower types (vegetables, herbs, fruit, eggs, honey, other) aren't
+// fully supported yet — hidden entirely rather than shown broken/empty,
+// matching the marketplace's category chip treatment.
 const FLOWER_TYPES = [
   { id: '', label: 'All types' },
   { id: 'flowers_cut',   label: '✿ Cut Flowers' },
   { id: 'flowers_dried', label: '🌾 Dried' },
   { id: 'flowers_native',label: '🌼 Natives' },
   { id: 'foliage',       label: '🍃 Foliage' },
-  { id: 'vegetables',    label: '🥦 Vegetables' },
-  { id: 'herbs',         label: '🌿 Herbs' },
-  { id: 'fruit',         label: '🍓 Fruit' },
-  { id: 'eggs',          label: '🥚 Eggs' },
-  { id: 'honey',         label: '🍯 Honey' },
-  { id: 'other',         label: '📦 Other' },
 ]
 
 export default function GrowersPage() {

@@ -27,7 +27,7 @@ export async function GET(
     .select('*')
     .eq('farmer_id', farmerId)
     .eq('is_active', true)
-    .order('created_at', { ascending: false })
+    .order('name', { ascending: true })
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
   return NextResponse.json({ data })

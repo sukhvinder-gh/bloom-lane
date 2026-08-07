@@ -56,8 +56,11 @@ export async function GET(request: NextRequest) {
 
   if (category) query = query.eq('category', category)
 
-  const color = url.searchParams.get('color') || ''
-  if (color) query = query.contains('color_tags', [color])
+  // `colors` (comma-separated, multi-select) is the current param; `color`
+  // (single value) is kept for backward compatibility with any old callers.
+  const colorsParam = url.searchParams.get('colors') || url.searchParams.get('color') || ''
+  const colors = colorsParam.split(',').map(c => c.trim()).filter(Boolean)
+  if (colors.length) query = query.overlaps('color_tags', colors)
 
   const farmerId = url.searchParams.get('farmer_id') || ''
   if (farmerId) query = query.eq('farmer_id', farmerId)
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
     query = query.gt('b2c_available', 0)
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false })
+  const { data, error } = await query.order('name', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const { getBuyerUnitPrice } = await import('@/lib/utils/pricing')

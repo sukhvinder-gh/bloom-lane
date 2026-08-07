@@ -50,7 +50,7 @@ export default function FarmerInventoryPage() {
   const [search, setSearch]       = useState('')
   const [category, setCategory]   = useState('all')
   const [status, setStatus]       = useState<StatusFilter>('all')
-  const [sort, setSort]           = useState<SortOption>('newest')
+  const [sort, setSort]           = useState<SortOption>('name_asc')
   const [selected, setSelected]   = useState<Set<string>>(new Set())
   const [bulkStock, setBulkStock] = useState('')
   const [bulkBusy, setBulkBusy]   = useState(false)

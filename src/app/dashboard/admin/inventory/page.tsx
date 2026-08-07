@@ -48,8 +48,9 @@ export default function AdminInventoryPage() {
   const [loadError, setLoadError] = useState('')
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState('all')
+  const [farm, setFarm]         = useState('all')
   const [status, setStatus]     = useState<StatusFilter>('all')
-  const [sort, setSort]         = useState<SortOption>('newest')
+  const [sort, setSort]         = useState<SortOption>('name_asc')
   const [toggling, setToggling] = useState<string | null>(null)
 
   useEffect(() => {
@@ -77,11 +78,34 @@ export default function AdminInventoryPage() {
     setToggling(null)
   }
 
+  // "Farm" options combine each grower's own name with, where they belong to
+  // one, their hub — so admins can scope the list down to either level.
+  const farmOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const p of products) {
+      if (p.farmers?.business_name) names.add(p.farmers.business_name)
+    }
+    return [...names].sort()
+  }, [products])
+
+  const hubOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const p of products) {
+      if (p.farmers?.hubs?.name) names.add(p.farmers.hubs.name)
+    }
+    return [...names].sort()
+  }, [products])
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
 
     const base = products.filter(p => {
       if (category !== 'all' && p.category !== category) return false
+      if (farm !== 'all') {
+        const isFarmMatch = p.farmers?.business_name === farm
+        const isHubMatch   = p.farmers?.hubs?.name === farm
+        if (!isFarmMatch && !isHubMatch) return false
+      }
       if (status === 'listed'   && !p.is_listed_this_week) return false
       if (status === 'unlisted' &&  p.is_listed_this_week) return false
       if (q) {
@@ -103,7 +127,7 @@ export default function AdminInventoryPage() {
         default:           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       }
     })
-  }, [products, search, category, status, sort])
+  }, [products, search, category, farm, status, sort])
 
   const listedCount = products.filter(p => p.is_listed_this_week).length
   const growerCount = new Set(products.map(p => p.farmer_id)).size
@@ -174,6 +198,28 @@ export default function AdminInventoryPage() {
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{CATEGORY_EMOJI[k]} {v}</option>
             ))}
+          </select>
+        </div>
+
+        {/* Farm / Hub */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.875rem', borderRight: '1px solid var(--olive)', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Farm/Hub</span>
+          <select
+            value={farm}
+            onChange={e => setFarm(e.target.value)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '0.825rem', color: 'var(--navy)', cursor: 'pointer', fontFamily: 'var(--font-body)', padding: '0.65rem 0', maxWidth: '10rem' }}
+          >
+            <option value="all">All</option>
+            {farmOptions.length > 0 && (
+              <optgroup label="Farms">
+                {farmOptions.map(f => <option key={f} value={f}>{f}</option>)}
+              </optgroup>
+            )}
+            {hubOptions.length > 0 && (
+              <optgroup label="Hubs">
+                {hubOptions.map(h => <option key={h} value={h}>{h}</option>)}
+              </optgroup>
+            )}
           </select>
         </div>
 

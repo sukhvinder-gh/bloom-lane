@@ -288,9 +288,9 @@ export default function MarketplacePage() {
   const [products, setProducts]   = useState<any[]>([])
   const [loading, setLoading]     = useState(true)
   const [category, setCategory]   = useState('')
-  const [color, setColor]         = useState('')
-  const [farmFilter, setFarmFilter]     = useState('')
-  const [regionFilter, setRegionFilter] = useState('')
+  const [colors, setColors]             = useState<string[]>([])
+  const [farmFilters, setFarmFilters]     = useState<string[]>([])
+  const [regionFilters, setRegionFilters] = useState<string[]>([])
   const [isB2B, setIsB2B]         = useState(false)
   const [userRole, setUserRole]   = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
@@ -332,9 +332,14 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${color ? `&color=${color}` : ''}${farmerId ? `&farmer_id=${farmerId}` : ''}`)
+    const colorsParam = colors.length ? `&colors=${colors.map(encodeURIComponent).join(',')}` : ''
+    fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${colorsParam}${farmerId ? `&farmer_id=${farmerId}` : ''}`)
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
-  }, [category, color, isB2B, farmerId])
+  }, [category, colors, isB2B, farmerId])
+
+  function toggleFilter(setArr: React.Dispatch<React.SetStateAction<string[]>>, value: string) {
+    setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value])
+  }
 
 
   // Show every flower category chip always — hiding chips for zero-stock
@@ -372,8 +377,8 @@ export default function MarketplacePage() {
   const regionOptions = [...new Set(products.map(p => p.farmers?.region).filter(Boolean))].sort()
 
   const filtered = products.filter(p => {
-    if (farmFilter && p.farmers?.business_name !== farmFilter) return false
-    if (regionFilter && p.farmers?.region !== regionFilter) return false
+    if (farmFilters.length && !farmFilters.includes(p.farmers?.business_name)) return false
+    if (regionFilters.length && !regionFilters.includes(p.farmers?.region)) return false
     if (!search) return true
     const q = search.toLowerCase()
     return (
@@ -462,15 +467,34 @@ export default function MarketplacePage() {
             )
           })}
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', padding: '0 1rem 0.75rem' }}>
-          <select className="input" style={{ fontSize: '0.8rem', flex: 1 }} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
-            <option value="">All farms</option>
-            {farmOptions.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-          <select className="input" style={{ fontSize: '0.8rem', flex: 1 }} value={regionFilter} onChange={e => setRegionFilter(e.target.value)}>
-            <option value="">All regions</option>
-            {regionOptions.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+        {farmOptions.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+            {farmOptions.map(f => (
+              <button key={f} type="button" onClick={() => toggleFilter(setFarmFilters, f)}
+                style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${farmFilters.includes(f) ? 'var(--navy)' : 'var(--border)'}`, background: farmFilters.includes(f) ? 'var(--navy)' : 'white', color: farmFilters.includes(f) ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+        {regionOptions.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+            {regionOptions.map(r => (
+              <button key={r} type="button" onClick={() => toggleFilter(setRegionFilters, r)}
+                style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${regionFilters.includes(r) ? 'var(--navy)' : 'var(--border)'}`, background: regionFilters.includes(r) ? 'var(--navy)' : 'white', color: regionFilters.includes(r) ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {r}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+          {COLOR_PALETTE.map(c => (
+            <button key={c.id} type="button" onClick={() => toggleFilter(setColors, c.id)}
+              style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${colors.includes(c.id) ? 'var(--navy)' : 'var(--border)'}`, background: colors.includes(c.id) ? 'var(--navy)' : 'white', color: colors.includes(c.id) ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <span style={{ width: '0.75rem', height: '0.75rem', borderRadius: '50%', background: c.swatch, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+              {c.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -523,32 +547,62 @@ export default function MarketplacePage() {
             })}
           </div>
 
-          <p className="label">Color</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
-            <button type="button" onClick={() => setColor('')}
-              className={`nav-item ${color === '' ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left' }}>
-              All colors
-            </button>
+          {farmOptions.length > 0 && (
+            <>
+              <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                Farm
+                {farmFilters.length > 0 && (
+                  <button type="button" onClick={() => setFarmFilters([])} style={{ background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
+                )}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
+                {farmOptions.map(f => (
+                  <button key={f} type="button" onClick={() => toggleFilter(setFarmFilters, f)}
+                    className={`nav-item ${farmFilters.includes(f) ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: '0.9rem', flexShrink: 0 }}>{farmFilters.includes(f) ? '✓' : ''}</span>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {regionOptions.length > 0 && (
+            <>
+              <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                Region
+                {regionFilters.length > 0 && (
+                  <button type="button" onClick={() => setRegionFilters([])} style={{ background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
+                )}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
+                {regionOptions.map(r => (
+                  <button key={r} type="button" onClick={() => toggleFilter(setRegionFilters, r)}
+                    className={`nav-item ${regionFilters.includes(r) ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: '0.9rem', flexShrink: 0 }}>{regionFilters.includes(r) ? '✓' : ''}</span>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Color
+            {colors.length > 0 && (
+              <button type="button" onClick={() => setColors([])} style={{ background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
+            )}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             {COLOR_PALETTE.map(c => (
-              <button key={c.id} type="button" onClick={() => setColor(c.id)}
-                className={`nav-item ${color === c.id ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button key={c.id} type="button" onClick={() => toggleFilter(setColors, c.id)}
+                className={`nav-item ${colors.includes(c.id) ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ width: '0.9rem', height: '0.9rem', borderRadius: '50%', background: c.swatch, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
                 {c.label}
+                {colors.includes(c.id) && <span style={{ marginLeft: 'auto' }}>✓</span>}
               </button>
             ))}
           </div>
-
-          <p className="label">Farm</p>
-          <select className="input" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
-            <option value="">All farms</option>
-            {farmOptions.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-
-          <p className="label">Region</p>
-          <select className="input" style={{ fontSize: '0.85rem' }} value={regionFilter} onChange={e => setRegionFilter(e.target.value)}>
-            <option value="">All regions</option>
-            {regionOptions.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
         </aside>
 
         {/* Product grid */}
