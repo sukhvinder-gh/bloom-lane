@@ -23,40 +23,66 @@ function ResetPasswordForm() {
     const supabase = createClient()
 
     // Supabase's recovery link puts the session tokens in the URL *hash*
-    // (#access_token=...&refresh_token=...&type=recovery) — a query-string
-    // ?code= is the PKCE alternative. The hash never reaches the server, so
-    // it has to be parsed here rather than assumed to be one specific
-    // format; relying on the client's automatic hash detection raced with
-    // this component's own render and produced a blank page instead of a
-    // real error.
+    // (#access_token=...&refresh_token=...&type=recovery). The browser
+    // client auto-detects and exchanges that hash on its own as soon as
+    // it's created — asynchronously — so racing it with an immediate
+    // getSession()/setSession() call here was losing the race and landing
+    // on the error state even though the exchange succeeded moments later.
+    // onAuthStateChange's PASSWORD_RECOVERY event is Supabase's documented
+    // way to be told exactly when that finishes, instead of polling for it.
+    let resolved = false
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session)) {
+        resolved = true
+        clearTimeout(timeout)
+        setReady(true)
+        setError(null)
+      }
+    })
+
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-    const accessToken  = hashParams.get('access_token')
-    const refreshToken = hashParams.get('refresh_token')
+    const hasRecoveryHash = hashParams.has('access_token') || hashParams.has('refresh_token')
     const code = searchParams.get('code')
     const serverError =
       searchParams.get('error_description') || hashParams.get('error_description') ||
       searchParams.get('error') || hashParams.get('error')
 
-    if (serverError) {
-      setError(decodeURIComponent(serverError.replace(/\+/g, ' ')))
-      return
-    }
+    // Fallback in case the hash is genuinely stale/invalid and Supabase's
+    // own processing never fires an event for it at all.
+    const timeout = setTimeout(() => {
+      if (!resolved) setError(CROSS_DEVICE_HINT)
+    }, 6000)
 
-    if (accessToken && refreshToken) {
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
-        if (error) setError(CROSS_DEVICE_HINT)
-        else setReady(true)
-      })
+    if (serverError) {
+      resolved = true
+      clearTimeout(timeout)
+      setError(decodeURIComponent(serverError.replace(/\+/g, ' ')))
     } else if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (resolved) return
+        resolved = true
+        clearTimeout(timeout)
         if (error) setError(CROSS_DEVICE_HINT)
         else setReady(true)
       })
-    } else {
+    } else if (!hasRecoveryHash) {
+      // No tokens anywhere — check for an already-live session (e.g. the
+      // page was refreshed after a successful exchange) before giving up.
       supabase.auth.getSession().then(({ data: { session } }) => {
+        if (resolved) return
+        resolved = true
+        clearTimeout(timeout)
         if (session) setReady(true)
         else setError(CROSS_DEVICE_HINT)
       })
+    }
+    // else: a recovery hash is present — wait for onAuthStateChange above
+    // (or the timeout) rather than reading it ourselves.
+
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
     }
   }, [searchParams])
 
