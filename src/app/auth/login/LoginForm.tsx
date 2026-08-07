@@ -11,6 +11,7 @@ export default function LoginForm() {
   const resetSuccess = searchParams.get('reset') === 'success'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -63,7 +64,7 @@ export default function LoginForm() {
           <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Welcome back</h1>
           <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '2.5rem' }}>
             No account?{' '}
-            <Link href="/auth/register" style={{ color: 'var(--navy)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign up free</Link>
+            <Link href="/auth/register" style={{ color: 'var(--navy)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign up</Link>
           </p>
           {resetSuccess && (
             <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.75rem', padding: '0.875rem 1rem', marginBottom: '1.5rem', fontSize: '0.75rem', color: '#166534', letterSpacing: '0.05em' }}>
@@ -85,7 +86,20 @@ export default function LoginForm() {
                 <label className="label" style={{ margin: 0 }}>Password</label>
                 <Link href="/auth/forgot-password" style={{ fontSize: '0.75rem', color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Forgot password?</Link>
               </div>
-              <input className="input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="input" type={showPassword ? 'text' : 'password'} placeholder="••••••••"
+                  value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password"
+                  style={{ paddingRight: '2.75rem', width: '100%' }}
+                />
+                <button
+                  type="button" onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: 'var(--moss)', padding: '0.375rem 0.5rem' }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
             <button type="submit" className="btn btn-forest" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}

@@ -134,7 +134,7 @@ export default async function HomePage() {
                 </svg>
               </div>
               <div>
-                <h4>Register – Buyer (free)</h4>
+                <h4>Register – Buyer</h4>
                 <p>Source fresh produce direct from growers.</p>
               </div>
             </Link>

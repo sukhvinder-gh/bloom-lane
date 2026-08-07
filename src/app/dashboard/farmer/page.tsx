@@ -31,6 +31,21 @@ export default async function FarmerOverviewPage() {
     .eq('farmer_id', farmer?.id || '')
     .eq('is_active', true)
 
+  // Whether this grower has picked a membership plan yet (Hub Membership or
+  // the free Grower Listing) — selling requires one, so a farmer who's just
+  // finished setting up their storefront needs a clear next step here.
+  const { data: subscription } = farmer
+    ? await admin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', sessionUser.id)
+        .eq('subscriber_type', 'grower')
+        .in('status', ['active', 'pending'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
   const status = farmer?.status ? STATUS_INFO[farmer.status] : null
 
   return (
@@ -92,6 +107,7 @@ export default async function FarmerOverviewPage() {
                 { icon: '📋', label: 'Manage Inventory',   desc: 'List products and set stock for this week',               href: '/dashboard/farmer/inventory' },
                 { icon: '📦', label: 'View Orders',        desc: 'See incoming orders and update fulfilment status',         href: '/dashboard/farmer/orders' },
                 { icon: '💰', label: 'Payouts',            desc: 'Check your earnings and payout history',                   href: '/dashboard/farmer/payouts' },
+                { icon: '🎫', label: 'Membership',         desc: 'Choose your plan and manage billing',                      href: '/dashboard/farmer/membership' },
               ].map(a => (
                 <Link key={a.href} href={a.href} className="farmer-action-card" style={{ textDecoration: 'none', background: 'white', padding: '1.25rem 1.5rem', display: 'block' }}>
                   <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{a.icon}</p>
@@ -101,6 +117,24 @@ export default async function FarmerOverviewPage() {
               ))}
             </div>
           </div>
+
+          {/* Membership setup nudge — selling requires a plan, so this is the
+              clear next step right after finishing the storefront profile */}
+          {!subscription && (
+            <div className="card reveal" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.25rem', background: '#fef9c3', border: '1px solid #fbbf24' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#92400e', marginBottom: '0.2rem' }}>🎫 Set up your membership</p>
+                  <p className="type-label-sm" style={{ color: '#92400e', opacity: 0.85 }}>
+                    Choose Hub Membership or the free Grower Listing to start listing products for sale.
+                  </p>
+                </div>
+                <Link href="/dashboard/farmer/membership" className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>
+                  Set Up Membership →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Profile completeness nudge */}
           {(!farmer.region || !farmer.sustainability?.length) && (

@@ -98,7 +98,7 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
 }
 
 // ── Current subscription row ──────────────────────────────────────────────────
-function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => void }) {
+function CurrentSubscriptionRow({ sub, onCancel, onChangePlan }: { sub: any; onCancel: () => void; onChangePlan: () => void }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos]   = useState({ top: 0, right: 0 })
   const btnRef          = useRef<HTMLButtonElement>(null)
@@ -191,10 +191,7 @@ function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => v
             overflow: 'hidden',
           }}>
             <button
-              onClick={() => {
-                setOpen(false)
-                document.getElementById('florist-membership-form')?.scrollIntoView({ behavior: 'smooth' })
-              }}
+              onClick={() => { setOpen(false); onChangePlan() }}
               style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
             >
               ✏️ Change Plan
@@ -219,6 +216,39 @@ const FLORIST_BILLING = [
   { value: 'annual',  label: 'Annual',  hint: 'Best value overall' },
 ]
 
+// ── Membership details (read-only summary shown once a plan is active) ────────
+function MembershipDetailsCard({ plan, billing, priceMap, expiresAt, onChangePlan }: {
+  plan: 'mailing_list' | 'personal_shopper'
+  billing: string
+  priceMap: Record<string, number>
+  expiresAt?: string | null
+  onChangePlan: () => void
+}) {
+  const planLabel = plan === 'mailing_list' ? 'Florist Mailing List' : 'Personal Shopper & Delivery'
+  const billingLabel = billing === 'weekly' ? 'Weekly' : billing === 'annual' ? 'Annual' : 'Monthly'
+  const price = plan === 'mailing_list'
+    ? 'Free, always'
+    : (priceMap[billing] ? `$${(priceMap[billing] / 100).toFixed(0)}/${billing === 'weekly' ? 'wk' : billing === 'annual' ? 'yr' : 'mo'}` : 'Price TBC')
+
+  return (
+    <div className="card" style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.375rem' }}>Current Plan</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)' }}>
+            {planLabel}{plan === 'personal_shopper' ? ` — ${billingLabel}` : ''}
+          </p>
+          <p style={{ fontSize: '0.9rem', color: plan === 'mailing_list' ? '#065F46' : '#1E40AF', fontWeight: 700, marginTop: '0.25rem' }}>{price}</p>
+          {expiresAt && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.4rem' }}>Renews {new Date(expiresAt).toLocaleDateString('en-AU')}</p>
+          )}
+        </div>
+        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Change Plan</button>
+      </div>
+    </div>
+  )
+}
+
 export default function FloristSubscriptionPage() {
   const [config, setConfig]   = useState<Record<string, number>>({})
   const [current, setCurrent] = useState<any>(null)
@@ -230,6 +260,10 @@ export default function FloristSubscriptionPage() {
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [cancelling, setCancelling]       = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState(false)
+  // Once a membership is set up, this page should open on a read-only
+  // summary, not the plan picker — "edit" only ever shows again via the
+  // explicit "Change Plan" action.
+  const [viewMode, setViewMode] = useState<'details' | 'edit'>('edit')
 
   useEffect(() => {
     fetch('/api/buyer/subscription')
@@ -240,6 +274,8 @@ export default function FloristSubscriptionPage() {
           setCurrent(d.subscription)
           setPlan(d.subscription.plan)
           setBilling(d.subscription.billing_period || 'monthly')
+          const subActive = d.subscription.status === 'active' || d.subscription.status === 'pending'
+          setViewMode(subActive ? 'details' : 'edit')
         }
       })
       .catch(() => {})
@@ -307,9 +343,16 @@ export default function FloristSubscriptionPage() {
       </p>
 
       {hasExistingSub && (
-        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} />
+        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} onChangePlan={() => setViewMode('edit')} />
       )}
 
+      {hasExistingSub && viewMode === 'details' ? (
+        <MembershipDetailsCard
+          plan={plan} billing={billing} priceMap={priceMap} expiresAt={current?.expires_at}
+          onChangePlan={() => setViewMode('edit')}
+        />
+      ) : (
+      <>
       {/* Plan cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
@@ -414,6 +457,14 @@ export default function FloristSubscriptionPage() {
           {saving ? 'Saving…' : plan === 'mailing_list' ? 'Join Mailing List — Free' : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
+
+      {hasExistingSub && (
+        <button type="button" onClick={() => setViewMode('details')} className="btn btn-ghost btn-sm" style={{ marginTop: '1rem' }}>
+          ← Back to membership details
+        </button>
+      )}
+      </>
+      )}
 
       {pendingConfirm && (() => {
         const isChangingPlan    = hasExistingSub && current?.plan !== plan

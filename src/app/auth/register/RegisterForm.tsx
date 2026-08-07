@@ -10,7 +10,11 @@ type Role = 'buyer_b2b' | 'buyer_b2c' | 'farmer' | 'coordinator'
 export default function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const defaultRole = (searchParams.get('role') as Role) || 'buyer_b2b'
+  const requestedRole = (searchParams.get('role') as Role) || 'buyer_b2b'
+  // Personal retail (buyer_b2c) isn't open for signup yet — only wholesale
+  // buyer accounts are active right now — so a deep link requesting it
+  // falls back to the wholesale option rather than landing on a disabled card.
+  const defaultRole = requestedRole === 'buyer_b2c' ? 'buyer_b2b' : requestedRole
   const [role, setRole] = useState<Role>(defaultRole)
   const [step, setStep] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState({ email: '', password: '', fullName: '', businessName: '', phone: '', abn: '', postcode: '' })
@@ -19,6 +23,7 @@ export default function RegisterForm() {
   const [abnMsg, setAbnMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const up = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   async function checkABN() {
@@ -94,7 +99,7 @@ export default function RegisterForm() {
 
   const roles = [
     { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: 'Buyer pricing with ABN' },
-    { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Retail pricing' },
+    { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Coming soon', disabled: true },
     { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: 'List & sell produce' },
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub or collective' },
   ]
@@ -143,8 +148,10 @@ export default function RegisterForm() {
 
         <div className="card" style={{ padding: '0.375rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.25rem', marginBottom: '0.75rem', background: 'var(--olive)' }}>
           {roles.map(opt => (
-            <button key={opt.id} type="button" onClick={() => setRole(opt.id as Role)}
-              style={{ padding: '0.5rem 0.375rem', borderRadius: '2rem', border: 'none', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', background: role === opt.id ? 'var(--forest)' : 'transparent' }}>
+            <button key={opt.id} type="button" onClick={() => !opt.disabled && setRole(opt.id as Role)}
+              disabled={opt.disabled}
+              title={opt.disabled ? 'Personal retail accounts aren\'t open yet' : undefined}
+              style={{ padding: '0.5rem 0.375rem', borderRadius: '2rem', border: 'none', cursor: opt.disabled ? 'not-allowed' : 'pointer', textAlign: 'center', transition: 'all 0.2s', background: role === opt.id ? 'var(--forest)' : 'transparent', opacity: opt.disabled ? 0.45 : 1 }}>
               <div style={{ fontSize: '1.2rem', marginBottom: '0.2rem' }}>{opt.icon}</div>
               <div className="type-label-sm" style={{ color: role === opt.id ? 'var(--cream)' : 'var(--forest)', marginBottom: '0.1rem' }}>{opt.label}</div>
               <div style={{ fontSize: '0.6rem', color: role === opt.id ? 'var(--sage)' : 'var(--moss)' }}>{opt.sub}</div>
@@ -163,7 +170,23 @@ export default function RegisterForm() {
             <div><label className="label">{role === 'coordinator' ? 'Organisation name *' : 'Business name *'}</label><input className="input" placeholder={role === 'coordinator' ? 'Your organisation or collective' : 'Your business name'} value={form.businessName} onChange={e => up('businessName', e.target.value)} required /></div>
           )}
           <div><label className="label">Email *</label><input className="input" type="email" placeholder="you@business.com.au" value={form.email} onChange={e => up('email', e.target.value)} required /></div>
-          <div><label className="label">Password *</label><input className="input" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => up('password', e.target.value)} required minLength={8} /></div>
+          <div>
+            <label className="label">Password *</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                className="input" type={showPassword ? 'text' : 'password'} placeholder="Min 8 characters"
+                value={form.password} onChange={e => up('password', e.target.value)} required minLength={8}
+                style={{ paddingRight: '2.75rem', width: '100%' }}
+              />
+              <button
+                type="button" onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: 'var(--moss)', padding: '0.375rem 0.5rem' }}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
           {(role === 'buyer_b2b' || role === 'farmer' || role === 'coordinator') && (
             <div>
               <label className="label">ABN (11 digits)</label>

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 // Display label only — the underlying plan value ('wholesale_collection')
 // is unchanged in the database/subscriptions.plan enum. This tier is a
@@ -107,7 +108,7 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
 }
 
 // ── Current subscription row ──────────────────────────────────────────────────
-function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => void }) {
+function CurrentSubscriptionRow({ sub, onCancel, onChangePlan }: { sub: any; onCancel: () => void; onChangePlan: () => void }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos]   = useState({ top: 0, right: 0 })
   const btnRef          = useRef<HTMLButtonElement>(null)
@@ -200,10 +201,7 @@ function CurrentSubscriptionRow({ sub, onCancel }: { sub: any; onCancel: () => v
             overflow: 'hidden',
           }}>
             <button
-              onClick={() => {
-                setOpen(false)
-                document.getElementById('grower-membership-form')?.scrollIntoView({ behavior: 'smooth' })
-              }}
+              onClick={() => { setOpen(false); onChangePlan() }}
               style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
             >
               ✏️ Change Plan
@@ -235,6 +233,54 @@ function PriceTag({ cents, selected }: { cents: number; selected?: boolean }) {
   return <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color, letterSpacing: '-0.03em' }}>${dollars}</span>
 }
 
+// ── Membership details (read-only summary shown once a plan is active) ────────
+function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, farmAddress, farmRegion, gstRegistered, hubName, onChangePlan }: {
+  plan: 'hub_membership' | 'wholesale_collection'
+  billing: string
+  priceMap: Record<string, number>
+  businessName: string; abn: string; farmAddress: string; farmRegion: string
+  gstRegistered: boolean; hubName: string
+  onChangePlan: () => void
+}) {
+  const planLabel = plan === 'hub_membership' ? 'Hub Membership' : FREE_TIER_LABEL
+  const billingLabel = billing === 'annual' ? 'Annual' : billing === 'seasonal' ? 'Seasonal' : 'Monthly'
+  const price = plan === 'hub_membership'
+    ? `$${((priceMap[billing] || 0) / 100).toFixed(0)}/${billing === 'annual' ? 'yr' : billing === 'seasonal' ? 'season' : 'mo'}`
+    : 'No membership fee'
+
+  const fields = [
+    { label: 'Business Name', value: businessName },
+    { label: 'ABN', value: abn },
+    { label: 'Farm Address', value: farmAddress },
+    { label: 'Region', value: farmRegion },
+    ...(plan === 'hub_membership' ? [{ label: 'Hub / Collective', value: hubName }] : []),
+    { label: 'GST Registered', value: gstRegistered ? 'Yes' : 'No' },
+  ]
+
+  return (
+    <div className="card" style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.375rem' }}>Current Plan</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)' }}>
+            {planLabel}{plan === 'hub_membership' ? ` — ${billingLabel}` : ''}
+          </p>
+          <p style={{ fontSize: '0.9rem', color: plan === 'hub_membership' ? '#92400E' : '#065F46', fontWeight: 700, marginTop: '0.25rem' }}>{price}</p>
+        </div>
+        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Change Plan</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', paddingTop: '1.5rem', borderTop: '1px solid var(--olive)' }}>
+        {fields.map(f => (
+          <div key={f.label}>
+            <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.25rem' }}>{f.label}</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--forest)' }}>{f.value || '—'}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function GrowerSubscriptionPage() {
   const router = useRouter()
   const [hubs, setHubs]         = useState<any[]>([])
@@ -246,6 +292,11 @@ export default function GrowerSubscriptionPage() {
   const [pendingConfirm, setPendingConfirm] = useState(false)
   const [cancelConfirm, setCancelConfirm]   = useState(false)
   const [cancelling, setCancelling]         = useState(false)
+  const [hasFarmerProfile, setHasFarmerProfile] = useState(true)
+  // Once a membership is set up, this page should open on a read-only
+  // summary, not the plan picker — "edit" only ever shows again via the
+  // explicit "Change Plan" action.
+  const [viewMode, setViewMode] = useState<'details' | 'edit'>('edit')
 
   // Form state
   const [plan, setPlan]               = useState<'hub_membership' | 'wholesale_collection'>('hub_membership')
@@ -270,6 +321,7 @@ export default function GrowerSubscriptionPage() {
       const cfgMap: Record<string, number> = {}
       ;(cfgData?.data || []).forEach((r: any) => { cfgMap[r.key] = parseInt(r.value) || 0 })
       setConfig(cfgMap)
+      setHasFarmerProfile(!!subData?.farmer)
       if (subData?.farmer) {
         const f = subData.farmer
         setCurrent(subData.subscription)
@@ -283,6 +335,8 @@ export default function GrowerSubscriptionPage() {
         setRctiFullName(f.rcti_full_name || '')
         setFarmAddress(f.farm_address || '')
         setFarmRegion(f.farm_region || '')
+        const subActive = subData.subscription?.status === 'active' || subData.subscription?.status === 'pending'
+        setViewMode(subActive ? 'details' : 'edit')
       }
     }).finally(() => setLoading(false))
   }, [])
@@ -354,6 +408,25 @@ export default function GrowerSubscriptionPage() {
     <div className="page-pad" style={{ padding: '2.5rem', color: 'var(--moss)', opacity: 0.5 }}>Loading…</div>
   )
 
+  // Membership details (business name, ABN, farm address) live on the
+  // farmers row, which doesn't exist until the storefront profile is
+  // created — saving here first would silently update zero rows.
+  if (!hasFarmerProfile) return (
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '52rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
+        Grower Membership
+      </h1>
+      <div className="card" style={{ padding: '2.5rem', textAlign: 'center', marginTop: '1.5rem' }}>
+        <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🌱</p>
+        <h2 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--forest)', marginBottom: '0.5rem' }}>Set up your farm profile first</h2>
+        <p style={{ color: 'var(--moss)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          Your business name, ABN, and address are collected there — membership picks up from that.
+        </p>
+        <Link href="/dashboard/farmer/storefront" className="btn btn-forest">Set Up Farm Profile →</Link>
+      </div>
+    </div>
+  )
+
   const hasExistingSub = current?.status === 'active' || current?.status === 'pending'
 
   return (
@@ -366,9 +439,18 @@ export default function GrowerSubscriptionPage() {
       </p>
 
       {hasExistingSub && (
-        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} />
+        <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} onChangePlan={() => setViewMode('edit')} />
       )}
 
+      {hasExistingSub && viewMode === 'details' ? (
+        <MembershipDetailsCard
+          plan={plan} billing={billing} priceMap={priceMap}
+          businessName={businessName} abn={abn} farmAddress={farmAddress} farmRegion={farmRegion}
+          gstRegistered={gstRegistered} hubName={hubs.find((h: any) => h.id === hubId)?.name || ''}
+          onChangePlan={() => setViewMode('edit')}
+        />
+      ) : (
+      <>
       {/* Plan selector */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
@@ -569,6 +651,14 @@ export default function GrowerSubscriptionPage() {
           {saving ? 'Saving…' : plan === 'wholesale_collection' ? `Register for ${FREE_TIER_LABEL}` : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
+
+      {hasExistingSub && (
+        <button type="button" onClick={() => setViewMode('details')} className="btn btn-ghost btn-sm" style={{ marginTop: '1rem' }}>
+          ← Back to membership details
+        </button>
+      )}
+      </>
+      )}
 
       {pendingConfirm && (() => {
         const isChangingPlan    = hasExistingSub && current?.plan !== plan
