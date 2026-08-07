@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -24,6 +25,7 @@ function fmt(date: string) {
 }
 
 export default function FarmerReportsPage() {
+  const router = useRouter()
   const [period, setPeriod] = useState('90d')
   const [data, setData]     = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -89,7 +91,13 @@ export default function FarmerReportsPage() {
               { label: 'Commission paid', value: s.commission,               fmt: formatPrice,                      icon: '🏛', color: 'var(--moss)' },
               { label: 'GST collected',   value: s.gst_amount,              fmt: formatPrice,                      icon: '🧾', color: 'var(--moss)' },
             ].map(stat => (
-              <div key={stat.label} className="card" style={{ padding: '1.25rem' }}>
+              <div
+                key={stat.label}
+                className="card"
+                style={{ padding: '1.25rem', cursor: 'pointer' }}
+                onClick={() => router.push('/dashboard/farmer/orders')}
+                title="View your orders"
+              >
                 <p style={{ fontSize: '1.5rem', marginBottom: '0.375rem' }}>{stat.icon}</p>
                 <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: stat.color, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em' }}>
                   {stat.fmt(stat.value || 0)}
@@ -109,7 +117,10 @@ export default function FarmerReportsPage() {
           {/* Revenue over time */}
           {weeks.length > 0 && (
             <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '1.25rem' }}>Revenue by week</h2>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>Revenue by week</h2>
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginBottom: '1.25rem' }}>
+                Bar length shows each week's gross revenue relative to your highest-earning week shown below — click a week to see your orders.
+              </p>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '32rem' }}>
                   <thead>
@@ -121,14 +132,19 @@ export default function FarmerReportsPage() {
                   </thead>
                   <tbody>
                     {[...weeks].reverse().map(w => (
-                      <tr key={w.week} style={{ borderBottom: '1px solid var(--olive)' }}>
+                      <tr
+                        key={w.week}
+                        style={{ borderBottom: '1px solid var(--olive)', cursor: 'pointer' }}
+                        onClick={() => router.push('/dashboard/farmer/orders')}
+                        title={`View orders for the week of ${fmt(w.week)}`}
+                      >
                         <td style={{ padding: '0.6rem 0.75rem', fontWeight: 600, color: 'var(--forest)' }}>
                           {fmt(w.week)}
                         </td>
                         <td style={{ padding: '0.6rem 0.75rem', color: 'var(--moss)' }}>{w.orders}</td>
                         <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: 'var(--forest)', fontWeight: 600 }}>{formatPrice(w.gross)}</td>
                         <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#065F46', fontWeight: 600 }}>{formatPrice(w.net)}</td>
-                        <td style={{ padding: '0.6rem 0.75rem', width: '8rem' }}>
+                        <td style={{ padding: '0.6rem 0.75rem', width: '8rem' }} title={`${Math.round((w.gross / maxGross) * 100)}% of your highest week's gross revenue`}>
                           <div style={{ height: '0.5rem', borderRadius: '99px', background: 'var(--olive)', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${Math.round((w.gross / maxGross) * 100)}%`, background: 'var(--forest)', borderRadius: '99px', transition: 'width 0.4s ease' }} />
                           </div>
@@ -156,7 +172,12 @@ export default function FarmerReportsPage() {
                   </thead>
                   <tbody>
                     {products.map((p: any, i: number) => (
-                      <tr key={p.product_id} style={{ borderBottom: '1px solid var(--olive)', background: i % 2 === 0 ? 'white' : 'var(--offwhite, #fafaf7)' }}>
+                      <tr
+                        key={p.product_id}
+                        style={{ borderBottom: '1px solid var(--olive)', background: i % 2 === 0 ? 'white' : 'var(--offwhite, #fafaf7)', cursor: 'pointer' }}
+                        onClick={() => router.push(`/dashboard/farmer/inventory/${p.product_id}`)}
+                        title={`View ${p.name}`}
+                      >
                         <td style={{ padding: '0.7rem 0.75rem', fontWeight: 600, color: 'var(--forest)' }}>{p.name}</td>
                         <td style={{ padding: '0.7rem 0.75rem' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--moss)' }}>

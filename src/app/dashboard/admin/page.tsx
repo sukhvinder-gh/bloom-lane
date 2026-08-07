@@ -115,20 +115,44 @@ export default async function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders?.map(order => (
-                <tr key={order.id} className="table-row">
-                  <td style={{ padding: '0.875rem 1.25rem' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: 'var(--forest)', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{order.order_number}</p>
-                    <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(order.created_at, 'dd MMM, h:mma')}</p>
-                  </td>
-                  <td style={{ padding: '0.875rem 1.25rem' }}><p style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 700 }}>{(order as any).profiles?.full_name}</p></td>
-                  <td style={{ padding: '0.875rem 1.25rem', textAlign: 'center', fontSize: '1.25rem' }}>{order.fulfillment_type === 'hub_pickup' ? '🏭' : '🚚'}</td>
-                  <td style={{ padding: '0.875rem 1.25rem', textAlign: 'center' }}><AdminStatusBadge status={order.status} /></td>
-                  <td style={{ padding: '0.875rem 1.25rem', textAlign: 'right' }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span>
-                  </td>
-                </tr>
-              ))}
+              {recentOrders?.map(order => {
+                // Each cell's content is wrapped in a Link filling the cell,
+                // rather than an onClick on the <tr> — this stays a server
+                // component and gets a real, crawlable/right-clickable href
+                // per row instead of needing client-side navigation.
+                const rowLinkStyle: React.CSSProperties = { display: 'block', padding: '0.875rem 1.25rem', textDecoration: 'none', color: 'inherit' }
+                const href = `/dashboard/admin/orders/${order.id}`
+                return (
+                  <tr key={order.id} className="table-row">
+                    <td style={{ padding: 0 }}>
+                      <Link href={href} style={rowLinkStyle}>
+                        <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: 'var(--forest)', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>{order.order_number}</p>
+                        <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{formatAEST(order.created_at, 'dd MMM, h:mma')}</p>
+                      </Link>
+                    </td>
+                    <td style={{ padding: 0 }}>
+                      <Link href={href} style={rowLinkStyle}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 700 }}>{(order as any).profiles?.full_name}</p>
+                      </Link>
+                    </td>
+                    <td style={{ padding: 0, textAlign: 'center' }}>
+                      <Link href={href} style={{ ...rowLinkStyle, fontSize: '1.25rem' }}>
+                        {order.fulfillment_type === 'hub_pickup' ? '🏭' : '🚚'}
+                      </Link>
+                    </td>
+                    <td style={{ padding: 0, textAlign: 'center' }}>
+                      <Link href={href} style={{ ...rowLinkStyle, display: 'flex', justifyContent: 'center' }}>
+                        <AdminStatusBadge status={order.status} />
+                      </Link>
+                    </td>
+                    <td style={{ padding: 0, textAlign: 'right' }}>
+                      <Link href={href} style={{ ...rowLinkStyle, textAlign: 'right' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(order.total_cents)}</span>
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           </div>{/* end table-wrap */}
