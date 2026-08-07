@@ -11,7 +11,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data: farmer } = await admin
     .from('farmers')
-    .select('id, subscription_type, subscription_tier, subscription_expires_at, hub_id, gst_registered, rcti_agreed, rcti_agreed_at, rcti_full_name, abn, farm_address, farm_region, hubs(name, region)')
+    .select('id, business_name, subscription_type, subscription_tier, subscription_expires_at, hub_id, gst_registered, rcti_agreed, rcti_agreed_at, rcti_full_name, abn, farm_address, farm_region, address, suburb, state, region, hubs(name, region)')
     .eq('user_id', user.id)
     .single()
 
@@ -24,7 +24,17 @@ export async function GET() {
     .limit(1)
     .single()
 
-  return NextResponse.json({ farmer, subscription: sub || null })
+  // farm_address/farm_region are membership-specific fields, only ever set
+  // once this form has been submitted — on a first visit, fall back to the
+  // address/region already entered on the Storefront page rather than
+  // showing blank fields the farmer has to re-type.
+  const farmerOut = farmer ? {
+    ...farmer,
+    farm_address: farmer.farm_address || [farmer.address, farmer.suburb, farmer.state].filter(Boolean).join(', ') || null,
+    farm_region: farmer.farm_region || farmer.region || null,
+  } : farmer
+
+  return NextResponse.json({ farmer: farmerOut, subscription: sub || null })
 }
 
 // POST — save/update grower subscription details (pre-payment step)
