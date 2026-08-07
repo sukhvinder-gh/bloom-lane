@@ -12,19 +12,32 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
 
+  // Most common cause of an "invalid" link on the very first click: it's a
+  // PKCE code, which can only be exchanged in the same browser that
+  // requested the reset (that's where the matching code_verifier lives) —
+  // opening the email on a different device/browser fails immediately,
+  // regardless of real expiry.
+  const CROSS_DEVICE_HINT = "This reset link didn't work — this usually happens when it's opened in a different browser or device than the one you requested it from. Try requesting a new link and opening it on the same device, or copy the full link into that browser."
+
   useEffect(() => {
     const supabase = createClient()
     const code = searchParams.get('code')
+    const serverError = searchParams.get('error_description') || searchParams.get('error')
+
+    if (serverError) {
+      setError(decodeURIComponent(serverError.replace(/\+/g, ' ')))
+      return
+    }
 
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) setError('This reset link is invalid or has expired.')
+        if (error) setError(CROSS_DEVICE_HINT)
         else setReady(true)
       })
     } else {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) setReady(true)
-        else setError('This reset link is invalid or has expired.')
+        else setError(CROSS_DEVICE_HINT)
       })
     }
   }, [searchParams])
@@ -54,7 +67,7 @@ function ResetPasswordForm() {
         {error && (
           <div className="badge badge-red" style={{ width: '100%', padding: '0.875rem 1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', justifyContent: 'flex-start', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
             ⚠ {error}
-            {error.includes('invalid or has expired') && (
+            {!ready && (
               <a href="/auth/forgot-password" style={{ marginLeft: '0.5rem', color: 'inherit', textDecoration: 'underline' }}>Request a new link</a>
             )}
           </div>

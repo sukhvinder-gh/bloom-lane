@@ -1,9 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function CoordinatorHubRegisterPage() {
-  const router = useRouter()
   const [name, setName]     = useState('')
   const [region, setRegion] = useState('')
   const [saving, setSaving] = useState(false)
@@ -27,7 +25,6 @@ export default function CoordinatorHubRegisterPage() {
       setMsg({ type: 'ok', text: `Hub "${name}" registered. Payment of $${((data.fee_cents || 0) / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
     } else {
       setMsg({ type: 'ok', text: `Hub "${name}" is now active! Growers can start joining.` })
-      setTimeout(() => router.push('/dashboard'), 2000)
     }
     setSaving(false)
   }

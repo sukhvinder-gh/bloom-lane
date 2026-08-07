@@ -13,7 +13,15 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  // A confirmation/reset link that failed to exchange for a session lands
+  // here via /auth/callback?error=invalid_link — most often because it was
+  // opened in a different browser/device than the one the email was
+  // requested from. Surface that instead of a silent, unexplained landing.
+  const [error, setError] = useState(() =>
+    searchParams.get('error') === 'invalid_link'
+      ? "That link didn't work — this usually happens when it's opened in a different browser or device than the one you signed up or requested it from. Try opening the email and clicking the link on the same device, or request a new one below."
+      : ''
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

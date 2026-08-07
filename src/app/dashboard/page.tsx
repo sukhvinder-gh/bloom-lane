@@ -16,5 +16,10 @@ export default async function DashboardRootPage() {
   const role = profile?.role || ''
   if (isAdminRole(role)) redirect('/dashboard/admin')
   if (role === 'farmer')  redirect('/dashboard/farmer')
+  // Coordinators have no buyer/farmer-shaped dashboard of their own yet —
+  // falling through to /dashboard/buyer used to send them straight into a
+  // redirect loop, since that layout immediately bounces anyone who isn't
+  // a buyer back to /dashboard (a blank/stuck page in the browser).
+  if (role === 'coordinator') redirect('/dashboard/coordinator/hub/register')
   redirect('/dashboard/buyer')
 }
