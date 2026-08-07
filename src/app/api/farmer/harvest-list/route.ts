@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { toZonedTime, fromZonedTime } from 'date-fns-tz'
+import { AU_TIMEZONE } from '@/lib/utils/timezone'
 
 const ACTIVE_PO_STATUSES = ['pending', 'ready']
 
@@ -13,20 +15,37 @@ async function requireFarmer() {
   return { error: null, status: 200 as const, farmer, admin }
 }
 
-// Monday of the week containing `d`, at local midnight.
-function mondayOf(d: Date): Date {
-  const day = d.getDay() // 0=Sun..6=Sat
+// "Monday" has to mean Monday in Sydney, not wherever the server process
+// happens to be running — the whole app anchors weeks/market windows to
+// Australia/Sydney (see timezone.ts), and a server-local computation here
+// would silently shift the default range by a day whenever server TZ != AEST.
+function defaultWeekRange(): { from: string; to: string } {
+  const sydneyNow = toZonedTime(new Date(), AU_TIMEZONE)
+  const day = sydneyNow.getDay() // 0=Sun..6=Sat, read as Sydney wall-clock
   const diff = (day === 0 ? -6 : 1) - day
-  const monday = new Date(d)
-  monday.setDate(d.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
+  const monday = new Date(sydneyNow)
+  monday.setDate(sydneyNow.getDate() + diff)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return { from: toDateStr(monday), to: toDateStr(sunday) }
+}
+
+// A plain from/to date string means "that calendar day in Sydney" — convert
+// to the real UTC instants bounding it so the range comparison below can't
+// drift by the ~10-11hr AEST/UTC offset.
+function sydneyDateRangeInstants(from: string, to: string): { fromMs: number; toMs: number } {
+  return {
+    fromMs: fromZonedTime(`${from}T00:00:00`, AU_TIMEZONE).getTime(),
+    toMs: fromZonedTime(`${to}T23:59:59`, AU_TIMEZONE).getTime(),
+  }
 }
 
 // GET /api/farmer/harvest-list?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Aggregates this farmer's still-active order lines by product, scoped to
 // orders whose admin-set harvest/fulfilment date falls in [from, to] —
-// defaults to the current Mon–Sun week when no range is given.
+// defaults to the current Mon–Sun week (Sydney time) when no range is given.
 export async function GET(request: NextRequest) {
   const check = await requireFarmer()
   if (check.error || !check.farmer || !check.admin) return NextResponse.json({ error: check.error }, { status: check.status })
@@ -36,12 +55,11 @@ export async function GET(request: NextRequest) {
   let from = url.searchParams.get('from')
   let to = url.searchParams.get('to')
   if (!from || !to) {
-    const monday = mondayOf(new Date())
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
-    from = monday.toISOString().slice(0, 10)
-    to = sunday.toISOString().slice(0, 10)
+    const range = defaultWeekRange()
+    from = range.from
+    to = range.to
   }
+  const { fromMs, toMs } = sydneyDateRangeInstants(from, to)
 
   const { data: pos } = await admin
     .from('purchase_orders')
@@ -64,7 +82,7 @@ export async function GET(request: NextRequest) {
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {
     if (!o.grower_fulfillment_date) return false
     const t = new Date(o.grower_fulfillment_date).getTime()
-    return t >= new Date(from!).getTime() && t <= new Date(`${to}T23:59:59`).getTime()
+    return t >= fromMs && t <= toMs
   })
   const scopedOrderIds = scopedOrders.map((o: any) => o.id)
   const dateByOrder = new Map(scopedOrders.map((o: any) => [o.id, o.grower_fulfillment_date]))

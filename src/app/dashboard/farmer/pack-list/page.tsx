@@ -1,18 +1,9 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatAEST } from '@/lib/utils/timezone'
 import { PrintButton } from '@/components/PrintButton'
 
-function mondayOf(d: Date): Date {
-  const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1) - day
-  const monday = new Date(d)
-  monday.setDate(d.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-function toISODate(d: Date) { return d.toISOString().slice(0, 10) }
 function fmtShort(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
 }
@@ -25,31 +16,35 @@ type Order = {
 }
 
 export default function PackListPage() {
-  const initialMonday = mondayOf(new Date())
-  const initialSunday = new Date(initialMonday)
-  initialSunday.setDate(initialMonday.getDate() + 6)
-
   const [mode, setMode] = useState<'range' | 'day'>('range')
-  const [from, setFrom] = useState(toISODate(initialMonday))
-  const [to, setTo] = useState(toISODate(initialSunday))
+  // Left null until the server tells us what "this week" means (computed
+  // in Sydney time server-side — see the harvest-list page for why the
+  // client doesn't do this calculation itself).
+  const [from, setFrom] = useState<string | null>(null)
+  const [to, setTo] = useState<string | null>(null)
   const [data, setData] = useState<{ orders: Order[]; order_count: number; unscheduled_order_count: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
 
-  const load = useCallback(() => {
+  async function load(f?: string | null, t?: string | null) {
     setLoading(true)
-    fetch(`/api/farmer/pack-list?from=${from}&to=${to}`)
-      .then(r => r.json())
-      .then(d => { setData(d.data); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [from, to])
+    const qs = f && t ? `?from=${f}&to=${t}` : ''
+    try {
+      const res = await fetch(`/api/farmer/pack-list${qs}`)
+      const json = await res.json()
+      setData(json.data)
+      setFrom(json.data.from)
+      setTo(json.data.to)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function resetToThisWeek() {
     setMode('range')
-    setFrom(toISODate(initialMonday))
-    setTo(toISODate(initialSunday))
+    load()
   }
 
   async function toggleItem(orderId: string, item: Item) {
@@ -72,7 +67,7 @@ export default function PackListPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: item.id, packed: nextPacked }),
     })
-    if (!res.ok) load()
+    if (!res.ok) load(from, to)
     setBusyIds(s => { const n = new Set(s); n.delete(item.id); return n })
   }
 
@@ -94,7 +89,7 @@ export default function PackListPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order_id: order.id, packed: nextPacked }),
     })
-    if (!res.ok) load()
+    if (!res.ok) load(from, to)
     setBusyIds(s => {
       const n = new Set(s)
       order.items.forEach(i => n.delete(i.id))
@@ -129,11 +124,11 @@ export default function PackListPage() {
         </div>
         {mode === 'range' ? (
           <>
-            <div><label className="label">From</label><input type="date" className="input" value={from} onChange={e => setFrom(e.target.value)} /></div>
-            <div><label className="label">To</label><input type="date" className="input" value={to} onChange={e => setTo(e.target.value)} /></div>
+            <div><label className="label">From</label><input type="date" className="input" value={from ?? ''} onChange={e => load(e.target.value, to)} /></div>
+            <div><label className="label">To</label><input type="date" className="input" value={to ?? ''} onChange={e => load(from, e.target.value)} /></div>
           </>
         ) : (
-          <div><label className="label">Date</label><input type="date" className="input" value={from} onChange={e => { setFrom(e.target.value); setTo(e.target.value) }} /></div>
+          <div><label className="label">Date</label><input type="date" className="input" value={from ?? ''} onChange={e => load(e.target.value, e.target.value)} /></div>
         )}
         <button onClick={resetToThisWeek} className="btn btn-ghost btn-sm">This week</button>
       </div>
@@ -142,7 +137,7 @@ export default function PackListPage() {
         <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '2rem 2.5rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>Pack List</div>
           <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
-            {data?.order_count ?? 0} order{(data?.order_count ?? 0) === 1 ? '' : 's'} to pack · {fmtShort(from)}{from !== to ? ` – ${fmtShort(to)}` : ''}
+            {data?.order_count ?? 0} order{(data?.order_count ?? 0) === 1 ? '' : 's'} to pack{from && to ? ` · ${fmtShort(from)}${from !== to ? ` – ${fmtShort(to)}` : ''}` : ''}
           </p>
           {!!data?.unscheduled_order_count && (
             <p className="no-print" style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.75rem', background: '#fef9c3', padding: '0.6rem 0.875rem', borderRadius: '0.625rem' }}>
