@@ -21,15 +21,33 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     const supabase = createClient()
+
+    // Supabase's recovery link puts the session tokens in the URL *hash*
+    // (#access_token=...&refresh_token=...&type=recovery) — a query-string
+    // ?code= is the PKCE alternative. The hash never reaches the server, so
+    // it has to be parsed here rather than assumed to be one specific
+    // format; relying on the client's automatic hash detection raced with
+    // this component's own render and produced a blank page instead of a
+    // real error.
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const accessToken  = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
     const code = searchParams.get('code')
-    const serverError = searchParams.get('error_description') || searchParams.get('error')
+    const serverError =
+      searchParams.get('error_description') || hashParams.get('error_description') ||
+      searchParams.get('error') || hashParams.get('error')
 
     if (serverError) {
       setError(decodeURIComponent(serverError.replace(/\+/g, ' ')))
       return
     }
 
-    if (code) {
+    if (accessToken && refreshToken) {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
+        if (error) setError(CROSS_DEVICE_HINT)
+        else setReady(true)
+      })
+    } else if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) setError(CROSS_DEVICE_HINT)
         else setReady(true)
@@ -93,7 +111,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--cream)' }} />}>
       <ResetPasswordForm />
     </Suspense>
   )
