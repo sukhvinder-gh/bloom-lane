@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
+import { hasActiveMembership } from '@/lib/utils/membership'
 import { z } from 'zod'
 
 const VALID_CATEGORIES = ['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']
@@ -13,6 +14,9 @@ export async function POST(request: NextRequest) {
   const { data: farmer } = await supabase.from('farmers').select('id, status').eq('user_id', user.id).single()
   if (!farmer) return NextResponse.json({ error: 'Farmer account not found' }, { status: 403 })
   if (farmer.status !== 'approved') return NextResponse.json({ error: 'Farmer account not yet approved' }, { status: 403 })
+  if (!(await hasActiveMembership(user.id))) {
+    return NextResponse.json({ error: 'An approved membership is required before you can list products.' }, { status: 403 })
+  }
 
   const { products } = await request.json()
   if (!Array.isArray(products) || products.length === 0) {
