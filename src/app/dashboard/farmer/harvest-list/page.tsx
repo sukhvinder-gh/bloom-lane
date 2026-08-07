@@ -1,55 +1,90 @@
-import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
 
-const ACTIVE_PO_STATUSES = ['pending', 'ready']
+function mondayOf(d: Date): Date {
+  const day = d.getDay()
+  const diff = (day === 0 ? -6 : 1) - day
+  const monday = new Date(d)
+  monday.setDate(d.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
+}
+function toISODate(d: Date) { return d.toISOString().slice(0, 10) }
+function fmtShort(iso: string) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
+}
 
-export default async function HarvestListPage() {
-  const sessionUser = await getSessionUserFromCookie()
-  if (!sessionUser) redirect('/auth/login')
+type Row = {
+  key: string; name: string; unit: string; category: string; qty: number
+  order_count: number; item_ids: string[]; notes: string[]
+  fully_harvested: boolean; any_harvested: boolean; overdue: boolean
+}
 
-  const admin = createAdminClient()
+function RowCheckbox({ row, busy, onToggle }: { row: Row; busy: boolean; onToggle: () => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !row.fully_harvested && row.any_harvested
+  }, [row.fully_harvested, row.any_harvested])
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={row.fully_harvested}
+      onChange={onToggle}
+      disabled={busy}
+      aria-label={`Mark ${row.name} as harvested`}
+      style={{ width: '1.5rem', height: '1.5rem', accentColor: 'var(--forest)', cursor: busy ? 'wait' : 'pointer' }}
+    />
+  )
+}
 
-  const { data: farmers } = await admin
-    .from('farmers').select('id, business_name').eq('user_id', sessionUser.id).limit(1)
-  const farmer = farmers?.[0] ?? null
-  if (!farmer) redirect('/dashboard')
+export default function HarvestListPage() {
+  const initialMonday = mondayOf(new Date())
+  const initialSunday = new Date(initialMonday)
+  initialSunday.setDate(initialMonday.getDate() + 6)
 
-  // Every order this farmer still needs to fulfil this cycle — not yet
-  // packed off to the hub/courier, and not rejected.
-  const { data: pos } = await admin
-    .from('purchase_orders')
-    .select('order_id')
-    .eq('farmer_id', farmer.id)
-    .in('status', ACTIVE_PO_STATUSES)
+  const [mode, setMode] = useState<'range' | 'day'>('range')
+  const [from, setFrom] = useState(toISODate(initialMonday))
+  const [to, setTo] = useState(toISODate(initialSunday))
+  const [data, setData] = useState<{ rows: Row[]; order_count: number; unscheduled_order_count: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set())
 
-  const orderIds = [...new Set((pos || []).map(p => p.order_id))]
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch(`/api/farmer/harvest-list?from=${from}&to=${to}`)
+      .then(r => r.json())
+      .then(d => { setData(d.data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [from, to])
 
-  const { data: items } = orderIds.length > 0
-    ? await admin
-        .from('order_items')
-        .select('id, order_id, quantity, products(name, unit, category)')
-        .eq('farmer_id', farmer.id)
-        .in('order_id', orderIds)
-    : { data: [] as any[] }
+  useEffect(() => { load() }, [load])
 
-  // Aggregate across every active order — a grower cuts once for the whole
-  // week's demand, not order by order.
-  const byProduct = new Map<string, { name: string; unit: string; category: string; qty: number; orders: Set<string> }>()
-  for (const item of items || []) {
-    const p = (item as any).products
-    const key = p?.name + '|' + p?.unit
-    const entry = byProduct.get(key) || { name: p?.name || 'Unknown', unit: p?.unit || '', category: p?.category || '', qty: 0, orders: new Set() }
-    entry.qty += item.quantity
-    entry.orders.add(item.order_id)
-    byProduct.set(key, entry)
+  function resetToThisWeek() {
+    setMode('range')
+    setFrom(toISODate(initialMonday))
+    setTo(toISODate(initialSunday))
   }
 
-  const rows = [...byProduct.values()].sort((a, b) => a.name.localeCompare(b.name))
+  async function toggleRow(row: Row) {
+    const nextHarvested = !row.fully_harvested
+    setBusyKeys(s => new Set(s).add(row.key))
+    setData(d => d ? { ...d, rows: d.rows.map(r => r.key === row.key ? { ...r, fully_harvested: nextHarvested, any_harvested: nextHarvested, overdue: nextHarvested ? false : r.overdue } : r) } : d)
+    const res = await fetch('/api/farmer/harvest-list', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_ids: row.item_ids, harvested: nextHarvested }),
+    })
+    if (!res.ok) load()
+    setBusyKeys(s => { const n = new Set(s); n.delete(row.key); return n })
+  }
+
+  const rows = data?.rows || []
 
   return (
-    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '860px', margin: '0 auto' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '900px', margin: '0 auto' }}>
       <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <Link href="/dashboard/farmer/orders" className="btn btn-ghost btn-sm">← Orders</Link>
         <span style={{ flex: 1 }} />
@@ -57,20 +92,52 @@ export default async function HarvestListPage() {
         <PrintButton label="Print" />
       </div>
 
+      {/* Date filter */}
+      <div className="no-print card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          {(['range', 'day'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              style={{ padding: '0.4rem 0.9rem', borderRadius: '99px', border: '1.5px solid var(--olive)', background: mode === m ? 'var(--forest)' : 'white', color: mode === m ? 'white' : 'var(--forest)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font-body)' }}
+            >
+              {m === 'range' ? 'Date range' : 'Single date'}
+            </button>
+          ))}
+        </div>
+        {mode === 'range' ? (
+          <>
+            <div><label className="label">From</label><input type="date" className="input" value={from} onChange={e => setFrom(e.target.value)} /></div>
+            <div><label className="label">To</label><input type="date" className="input" value={to} onChange={e => setTo(e.target.value)} /></div>
+          </>
+        ) : (
+          <div><label className="label">Date</label><input type="date" className="input" value={from} onChange={e => { setFrom(e.target.value); setTo(e.target.value) }} /></div>
+        )}
+        <button onClick={resetToThisWeek} className="btn btn-ghost btn-sm">This week</button>
+      </div>
+
       <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '2.5rem' }}>
         <div style={{ borderBottom: '2px solid var(--forest)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>Harvest List</div>
           <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
-            {farmer.business_name} · totals across {orderIds.length} active order{orderIds.length === 1 ? '' : 's'}
+            totals across {data?.order_count ?? 0} order{(data?.order_count ?? 0) === 1 ? '' : 's'} · {fmtShort(from)}{from !== to ? ` – ${fmtShort(to)}` : ''}
           </p>
+          {!!data?.unscheduled_order_count && (
+            <p className="no-print" style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.75rem', background: '#fef9c3', padding: '0.6rem 0.875rem', borderRadius: '0.625rem' }}>
+              ⚠ {data.unscheduled_order_count} active order{data.unscheduled_order_count === 1 ? '' : 's'} {data.unscheduled_order_count === 1 ? "doesn't" : "don't"} have a harvest date set yet, so {data.unscheduled_order_count === 1 ? "it isn't" : "they aren't"} shown here — check with admin.
+            </p>
+          )}
         </div>
 
-        {rows.length === 0 ? (
-          <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '3rem 0' }}>Nothing to harvest right now — no active orders.</p>
+        {loading ? (
+          <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '3rem 0' }}>Loading…</p>
+        ) : rows.length === 0 ? (
+          <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '3rem 0' }}>Nothing to harvest in this date range.</p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--forest)' }}>
+                <th className="no-print" style={{ padding: '0.75rem 0.5rem', width: '2.5rem' }} />
                 {['Product', 'Total to cut', 'Orders'].map((h, i) => (
                   <th key={h} style={{ padding: '0.75rem', textAlign: i === 0 ? 'left' : 'right', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--forest)' }}>{h}</th>
                 ))}
@@ -78,12 +145,31 @@ export default async function HarvestListPage() {
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.name + r.unit} style={{ borderBottom: '1px solid var(--olive)' }}>
-                  <td style={{ padding: '1rem 0.75rem', fontSize: '1.1rem', fontWeight: 700, color: 'var(--forest)' }}>{r.name}</td>
+                <tr key={r.key} style={{ borderBottom: '1px solid var(--olive)', background: r.overdue ? '#fee2e2' : 'transparent' }}>
+                  <td className="no-print" style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
+                    <RowCheckbox row={r} busy={busyKeys.has(r.key)} onToggle={() => toggleRow(r)} />
+                  </td>
+                  <td style={{ padding: '1rem 0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--forest)', textDecoration: r.fully_harvested ? 'line-through' : 'none', opacity: r.fully_harvested ? 0.6 : 1 }}>{r.name}</span>
+                      {r.overdue && (
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>
+                          ⚠ Not fulfilled
+                        </span>
+                      )}
+                    </div>
+                    {r.notes.length > 0 && (
+                      <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        {r.notes.map((n, i) => (
+                          <p key={i} style={{ fontSize: '0.75rem', color: 'var(--moss)', fontStyle: 'italic' }}>📝 {n}</p>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '1.4rem', fontFamily: 'var(--font-display)', color: 'var(--forest)' }}>
                     {r.qty} <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-body)', color: 'var(--moss)' }}>{r.unit}</span>
                   </td>
-                  <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '0.85rem', color: 'var(--moss)' }}>{r.orders.size}</td>
+                  <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '0.85rem', color: 'var(--moss)' }}>{r.order_count}</td>
                 </tr>
               ))}
             </tbody>
