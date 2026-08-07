@@ -10,6 +10,32 @@ const EMOJI: Record<string, string> = {
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 
+const DOW_SHORT: Record<string, string> = {
+  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
+}
+
+// Different growers/hubs in the same cart can offer different pickup or
+// delivery slots (configured on their storefront). Surfacing that per item
+// here — not only once a buyer reaches the fulfillment step at checkout —
+// so they know upfront whether this particular item's grower even offers
+// what they're hoping for.
+function fulfillmentBadges(farmers: any): { key: string; label: string }[] {
+  const options: any[] = farmers?.farmer_fulfillment_options || []
+  if (options.length === 0) {
+    return farmers?.offers_farm_pickup ? [{ key: 'pickup-generic', label: '🚜 Farm pickup available' }] : []
+  }
+  return options.map(o => {
+    const day = o.day_of_week ? DOW_SHORT[o.day_of_week] || o.day_of_week : ''
+    const time = o.start_time && o.end_time ? `${o.start_time}–${o.end_time}` : ''
+    const cost = o.type === 'pickup' ? (o.cost_cents > 0 ? formatPrice(o.cost_cents) : 'Free') : formatPrice(o.cost_cents || 0)
+    const when = [day, time].filter(Boolean).join(' ')
+    return {
+      key: o.id,
+      label: `${o.type === 'pickup' ? '🚜' : '🚚'} ${o.type === 'pickup' ? 'Pickup' : 'Delivery'}${when ? `: ${when}` : ''} · ${cost}`,
+    }
+  })
+}
+
 type StockIssue = {
   product_id: string; name: string; unit: string
   requested: number; available: number; delisted: boolean
@@ -255,6 +281,21 @@ export default function CartPage() {
                     maxLength={200}
                     style={{ width: '100%', marginTop: '0.6rem', padding: '0.4rem 0.6rem', fontSize: '0.78rem', border: '1px solid var(--olive)', borderRadius: '0.5rem', background: 'white', color: 'var(--forest)', outline: 'none', fontFamily: 'var(--font-body)' }}
                   />
+
+                  {/* This grower's pickup/delivery options, straight from their storefront */}
+                  {(() => {
+                    const badges = fulfillmentBadges(item.product.farmers)
+                    if (badges.length === 0) return null
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.6rem' }}>
+                        {badges.map(b => (
+                          <span key={b.key} style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--forest)', background: 'var(--green-soft)', padding: '0.2rem 0.5rem', borderRadius: '99px' }}>
+                            {b.label}
+                          </span>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Line total + remove */}

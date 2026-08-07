@@ -210,15 +210,35 @@ export default function CheckoutPage() {
                 const exGstUnit  = item.unit_price_cents - unitGst
                 const displayUnit = isB2B ? exGstUnit : item.unit_price_cents
                 const lineTotal   = displayUnit * item.quantity
+
+                // Each item shows exactly what its own grower's chosen fulfillment
+                // is — different growers in the same order can be pickup vs
+                // delivery, or different slots of the same type, and the buyer
+                // should see that against the specific item, not just once
+                // buried in a single collection-method section below.
+                const isPickup = farmPickupIds.has(item.product.farmer_id)
+                let fulfillmentTag: string | null = null
+                if (isPickup) {
+                  fulfillmentTag = '🚜 farm pickup'
+                } else if (fulfillment_type === 'direct_delivery') {
+                  const deliveryEntry = pooledDeliveryInfo.find(f => f.farmer_id === item.product.farmer_id)
+                  const chosen = deliveryEntry && deliveryEntry.options.length > 0 ? selectedOption(deliveryEntry.farmer_id, deliveryEntry.options) : null
+                  const day = chosen?.day_of_week ? `${chosen.day_of_week.charAt(0).toUpperCase()}${chosen.day_of_week.slice(1)}` : ''
+                  const time = chosen?.start_time && chosen?.end_time ? ` ${chosen.start_time}–${chosen.end_time}` : ''
+                  fulfillmentTag = chosen ? `🚚 delivery${day ? ` · ${day}${time}` : ''}` : '🚚 delivery'
+                } else if (fulfillment_type === 'hub_pickup') {
+                  fulfillmentTag = '🏭 hub pickup'
+                }
+
                 return (
                   <div key={item.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--cream)', marginBottom: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.product.name}
-                        {farmPickupIds.has(item.product.farmer_id) && (
-                          <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', color: 'var(--sage)', fontWeight: 600 }}>🚜 farm pickup</span>
-                        )}
                       </p>
+                      {fulfillmentTag && (
+                        <p style={{ fontSize: '0.65rem', color: 'var(--sage)', fontWeight: 600, marginBottom: '0.15rem' }}>{fulfillmentTag}</p>
+                      )}
                       <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
                         {item.quantity} × {formatPrice(displayUnit)} / {item.product.unit}
                         {isB2B && !isGstFree && <span style={{ opacity: 0.6 }}> ex-GST</span>}

@@ -4,8 +4,10 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { notifyPORejection } from '@/lib/email/sendPORejectionEmails'
 
 // POST /api/orders/[id]/po/reject
-// Grower rejects their PO for this order. Buyer and admins are emailed —
-// manual resolution (refund, substitute, contact buyer) is needed.
+// Grower rejects their PO for this order. The buyer is emailed directly —
+// admins aren't cc'd on this (see sendPORejectionEmails.ts), but still see
+// it via the admin Orders list, where manual resolution (refund, substitute,
+// contact buyer) can happen.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
