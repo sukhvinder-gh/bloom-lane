@@ -34,8 +34,15 @@ export default function ForgotPasswordPage() {
             <div style={{ width: '3rem', height: '3rem', borderRadius: '50%', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', marginBottom: '1.5rem' }}>✓</div>
             <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Check your email</h1>
             <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '2rem' }}>
-              We sent a reset link to <strong>{email}</strong>. Click it to set a new password.
+              We sent a code to <strong>{email}</strong>. Enter it on the next screen to set a new password.
             </p>
+            <Link
+              href={`/auth/reset-password?email=${encodeURIComponent(email)}`}
+              className="btn btn-forest"
+              style={{ width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none', marginBottom: '1.25rem' }}
+            >
+              I have my code →
+            </Link>
             <Link href="/auth/login" style={{ color: 'var(--navy)', fontSize: '0.875rem', textDecoration: 'underline', textUnderlineOffset: '3px' }}>
               Back to sign in
             </Link>
