@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
+import { AUDateTimeInput } from '@/components/AUDateInput'
 
 const STATUS_TRANSITIONS: Record<string, { status: string; label: string; danger?: boolean }[]> = {
   payment_confirmed: [
@@ -183,13 +184,13 @@ export default function AdminOrderDetail({ order }: { order: any }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ fontSize: '0.75rem', color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>🌿 Grower fulfils by</label>
-              <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
-                value={fulfillDate} onChange={e => setFulfillDate(e.target.value)} />
+              <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                value={fulfillDate} onChange={setFulfillDate} ariaLabel="Grower fulfils by" />
             </div>
             <div>
               <label style={{ fontSize: '0.75rem', color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>🚚 Florist delivery date</label>
-              <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
-                value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+              <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                value={deliveryDate} onChange={setDeliveryDate} ariaLabel="Florist delivery date" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

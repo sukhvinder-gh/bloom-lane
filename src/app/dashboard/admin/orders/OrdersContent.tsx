@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
+import { AUDateTimeInput } from '@/components/AUDateInput'
 
 type View = 'orders' | 'packing' | 'picking'
 
@@ -287,13 +288,13 @@ function DateManager({ order, onUpdate }: { order: any; onUpdate: (id: string, f
           <p className="type-label-sm" style={{ color: 'var(--forest)', fontWeight: 700 }}>Fulfilment &amp; Delivery Dates</p>
           <div>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>Grower fulfils by</label>
-            <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
-              value={fulfillDate} onChange={e => setFulfillDate(e.target.value)} />
+            <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              value={fulfillDate} onChange={setFulfillDate} ariaLabel="Grower fulfils by" />
           </div>
           <div>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>Florist delivery date</label>
-            <input type="datetime-local" className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
-              value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+            <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+              value={deliveryDate} onChange={setDeliveryDate} ariaLabel="Florist delivery date" />
           </div>
           <button onClick={save} disabled={saving} className="btn btn-forest btn-sm">{saving ? 'Saving…' : 'Save dates'}</button>
         </div>
@@ -486,9 +487,16 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                   </div>
                   {order.order_items?.map((item: any) => (
                     <div key={item.id} style={{ padding: '0.875rem 1.75rem', borderBottom: '1px solid var(--olive)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div style={{ width: '1.25rem', height: '1.25rem', borderRadius: '0.25rem', border: '2px solid var(--sage)', flexShrink: 0 }} />
+                      <input
+                        type="checkbox"
+                        checked={!!item.picked_at}
+                        onChange={() => togglePicked(item.id, !!item.picked_at)}
+                        disabled={busyPickIds.has(item.id)}
+                        aria-label={`Mark ${item.products?.name} as packed`}
+                        style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--forest)', cursor: busyPickIds.has(item.id) ? 'wait' : 'pointer', flexShrink: 0 }}
+                      />
                       <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{item.products?.name} × {item.quantity}</p>
+                        <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', textDecoration: item.picked_at ? 'line-through' : 'none', opacity: item.picked_at ? 0.6 : 1 }}>{item.products?.name} × {item.quantity}</p>
                         <p className="type-label-sm" style={{ color: 'var(--moss)' }}>from {item.farmers?.business_name}</p>
                       </div>
                       {item.ppod_url ? <span className="badge badge-sage">✓ PPOD</span> : <span className="badge badge-olive">No PPOD</span>}
