@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isSuperAdminRole, canEditConfigKey, roleLabel } from '@/lib/utils/permissions'
+import { AUDateInput } from '@/components/AUDateInput'
 
 // ── Section / item definitions ───────────────────────────────────────────────
 
@@ -189,13 +190,13 @@ function ConfigRow({
       {canEdit && showSchedule && (
         <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.625rem', paddingLeft: '0.125rem' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--moss)', fontWeight: 600 }}>Effective from</span>
-          <input
-            type="date"
+          <AUDateInput
             value={scheduleDate}
             min={todayISO}
-            onChange={e => setScheduleDate(e.target.value)}
+            onChange={setScheduleDate}
             className="input"
             style={{ width: '9.5rem', fontSize: '0.8rem' }}
+            ariaLabel="Effective from date"
           />
           {scheduleDate && new Date(scheduleDate) <= new Date() && (
             <span style={{ fontSize: '0.72rem', color: 'var(--amber-new)' }}>Today or past → applies immediately</span>

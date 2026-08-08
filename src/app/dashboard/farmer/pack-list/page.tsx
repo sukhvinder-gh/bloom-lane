@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatAEST } from '@/lib/utils/timezone'
 import { PrintButton } from '@/components/PrintButton'
+import { AUDateInput } from '@/components/AUDateInput'
 
 function fmtShort(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
@@ -124,11 +125,11 @@ export default function PackListPage() {
         </div>
         {mode === 'range' ? (
           <>
-            <div><label className="label">From</label><input type="date" className="input" value={from ?? ''} onChange={e => load(e.target.value, to)} /></div>
-            <div><label className="label">To</label><input type="date" className="input" value={to ?? ''} onChange={e => load(from, e.target.value)} /></div>
+            <div><label className="label">From</label><AUDateInput className="input" value={from ?? ''} onChange={v => load(v, to)} ariaLabel="From date" /></div>
+            <div><label className="label">To</label><AUDateInput className="input" value={to ?? ''} onChange={v => load(from, v)} ariaLabel="To date" /></div>
           </>
         ) : (
-          <div><label className="label">Date</label><input type="date" className="input" value={from ?? ''} onChange={e => load(e.target.value, e.target.value)} /></div>
+          <div><label className="label">Date</label><AUDateInput className="input" value={from ?? ''} onChange={v => load(v, v)} ariaLabel="Date" /></div>
         )}
         <button onClick={resetToThisWeek} className="btn btn-ghost btn-sm">This week</button>
       </div>

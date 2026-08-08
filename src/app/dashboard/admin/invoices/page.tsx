@@ -3,6 +3,7 @@ import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { ExportInvoicesButton } from './ExportInvoicesButton'
+import { AUDateInput } from '@/components/AUDateInput'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,11 +58,11 @@ export default async function AdminInvoicesPage({
       <form style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>From</label>
-          <input type="date" name="from" defaultValue={from || ''} className="input" style={{ fontSize: '0.85rem' }} />
+          <AUDateInput name="from" defaultValue={from || ''} className="input" style={{ fontSize: '0.85rem' }} ariaLabel="From date" />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>To</label>
-          <input type="date" name="to" defaultValue={to || ''} className="input" style={{ fontSize: '0.85rem' }} />
+          <AUDateInput name="to" defaultValue={to || ''} className="input" style={{ fontSize: '0.85rem' }} ariaLabel="To date" />
         </div>
         <button type="submit" className="btn btn-forest btn-sm">Filter</button>
         {(from || to) && <Link href="/dashboard/admin/invoices" className="btn btn-ghost btn-sm">Clear</Link>}

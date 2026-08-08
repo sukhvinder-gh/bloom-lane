@@ -309,6 +309,24 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const [rejectedPOs, setRejectedPOs] = useState<any[]>(initialRejectedPOs)
+  const [busyPickIds, setBusyPickIds] = useState<Set<string>>(new Set())
+
+  async function togglePicked(itemId: string, currentlyPicked: boolean) {
+    const nextPicked = !currentlyPicked
+    const setPicked = (picked: boolean) => setOrders(os => os.map(o => ({
+      ...o,
+      order_items: o.order_items?.map((it: any) => it.id === itemId ? { ...it, picked_at: picked ? new Date().toISOString() : null } : it),
+    })))
+    setBusyPickIds(s => new Set(s).add(itemId))
+    setPicked(nextPicked)
+    const res = await fetch('/api/admin/orders/picking-list', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, picked: nextPicked }),
+    })
+    if (!res.ok) setPicked(currentlyPicked)
+    setBusyPickIds(s => { const n = new Set(s); n.delete(itemId); return n })
+  }
 
   function resolvePartialLocally(orderId: string) {
     setOrders(os => os.map(o => o.id === orderId ? { ...o, has_partial_rejection: false } : o))
@@ -506,9 +524,16 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                   {entry.items.map((item: any, j: number) => (
                     <div key={j} style={{ padding: '0.875rem 1.75rem', borderBottom: '1px solid var(--olive)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{ width: '1.25rem', height: '1.25rem', borderRadius: '0.25rem', border: '2px solid var(--sage)', flexShrink: 0 }} />
+                        <input
+                          type="checkbox"
+                          checked={!!item.picked_at}
+                          onChange={() => togglePicked(item.id, !!item.picked_at)}
+                          disabled={busyPickIds.has(item.id)}
+                          aria-label={`Mark ${item.products?.name} as arrived at hub`}
+                          style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--forest)', cursor: busyPickIds.has(item.id) ? 'wait' : 'pointer', flexShrink: 0 }}
+                        />
                         <div>
-                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{item.products?.name} — {item.quantity} {item.products?.unit}</p>
+                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', textDecoration: item.picked_at ? 'line-through' : 'none', opacity: item.picked_at ? 0.6 : 1 }}>{item.products?.name} — {item.quantity} {item.products?.unit}</p>
                           <p className="type-label-sm" style={{ color: 'var(--moss)' }}>→ Order {item.order_number}</p>
                         </div>
                       </div>
