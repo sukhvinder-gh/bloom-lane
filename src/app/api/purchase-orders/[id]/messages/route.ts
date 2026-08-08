@@ -7,12 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
+import { sendNewMessageEmail } from '@/lib/email/sendNewMessageEmail'
 import { z } from 'zod'
 
 async function resolveViewerRole(admin: ReturnType<typeof createAdminClient>, userId: string, poId: string) {
   const { data: po } = await admin
     .from('purchase_orders')
-    .select('id, order_id, farmer_id, orders(buyer_id), farmers(user_id)')
+    .select('id, order_id, farmer_id, orders(buyer_id, order_number), farmers(user_id, business_name)')
     .eq('id', poId)
     .single()
 
@@ -83,5 +84,44 @@ export async function POST(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Notify whichever side(s) didn't send this message — an admin posting
+  // notifies both buyer and farmer, a buyer or farmer notifies the other.
+  const buyerId = (po as any).orders?.buyer_id
+  const farmerUserId = (po as any).farmers?.user_id
+  const orderNumber = (po as any).orders?.order_number || ''
+  const farmerBusinessName = (po as any).farmers?.business_name
+  const senderName = (data as any).profiles?.business_name || (data as any).profiles?.full_name || 'Someone'
+
+  const { data: recipientProfiles } = await admin
+    .from('profiles')
+    .select('id, email, full_name, business_name')
+    .in('id', [buyerId, farmerUserId].filter(Boolean))
+  const buyerProfile = recipientProfiles?.find((p: any) => p.id === buyerId)
+  const farmerProfile = recipientProfiles?.find((p: any) => p.id === farmerUserId)
+
+  const notifications: Promise<void>[] = []
+  if (role !== 'buyer' && buyerProfile?.email) {
+    notifications.push(sendNewMessageEmail({
+      to: buyerProfile.email,
+      recipientName: buyerProfile.business_name || buyerProfile.full_name || 'there',
+      senderName,
+      orderNumber,
+      messageBody: parsed.data.body,
+      dashboardPath: `/dashboard/buyer/orders/${po.order_id}`,
+    }))
+  }
+  if (role !== 'farmer' && farmerProfile?.email) {
+    notifications.push(sendNewMessageEmail({
+      to: farmerProfile.email,
+      recipientName: farmerBusinessName || farmerProfile.full_name || 'there',
+      senderName,
+      orderNumber,
+      messageBody: parsed.data.body,
+      dashboardPath: `/dashboard/farmer/orders`,
+    }))
+  }
+  Promise.all(notifications).catch(() => {})
+
   return NextResponse.json({ data }, { status: 201 })
 }
