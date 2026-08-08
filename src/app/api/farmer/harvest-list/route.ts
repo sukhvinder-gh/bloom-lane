@@ -42,10 +42,44 @@ function sydneyDateRangeInstants(from: string, to: string): { fromMs: number; to
   }
 }
 
+function aggregateByProduct(items: any[], dateByOrder: Map<string, string | null>) {
+  const now = Date.now()
+  const byProduct = new Map<string, any>()
+  for (const item of items) {
+    const p = item.products
+    const key = `${p?.name || 'Unknown'}|${p?.unit || ''}`
+    const entry = byProduct.get(key) || {
+      key, name: p?.name || 'Unknown', unit: p?.unit || '', category: p?.category || '',
+      qty: 0, orderSet: new Set<string>(), item_ids: [] as string[], notes: [] as string[],
+      fully_harvested: true, any_harvested: false, overdue: false,
+    }
+    entry.qty += item.quantity
+    entry.orderSet.add(item.order_id)
+    entry.item_ids.push(item.id)
+    if (item.notes && item.notes.trim()) entry.notes.push(item.notes.trim())
+    const isHarvested = !!item.harvested_at
+    if (!isHarvested) entry.fully_harvested = false
+    if (isHarvested) entry.any_harvested = true
+    const orderDate = dateByOrder.get(item.order_id)
+    if (!isHarvested && orderDate && new Date(orderDate).getTime() < now) entry.overdue = true
+    byProduct.set(key, entry)
+  }
+  return [...byProduct.values()]
+    .map(r => ({
+      key: r.key, name: r.name, unit: r.unit, category: r.category, qty: r.qty,
+      order_count: r.orderSet.size, item_ids: r.item_ids, notes: r.notes,
+      fully_harvested: r.fully_harvested, any_harvested: r.any_harvested, overdue: r.overdue,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 // GET /api/farmer/harvest-list?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Aggregates this farmer's still-active order lines by product, scoped to
 // orders whose admin-set harvest/fulfilment date falls in [from, to] —
 // defaults to the current Mon–Sun week (Sydney time) when no range is given.
+// Orders with no fulfilment date at all can't fit any range, so they're
+// never silently dropped — they come back as a separate `unscheduled_rows`
+// group the farmer can still see and act on.
 export async function GET(request: NextRequest) {
   const check = await requireFarmer()
   if (check.error || !check.farmer || !check.admin) return NextResponse.json({ error: check.error }, { status: check.status })
@@ -69,7 +103,7 @@ export async function GET(request: NextRequest) {
 
   const activeOrderIds = [...new Set((pos || []).map((p: any) => p.order_id))]
   if (activeOrderIds.length === 0) {
-    return NextResponse.json({ data: { rows: [], order_count: 0, unscheduled_order_count: 0, from, to } })
+    return NextResponse.json({ data: { rows: [], unscheduled_rows: [], order_count: 0, unscheduled_order_count: 0, from, to } })
   }
 
   const { data: allActiveOrders } = await admin
@@ -77,58 +111,42 @@ export async function GET(request: NextRequest) {
     .select('id, grower_fulfillment_date')
     .in('id', activeOrderIds)
 
-  const unscheduledCount = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date).length
-
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {
     if (!o.grower_fulfillment_date) return false
     const t = new Date(o.grower_fulfillment_date).getTime()
     return t >= fromMs && t <= toMs
   })
-  const scopedOrderIds = scopedOrders.map((o: any) => o.id)
-  const dateByOrder = new Map(scopedOrders.map((o: any) => [o.id, o.grower_fulfillment_date]))
+  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date)
 
-  if (scopedOrderIds.length === 0) {
-    return NextResponse.json({ data: { rows: [], order_count: 0, unscheduled_order_count: unscheduledCount, from, to } })
+  const scopedOrderIds = scopedOrders.map((o: any) => o.id)
+  const unscheduledOrderIds = unscheduledOrders.map((o: any) => o.id)
+  const dateByOrder = new Map((allActiveOrders || []).map((o: any) => [o.id, o.grower_fulfillment_date]))
+
+  const allRelevantIds = [...scopedOrderIds, ...unscheduledOrderIds]
+  if (allRelevantIds.length === 0) {
+    return NextResponse.json({ data: { rows: [], unscheduled_rows: [], order_count: 0, unscheduled_order_count: 0, from, to } })
   }
 
   const { data: items } = await admin
     .from('order_items')
     .select('id, order_id, quantity, notes, harvested_at, products(name, unit, category)')
     .eq('farmer_id', farmer.id)
-    .in('order_id', scopedOrderIds)
+    .in('order_id', allRelevantIds)
 
-  const now = Date.now()
-  const byProduct = new Map<string, any>()
-  for (const item of items || []) {
-    const p = (item as any).products
-    const key = `${p?.name || 'Unknown'}|${p?.unit || ''}`
-    const entry = byProduct.get(key) || {
-      key, name: p?.name || 'Unknown', unit: p?.unit || '', category: p?.category || '',
-      qty: 0, orderSet: new Set<string>(), item_ids: [] as string[], notes: [] as string[],
-      fully_harvested: true, any_harvested: false, overdue: false,
-    }
-    entry.qty += item.quantity
-    entry.orderSet.add(item.order_id)
-    entry.item_ids.push(item.id)
-    if (item.notes && item.notes.trim()) entry.notes.push(item.notes.trim())
-    const isHarvested = !!item.harvested_at
-    if (!isHarvested) entry.fully_harvested = false
-    if (isHarvested) entry.any_harvested = true
-    const orderDate = dateByOrder.get(item.order_id)
-    if (!isHarvested && orderDate && new Date(orderDate as string).getTime() < now) entry.overdue = true
-    byProduct.set(key, entry)
-  }
+  const scopedIdSet = new Set(scopedOrderIds)
+  const unscheduledIdSet = new Set(unscheduledOrderIds)
+  const scopedItems = (items || []).filter((i: any) => scopedIdSet.has(i.order_id))
+  const unscheduledItems = (items || []).filter((i: any) => unscheduledIdSet.has(i.order_id))
 
-  const rows = [...byProduct.values()]
-    .map(r => ({
-      key: r.key, name: r.name, unit: r.unit, category: r.category, qty: r.qty,
-      order_count: r.orderSet.size, item_ids: r.item_ids, notes: r.notes,
-      fully_harvested: r.fully_harvested, any_harvested: r.any_harvested, overdue: r.overdue,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const rows = aggregateByProduct(scopedItems, dateByOrder)
+  const unscheduledRows = aggregateByProduct(unscheduledItems, dateByOrder)
 
   return NextResponse.json({
-    data: { rows, order_count: scopedOrderIds.length, unscheduled_order_count: unscheduledCount, from, to },
+    data: {
+      rows, unscheduled_rows: unscheduledRows,
+      order_count: scopedOrderIds.length, unscheduled_order_count: unscheduledOrderIds.length,
+      from, to,
+    },
   })
 }
 

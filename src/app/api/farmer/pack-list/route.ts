@@ -76,44 +76,55 @@ export async function GET(request: NextRequest) {
     .eq('order_items.farmer_id', farmer.id)
     .order('created_at', { ascending: true })
 
-  const unscheduledCount = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date).length
-
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {
     if (!o.grower_fulfillment_date) return false
     const t = new Date(o.grower_fulfillment_date).getTime()
     return t >= fromMs && t <= toMs
   })
+  // Orders with no fulfilment date at all can't fit any range — return them
+  // as their own group instead of silently dropping them, so the farmer can
+  // still see and pack them (and know to chase admin for a date).
+  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date)
 
-  const buyerIds = [...new Set(scopedOrders.map((o: any) => o.buyer_id))]
+  const buyerIds = [...new Set([...scopedOrders, ...unscheduledOrders].map((o: any) => o.buyer_id))]
   const { data: buyers } = buyerIds.length > 0
     ? await admin.from('profiles').select('id, full_name, business_name').in('id', buyerIds)
     : { data: [] as any[] }
   const buyerById = new Map((buyers || []).map((b: any) => [b.id, b]))
 
   const now = Date.now()
+  function toOrderRow(o: any, overdue: boolean) {
+    const items = o.order_items || []
+    const allPacked = items.length > 0 && items.every((i: any) => !!i.packed_at)
+    const buyer = buyerById.get(o.buyer_id)
+    return {
+      id: o.id,
+      order_number: o.order_number,
+      created_at: o.created_at,
+      grower_fulfillment_date: o.grower_fulfillment_date,
+      fulfillment_type: o.fulfillment_type,
+      pickup_method: pickupMethodByOrder.get(o.id) || null,
+      buyer_name: buyer?.business_name || buyer?.full_name || 'Buyer',
+      items,
+      all_packed: allPacked,
+      overdue: !allPacked && overdue,
+    }
+  }
+
   const orders = scopedOrders
     .sort((a: any, b: any) => new Date(a.grower_fulfillment_date).getTime() - new Date(b.grower_fulfillment_date).getTime())
-    .map((o: any) => {
-      const items = o.order_items || []
-      const allPacked = items.length > 0 && items.every((i: any) => !!i.packed_at)
-      const overdue = !allPacked && new Date(o.grower_fulfillment_date).getTime() < now
-      const buyer = buyerById.get(o.buyer_id)
-      return {
-        id: o.id,
-        order_number: o.order_number,
-        created_at: o.created_at,
-        grower_fulfillment_date: o.grower_fulfillment_date,
-        fulfillment_type: o.fulfillment_type,
-        pickup_method: pickupMethodByOrder.get(o.id) || null,
-        buyer_name: buyer?.business_name || buyer?.full_name || 'Buyer',
-        items,
-        all_packed: allPacked,
-        overdue,
-      }
-    })
+    .map((o: any) => toOrderRow(o, new Date(o.grower_fulfillment_date).getTime() < now))
+
+  const unscheduledOrdersOut = unscheduledOrders
+    .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .map((o: any) => toOrderRow(o, false))
 
   return NextResponse.json({
-    data: { orders, order_count: orders.length, unscheduled_order_count: unscheduledCount, from, to },
+    data: {
+      orders, unscheduled_orders: unscheduledOrdersOut,
+      order_count: orders.length, unscheduled_order_count: unscheduledOrdersOut.length,
+      from, to,
+    },
   })
 }
 

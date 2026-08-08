@@ -32,6 +32,51 @@ function RowCheckbox({ row, busy, onToggle }: { row: Row; busy: boolean; onToggl
   )
 }
 
+function HarvestTable({ rows, busyKeys, onToggle }: { rows: Row[]; busyKeys: Set<string>; onToggle: (row: Row) => void }) {
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <thead>
+        <tr style={{ borderBottom: '2px solid var(--forest)' }}>
+          <th className="no-print" style={{ padding: '0.75rem 0.5rem', width: '2.5rem' }} />
+          {['Product', 'Total to cut', 'Orders'].map((h, i) => (
+            <th key={h} style={{ padding: '0.75rem', textAlign: i === 0 ? 'left' : 'right', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--forest)' }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(r => (
+          <tr key={r.key} style={{ borderBottom: '1px solid var(--olive)', background: r.overdue ? '#fee2e2' : 'transparent' }}>
+            <td className="no-print" style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
+              <RowCheckbox row={r} busy={busyKeys.has(r.key)} onToggle={() => onToggle(r)} />
+            </td>
+            <td style={{ padding: '1rem 0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--forest)', textDecoration: r.fully_harvested ? 'line-through' : 'none', opacity: r.fully_harvested ? 0.6 : 1 }}>{r.name}</span>
+                {r.overdue && (
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>
+                    ⚠ Not fulfilled
+                  </span>
+                )}
+              </div>
+              {r.notes.length > 0 && (
+                <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  {r.notes.map((n, i) => (
+                    <p key={i} style={{ fontSize: '0.75rem', color: 'var(--moss)', fontStyle: 'italic' }}>📝 {n}</p>
+                  ))}
+                </div>
+              )}
+            </td>
+            <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '1.4rem', fontFamily: 'var(--font-display)', color: 'var(--forest)' }}>
+              {r.qty} <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-body)', color: 'var(--moss)' }}>{r.unit}</span>
+            </td>
+            <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '0.85rem', color: 'var(--moss)' }}>{r.order_count}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export default function HarvestListPage() {
   const [mode, setMode] = useState<'range' | 'day'>('range')
   // Left null until the server tells us what "this week" actually means —
@@ -40,7 +85,7 @@ export default function HarvestListPage() {
   // guaranteed to be Australia/Sydney).
   const [from, setFrom] = useState<string | null>(null)
   const [to, setTo] = useState<string | null>(null)
-  const [data, setData] = useState<{ rows: Row[]; order_count: number; unscheduled_order_count: number } | null>(null)
+  const [data, setData] = useState<{ rows: Row[]; unscheduled_rows: Row[]; order_count: number; unscheduled_order_count: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set())
 
@@ -68,7 +113,11 @@ export default function HarvestListPage() {
   async function toggleRow(row: Row) {
     const nextHarvested = !row.fully_harvested
     setBusyKeys(s => new Set(s).add(row.key))
-    setData(d => d ? { ...d, rows: d.rows.map(r => r.key === row.key ? { ...r, fully_harvested: nextHarvested, any_harvested: nextHarvested, overdue: nextHarvested ? false : r.overdue } : r) } : d)
+    setData(d => {
+      if (!d) return d
+      const patch = (r: Row) => r.key === row.key ? { ...r, fully_harvested: nextHarvested, any_harvested: nextHarvested, overdue: nextHarvested ? false : r.overdue } : r
+      return { ...d, rows: d.rows.map(patch), unscheduled_rows: d.unscheduled_rows.map(patch) }
+    })
     const res = await fetch('/api/farmer/harvest-list', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -79,6 +128,7 @@ export default function HarvestListPage() {
   }
 
   const rows = data?.rows || []
+  const unscheduledRows = data?.unscheduled_rows || []
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -113,17 +163,12 @@ export default function HarvestListPage() {
         <button onClick={resetToThisWeek} className="btn btn-ghost btn-sm">This week</button>
       </div>
 
-      <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '2.5rem' }}>
+      <div style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '2.5rem', marginBottom: unscheduledRows.length > 0 ? '1.5rem' : 0 }}>
         <div style={{ borderBottom: '2px solid var(--forest)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>Harvest List</div>
           <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
             totals across {data?.order_count ?? 0} order{(data?.order_count ?? 0) === 1 ? '' : 's'}{from && to ? ` · ${fmtShort(from)}${from !== to ? ` – ${fmtShort(to)}` : ''}` : ''}
           </p>
-          {!!data?.unscheduled_order_count && (
-            <p className="no-print" style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.75rem', background: '#fef9c3', padding: '0.6rem 0.875rem', borderRadius: '0.625rem' }}>
-              ⚠ {data.unscheduled_order_count} active order{data.unscheduled_order_count === 1 ? '' : 's'} {data.unscheduled_order_count === 1 ? "doesn't" : "don't"} have a harvest date set yet, so {data.unscheduled_order_count === 1 ? "it isn't" : "they aren't"} shown here — check with admin.
-            </p>
-          )}
         </div>
 
         {loading ? (
@@ -131,48 +176,21 @@ export default function HarvestListPage() {
         ) : rows.length === 0 ? (
           <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '3rem 0' }}>Nothing to harvest in this date range.</p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--forest)' }}>
-                <th className="no-print" style={{ padding: '0.75rem 0.5rem', width: '2.5rem' }} />
-                {['Product', 'Total to cut', 'Orders'].map((h, i) => (
-                  <th key={h} style={{ padding: '0.75rem', textAlign: i === 0 ? 'left' : 'right', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--forest)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r.key} style={{ borderBottom: '1px solid var(--olive)', background: r.overdue ? '#fee2e2' : 'transparent' }}>
-                  <td className="no-print" style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
-                    <RowCheckbox row={r} busy={busyKeys.has(r.key)} onToggle={() => toggleRow(r)} />
-                  </td>
-                  <td style={{ padding: '1rem 0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--forest)', textDecoration: r.fully_harvested ? 'line-through' : 'none', opacity: r.fully_harvested ? 0.6 : 1 }}>{r.name}</span>
-                      {r.overdue && (
-                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>
-                          ⚠ Not fulfilled
-                        </span>
-                      )}
-                    </div>
-                    {r.notes.length > 0 && (
-                      <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        {r.notes.map((n, i) => (
-                          <p key={i} style={{ fontSize: '0.75rem', color: 'var(--moss)', fontStyle: 'italic' }}>📝 {n}</p>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '1.4rem', fontFamily: 'var(--font-display)', color: 'var(--forest)' }}>
-                    {r.qty} <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-body)', color: 'var(--moss)' }}>{r.unit}</span>
-                  </td>
-                  <td style={{ padding: '1rem 0.75rem', textAlign: 'right', fontSize: '0.85rem', color: 'var(--moss)' }}>{r.order_count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <HarvestTable rows={rows} busyKeys={busyKeys} onToggle={toggleRow} />
         )}
       </div>
+
+      {!loading && unscheduledRows.length > 0 && (
+        <div className="no-print" style={{ background: 'white', border: '1.5px solid #FCD34D', borderRadius: '1.5rem', padding: '2.5rem' }}>
+          <div style={{ borderBottom: '2px solid #92400e', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: '#92400e', letterSpacing: '-0.02em' }}>⚠ Awaiting a harvest date</div>
+            <p style={{ fontSize: '0.85rem', color: '#92400e', marginTop: '0.25rem' }}>
+              {data?.unscheduled_order_count} order{data?.unscheduled_order_count === 1 ? '' : 's'} {data?.unscheduled_order_count === 1 ? "hasn't" : "haven't"} been given a harvest date yet by admin, so {data?.unscheduled_order_count === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — check with admin for a date.
+            </p>
+          </div>
+          <HarvestTable rows={unscheduledRows} busyKeys={busyKeys} onToggle={toggleRow} />
+        </div>
+      )}
     </div>
   )
 }

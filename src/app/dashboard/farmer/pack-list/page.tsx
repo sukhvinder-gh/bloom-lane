@@ -11,9 +11,70 @@ function fmtShort(iso: string) {
 
 type Item = { id: string; quantity: number; notes: string | null; packed_at: string | null; products: { name: string; unit: string } | null }
 type Order = {
-  id: string; order_number: string; created_at: string; grower_fulfillment_date: string
+  id: string; order_number: string; created_at: string; grower_fulfillment_date: string | null
   fulfillment_type: string; pickup_method: string | null; buyer_name: string
   items: Item[]; all_packed: boolean; overdue: boolean
+}
+
+function OrderCard({ order, busyIds, onToggleItem, onToggleOrder }: {
+  order: Order
+  busyIds: Set<string>
+  onToggleItem: (orderId: string, item: Item) => void
+  onToggleOrder: (order: Order) => void
+}) {
+  return (
+    <div style={{ background: order.overdue ? '#fef2f2' : 'white', border: order.overdue ? '1.5px solid #FCA5A5' : '1px solid var(--olive)', borderRadius: '1.5rem', padding: '1.75rem 2.5rem', breakInside: 'avoid' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--forest)', paddingBottom: '0.75rem', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label className="no-print" style={{ display: 'flex', alignItems: 'center', cursor: busyIds.has(order.items[0]?.id) ? 'wait' : 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={order.all_packed}
+              onChange={() => onToggleOrder(order)}
+              aria-label={`Mark whole order ${order.order_number} as packed`}
+              style={{ width: '1.5rem', height: '1.5rem', accentColor: 'var(--forest)', marginRight: '0.75rem' }}
+            />
+          </label>
+          <div>
+            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--forest)', textDecoration: order.all_packed ? 'line-through' : 'none', opacity: order.all_packed ? 0.6 : 1 }}>{order.buyer_name}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--moss)', marginLeft: '0.75rem' }}>
+              {order.pickup_method === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}
+            </span>
+            {order.overdue && (
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>
+                ⚠ Not fulfilled
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--moss)' }}>
+          {order.order_number} · {order.grower_fulfillment_date ? formatAEST(order.grower_fulfillment_date, 'dd MMM') : 'No date set'}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+        {order.items.map(item => (
+          <div key={item.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
+              <input
+                type="checkbox"
+                className="no-print"
+                checked={!!item.packed_at}
+                onChange={() => onToggleItem(order.id, item)}
+                disabled={busyIds.has(item.id)}
+                aria-label={`Mark ${item.products?.name} as packed`}
+                style={{ width: '1.35rem', height: '1.35rem', accentColor: 'var(--forest)', cursor: busyIds.has(item.id) ? 'wait' : 'pointer', flexShrink: 0 }}
+              />
+              <span style={{ color: 'var(--forest)', fontWeight: 600, flex: 1, textDecoration: item.packed_at ? 'line-through' : 'none', opacity: item.packed_at ? 0.6 : 1 }}>{item.products?.name}</span>
+              <span style={{ color: 'var(--forest)', fontFamily: 'var(--font-display)' }}>{item.quantity} <span style={{ fontSize: '0.75rem', color: 'var(--moss)', fontFamily: 'var(--font-body)' }}>{item.products?.unit}</span></span>
+            </div>
+            {item.notes && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', fontStyle: 'italic', marginLeft: '2.1rem', marginTop: '0.15rem' }}>📝 {item.notes}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function PackListPage() {
@@ -23,7 +84,7 @@ export default function PackListPage() {
   // client doesn't do this calculation itself).
   const [from, setFrom] = useState<string | null>(null)
   const [to, setTo] = useState<string | null>(null)
-  const [data, setData] = useState<{ orders: Order[]; order_count: number; unscheduled_order_count: number } | null>(null)
+  const [data, setData] = useState<{ orders: Order[]; unscheduled_orders: Order[]; order_count: number; unscheduled_order_count: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
 
@@ -53,15 +114,13 @@ export default function PackListPage() {
     setBusyIds(s => new Set(s).add(item.id))
     setData(d => {
       if (!d) return d
-      return {
-        ...d,
-        orders: d.orders.map(o => {
-          if (o.id !== orderId) return o
-          const items = o.items.map(i => i.id === item.id ? { ...i, packed_at: nextPacked ? new Date().toISOString() : null } : i)
-          const allPacked = items.length > 0 && items.every(i => !!i.packed_at)
-          return { ...o, items, all_packed: allPacked, overdue: allPacked ? false : o.overdue }
-        }),
+      const patchOrder = (o: Order) => {
+        if (o.id !== orderId) return o
+        const items = o.items.map(i => i.id === item.id ? { ...i, packed_at: nextPacked ? new Date().toISOString() : null } : i)
+        const allPacked = items.length > 0 && items.every(i => !!i.packed_at)
+        return { ...o, items, all_packed: allPacked, overdue: allPacked ? false : o.overdue }
       }
+      return { ...d, orders: d.orders.map(patchOrder), unscheduled_orders: d.unscheduled_orders.map(patchOrder) }
     })
     const res = await fetch('/api/farmer/pack-list', {
       method: 'PATCH',
@@ -79,12 +138,13 @@ export default function PackListPage() {
       order.items.forEach(i => n.add(i.id))
       return n
     })
-    setData(d => d ? {
-      ...d,
-      orders: d.orders.map(o => o.id === order.id
+    setData(d => {
+      if (!d) return d
+      const patchOrder = (o: Order) => o.id === order.id
         ? { ...o, all_packed: nextPacked, overdue: nextPacked ? false : o.overdue, items: o.items.map(i => ({ ...i, packed_at: nextPacked ? new Date().toISOString() : null })) }
-        : o),
-    } : d)
+        : o
+      return { ...d, orders: d.orders.map(patchOrder), unscheduled_orders: d.unscheduled_orders.map(patchOrder) }
+    })
     const res = await fetch('/api/farmer/pack-list', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -99,6 +159,7 @@ export default function PackListPage() {
   }
 
   const orders = data?.orders || []
+  const unscheduledOrders = data?.unscheduled_orders || []
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '860px', margin: '0 auto' }}>
@@ -140,11 +201,6 @@ export default function PackListPage() {
           <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
             {data?.order_count ?? 0} order{(data?.order_count ?? 0) === 1 ? '' : 's'} to pack{from && to ? ` · ${fmtShort(from)}${from !== to ? ` – ${fmtShort(to)}` : ''}` : ''}
           </p>
-          {!!data?.unscheduled_order_count && (
-            <p className="no-print" style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '0.75rem', background: '#fef9c3', padding: '0.6rem 0.875rem', borderRadius: '0.625rem' }}>
-              ⚠ {data.unscheduled_order_count} active order{data.unscheduled_order_count === 1 ? '' : 's'} {data.unscheduled_order_count === 1 ? "doesn't" : "don't"} have a harvest date set yet, so {data.unscheduled_order_count === 1 ? "it isn't" : "they aren't"} shown here — check with admin.
-            </p>
-          )}
         </div>
 
         {loading ? (
@@ -155,58 +211,22 @@ export default function PackListPage() {
           </div>
         ) : (
           orders.map(order => (
-            <div key={order.id} style={{ background: order.overdue ? '#fef2f2' : 'white', border: order.overdue ? '1.5px solid #FCA5A5' : '1px solid var(--olive)', borderRadius: '1.5rem', padding: '1.75rem 2.5rem', breakInside: 'avoid' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--forest)', paddingBottom: '0.75rem', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label className="no-print" style={{ display: 'flex', alignItems: 'center', cursor: busyIds.has(order.items[0]?.id) ? 'wait' : 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={order.all_packed}
-                      onChange={() => toggleOrder(order)}
-                      aria-label={`Mark whole order ${order.order_number} as packed`}
-                      style={{ width: '1.5rem', height: '1.5rem', accentColor: 'var(--forest)', marginRight: '0.75rem' }}
-                    />
-                  </label>
-                  <div>
-                    <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--forest)', textDecoration: order.all_packed ? 'line-through' : 'none', opacity: order.all_packed ? 0.6 : 1 }}>{order.buyer_name}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--moss)', marginLeft: '0.75rem' }}>
-                      {order.pickup_method === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}
-                    </span>
-                    {order.overdue && (
-                      <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>
-                        ⚠ Not fulfilled
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--moss)' }}>
-                  {order.order_number} · {formatAEST(order.grower_fulfillment_date, 'dd MMM')}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {order.items.map(item => (
-                  <div key={item.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                      <input
-                        type="checkbox"
-                        className="no-print"
-                        checked={!!item.packed_at}
-                        onChange={() => toggleItem(order.id, item)}
-                        disabled={busyIds.has(item.id)}
-                        aria-label={`Mark ${item.products?.name} as packed`}
-                        style={{ width: '1.35rem', height: '1.35rem', accentColor: 'var(--forest)', cursor: busyIds.has(item.id) ? 'wait' : 'pointer', flexShrink: 0 }}
-                      />
-                      <span style={{ color: 'var(--forest)', fontWeight: 600, flex: 1, textDecoration: item.packed_at ? 'line-through' : 'none', opacity: item.packed_at ? 0.6 : 1 }}>{item.products?.name}</span>
-                      <span style={{ color: 'var(--forest)', fontFamily: 'var(--font-display)' }}>{item.quantity} <span style={{ fontSize: '0.75rem', color: 'var(--moss)', fontFamily: 'var(--font-body)' }}>{item.products?.unit}</span></span>
-                    </div>
-                    {item.notes && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--moss)', fontStyle: 'italic', marginLeft: '2.1rem', marginTop: '0.15rem' }}>📝 {item.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <OrderCard key={order.id} order={order} busyIds={busyIds} onToggleItem={toggleItem} onToggleOrder={toggleOrder} />
           ))
+        )}
+
+        {!loading && unscheduledOrders.length > 0 && (
+          <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ background: 'white', border: '1.5px solid #FCD34D', borderRadius: '1.5rem', padding: '1.5rem 2.5rem' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: '#92400e', letterSpacing: '-0.02em' }}>⚠ Awaiting a harvest date</div>
+              <p style={{ fontSize: '0.85rem', color: '#92400e', marginTop: '0.25rem' }}>
+                {unscheduledOrders.length} order{unscheduledOrders.length === 1 ? '' : 's'} {unscheduledOrders.length === 1 ? "hasn't" : "haven't"} been given a harvest date yet by admin, so {unscheduledOrders.length === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — check with admin for a date.
+              </p>
+            </div>
+            {unscheduledOrders.map(order => (
+              <OrderCard key={order.id} order={order} busyIds={busyIds} onToggleItem={toggleItem} onToggleOrder={toggleOrder} />
+            ))}
+          </div>
         )}
       </div>
     </div>
