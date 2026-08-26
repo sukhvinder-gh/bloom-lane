@@ -90,21 +90,24 @@ export default async function BuyerInvoicesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(order.order_items || []).map((item: any) => {
-                      const gstComponent = item.products?.is_gst_free ? 0 : Math.round((item.subtotal_cents * 0.10) / 1.10)
-                      return (
-                        <tr key={item.id} style={{ borderBottom: '1px solid var(--olive)' }}>
-                          <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{item.products?.name}</td>
-                          <td style={{ padding: '0.625rem 0', color: 'var(--forest)', opacity: 0.6 }}>{item.farmers?.business_name}</td>
-                          <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{item.quantity} {item.products?.unit}</td>
-                          <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{formatPrice(item.unit_price_cents)}</td>
-                          <td style={{ padding: '0.625rem 0', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(item.subtotal_cents)}</td>
-                          <td style={{ padding: '0.625rem 0', color: 'var(--forest)', opacity: 0.6 }}>
-                            {item.products?.is_gst_free ? <span style={{ fontSize: '0.7rem' }}>GST-free</span> : formatPrice(gstComponent)}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {(order.order_items || []).map((item: any) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--olive)' }}>
+                        <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{item.products?.name}</td>
+                        <td style={{ padding: '0.625rem 0', color: 'var(--forest)', opacity: 0.6 }}>{item.farmers?.business_name}</td>
+                        <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{item.quantity} {item.products?.unit}</td>
+                        <td style={{ padding: '0.625rem 0', color: 'var(--forest)' }}>{formatPrice(item.unit_price_cents)}</td>
+                        <td style={{ padding: '0.625rem 0', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(item.subtotal_cents)}</td>
+                        <td style={{ padding: '0.625rem 0', color: 'var(--forest)', opacity: 0.6 }}>
+                          {/* item.gst_applied/item.gst_cents are snapshotted at
+                              checkout from the real GST decision (product not
+                              GST-free AND grower registered) — never
+                              recompute this from the product flag alone, that
+                              ignores grower registration and shows GST on
+                              lines from unregistered growers that charged none. */}
+                          {item.gst_applied ? formatPrice(item.gst_cents) : <span style={{ fontSize: '0.7rem' }}>N/A</span>}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
 

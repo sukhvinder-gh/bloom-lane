@@ -36,7 +36,7 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
   const farmerIds = [...new Set(items.map(i => i.farmer_id))]
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, business_name, abn, gst_registered')
+    .select('id, business_name, abn, gst_registered, address, suburb, state, postcode, email')
     .in('id', farmerIds)
 
   const farmerById = new Map((farmers || []).map(f => [f.id, f]))
@@ -55,6 +55,9 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
     return { farmerId, farmer, items: farmerItems, subtotal, gst, isTaxInvoice }
   })
 
+  const groupSubtotal = growerDocs.reduce((s, d) => s + d.subtotal, 0)
+  const groupGst = growerDocs.reduce((s, d) => s + d.gst, 0)
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', padding: '2rem' }}>
 
@@ -72,6 +75,31 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
           Order <strong>{order.order_number}</strong> · Buyer: <strong>{businessName}</strong>{buyerProfile?.email ? ` (${buyerProfile.email})` : ''} · Status: {order.status}
         </div>
 
+        {/* Grouped summary — only meaningful with more than one farm in this order */}
+        {growerDocs.length > 1 && (
+          <div style={{ background: 'var(--forest)', borderRadius: '1.5rem', padding: '1.75rem 2rem', color: 'white' }}>
+            <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.7, fontWeight: 700, marginBottom: '0.75rem' }}>
+              Order Summary · {growerDocs.length} farms
+            </p>
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '0.15rem' }}>Subtotal</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem' }}>{formatPrice(groupSubtotal)}</p>
+              </div>
+              {groupGst > 0 && (
+                <div>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '0.15rem' }}>GST</p>
+                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem' }}>{formatPrice(groupGst)}</p>
+                </div>
+              )}
+              <div>
+                <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '0.15rem' }}>Total</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>{formatPrice(groupSubtotal + groupGst)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* One document per grower — never combined */}
         {growerDocs.map(({ farmerId, farmer, items: farmerItems, subtotal, gst, isTaxInvoice }) => (
           <div key={farmerId} style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '3rem', fontFamily: 'var(--font-body)' }}>
@@ -82,9 +110,13 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--forest)', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
                   {farmer?.business_name || 'Grower'}
                 </div>
-                {isTaxInvoice && farmer?.abn && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>ABN: {farmer.abn}</div>
-                )}
+                <div style={{ fontSize: '0.8rem', color: 'var(--moss)', lineHeight: 1.6 }}>
+                  {farmer?.abn && <div>ABN: {farmer.abn}</div>}
+                  {(farmer?.address || farmer?.suburb) && (
+                    <div>{[farmer.address, farmer.suburb, farmer.state, farmer.postcode].filter(Boolean).join(', ')}</div>
+                  )}
+                  {farmer?.email && <div>{farmer.email}</div>}
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>

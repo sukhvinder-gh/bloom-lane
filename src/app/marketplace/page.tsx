@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCart } from '@/hooks/useCart'
@@ -39,6 +39,67 @@ function productImages(p: any): string[] {
     }
   }
   return all
+}
+
+// Multi-select dropdown — a buyer can start from one selection and keep
+// adding/switching others from the same control, rather than the option
+// list being limited to whatever's already been filtered into view.
+function MultiSelectDropdown({
+  label, options, selected, onToggle, onClear,
+}: {
+  label: string; options: string[]; selected: string[]
+  onToggle: (value: string) => void; onClear: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.875rem',
+          borderRadius: '99px', border: `1.5px solid ${selected.length ? 'var(--navy)' : 'var(--border)'}`,
+          background: selected.length ? 'var(--navy)' : 'white', color: selected.length ? 'white' : 'var(--text-secondary)',
+          fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        {label}{selected.length > 0 ? ` (${selected.length})` : ''} <span style={{ fontSize: '0.65rem' }}>▾</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 0.35rem)', left: 0, zIndex: 50, minWidth: '13rem', maxHeight: '18rem',
+          overflowY: 'auto', background: 'white', border: '1px solid var(--border)', borderRadius: '0.75rem',
+          boxShadow: '0 8px 28px rgba(0,0,0,0.12)', padding: '0.4rem',
+        }}>
+          {selected.length > 0 && (
+            <button type="button" onClick={onClear}
+              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.75rem', cursor: 'pointer', padding: '0.35rem 0.5rem', textDecoration: 'underline' }}>
+              Clear
+            </button>
+          )}
+          {options.map(o => (
+            <label key={o} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.5rem', cursor: 'pointer', borderRadius: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <input type="checkbox" checked={selected.includes(o)} onChange={() => onToggle(o)} style={{ accentColor: 'var(--navy)' }} />
+              {o}
+            </label>
+          ))}
+          {options.length === 0 && (
+            <p style={{ padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-3)' }}>None available</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── Product detail drawer ────────────────────────────────────────────────────
@@ -198,6 +259,16 @@ function ProductDrawer({
                     </span>
                   )}
                 </p>
+                {/* Plain-English GST status — the ex/inc-GST label above is
+                    useful shorthand but shouldn't be the only signal for a
+                    buyer deciding whether GST applies before purchase. */}
+                <p style={{ fontSize: '0.75rem', color: 'var(--forest)', marginTop: '0.4rem', fontWeight: 600 }}>
+                  {gstApplies
+                    ? (isB2B ? '🧾 GST will be added at checkout' : '🧾 Price shown includes GST')
+                    : showsGstFree
+                      ? '🌿 GST-free — raw, unprocessed produce'
+                      : '🌿 No GST — this grower is not registered for GST'}
+                </p>
               </div>
             )}
           </div>
@@ -298,7 +369,9 @@ export default function MarketplacePage() {
   const [search, setSearch]       = useState('')
   const [selected, setSelected]   = useState<any>(null)
   const [farmerId, setFarmerId]   = useState('')
+  const [farmerIdName, setFarmerIdName] = useState('')
   const [shopAsBuyer, setShopAsBuyer] = useState(false)
+  const [facets, setFacets] = useState<{ farms: string[]; regions: string[] }>({ farms: [], regions: [] })
   const { addItem, updateQuantity, items, totalItems } = useCart()
 
   // Read ?farmer_id=/?as=buyer via plain browser API rather than useSearchParams()
@@ -308,6 +381,17 @@ export default function MarketplacePage() {
     setFarmerId(params.get('farmer_id') || '')
     setShopAsBuyer(params.get('as') === 'buyer')
   }, [])
+
+  // Resolve the deep-linked farm's name directly, rather than reading it off
+  // whatever products happen to still be in view — a category filter that
+  // leaves this farm with zero matches must not make the banner go generic.
+  useEffect(() => {
+    if (!farmerId) { setFarmerIdName(''); return }
+    fetch(`/api/growers/${farmerId}`)
+      .then(r => r.json())
+      .then(d => setFarmerIdName(d.data?.business_name || ''))
+      .catch(() => {})
+  }, [farmerId])
 
   useEffect(() => {
     const supabase = createClient()
@@ -336,6 +420,16 @@ export default function MarketplacePage() {
     fetch(`/api/products?b2b=${isB2B}${category ? `&category=${category}` : ''}${colorsParam}${farmerId ? `&farmer_id=${farmerId}` : ''}`)
       .then(r => r.json()).then(d => { setProducts(d.data || []); setLoading(false) })
   }, [category, colors, isB2B, farmerId])
+
+  // Farm/region filter options — fetched independently of category/color/
+  // farmer_id filters, so once a buyer is scoped to one farm the dropdown
+  // still lists every other farm they could add or switch to.
+  useEffect(() => {
+    fetch(`/api/products?facets=true&b2b=${isB2B}`)
+      .then(r => r.json())
+      .then(d => setFacets({ farms: d.data?.farms || [], regions: d.data?.regions || [] }))
+      .catch(() => {})
+  }, [isB2B])
 
   function toggleFilter(setArr: React.Dispatch<React.SetStateAction<string[]>>, value: string) {
     setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value])
@@ -370,11 +464,8 @@ export default function MarketplacePage() {
     return items.find(i => i.product_id === productId)?.quantity || 0
   }
 
-  // Farm and region options are derived from whatever this category/color/b2b
-  // fetch actually returned, so the dropdowns never offer a combination with
-  // zero results.
-  const farmOptions = [...new Set(products.map(p => p.farmers?.business_name).filter(Boolean))].sort()
-  const regionOptions = [...new Set(products.map(p => p.farmers?.region).filter(Boolean))].sort()
+  const farmOptions = facets.farms
+  const regionOptions = facets.regions
 
   const filtered = products.filter(p => {
     if (farmFilters.length && !farmFilters.includes(p.farmers?.business_name)) return false
@@ -429,13 +520,24 @@ export default function MarketplacePage() {
         </div>
       </nav>
 
-      {/* Grower filter banner */}
-      {farmerId && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1.5rem', background: 'var(--green-soft)', borderBottom: '1px solid var(--border-light)', flexWrap: 'wrap' }}>
-          <p style={{ fontSize: '0.85rem', color: 'var(--forest)', fontWeight: 600 }}>
-            Showing products from {products[0]?.farmers?.business_name || 'this grower'}
+      {/* Grower filter banner — reflects both the single ?farmer_id= deep
+          link AND the sidebar's multi-select Farm filter, and never depends
+          on the currently-filtered product list (which can be empty for a
+          selected farm after a category filter, e.g. that farm has no dried
+          natives in stock) — the farm name always stays visible regardless. */}
+      {(farmerId || farmFilters.length > 0) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.875rem 1.5rem', background: 'var(--navy)', flexWrap: 'wrap' }}>
+          <p style={{ fontSize: '0.95rem', color: 'white', fontWeight: 700 }}>
+            🌱 Showing: {farmerId ? (farmerIdName || 'this grower') : farmFilters.join(', ')}
           </p>
-          <Link href="/marketplace" onClick={() => setFarmerId('')} className="btn btn-ghost btn-sm">View all growers →</Link>
+          <Link
+            href="/marketplace"
+            onClick={() => { setFarmerId(''); setFarmFilters([]) }}
+            className="btn btn-ghost btn-sm"
+            style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+          >
+            View all growers →
+          </Link>
         </div>
       )}
 
@@ -467,24 +569,16 @@ export default function MarketplacePage() {
             )
           })}
         </div>
-        {farmOptions.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-            {farmOptions.map(f => (
-              <button key={f} type="button" onClick={() => toggleFilter(setFarmFilters, f)}
-                style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${farmFilters.includes(f) ? 'var(--navy)' : 'var(--border)'}`, background: farmFilters.includes(f) ? 'var(--navy)' : 'white', color: farmFilters.includes(f) ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
-        {regionOptions.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-            {regionOptions.map(r => (
-              <button key={r} type="button" onClick={() => toggleFilter(setRegionFilters, r)}
-                style={{ flexShrink: 0, padding: '0.375rem 0.875rem', borderRadius: '99px', border: `1.5px solid ${regionFilters.includes(r) ? 'var(--navy)' : 'var(--border)'}`, background: regionFilters.includes(r) ? 'var(--navy)' : 'white', color: regionFilters.includes(r) ? 'white' : 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {r}
-              </button>
-            ))}
+        {(farmOptions.length > 0 || regionOptions.length > 0) && (
+          <div style={{ display: 'flex', gap: '0.5rem', padding: '0 1rem 0.75rem', flexWrap: 'wrap' }}>
+            {farmOptions.length > 0 && (
+              <MultiSelectDropdown label="Farm" options={farmOptions} selected={farmFilters}
+                onToggle={f => toggleFilter(setFarmFilters, f)} onClear={() => setFarmFilters([])} />
+            )}
+            {regionOptions.length > 0 && (
+              <MultiSelectDropdown label="Region" options={regionOptions} selected={regionFilters}
+                onToggle={r => toggleFilter(setRegionFilters, r)} onClear={() => setRegionFilters([])} />
+            )}
           </div>
         )}
         <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem 0.75rem', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
@@ -548,43 +642,19 @@ export default function MarketplacePage() {
           </div>
 
           {farmOptions.length > 0 && (
-            <>
-              <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                Farm
-                {farmFilters.length > 0 && (
-                  <button type="button" onClick={() => setFarmFilters([])} style={{ background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
-                )}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
-                {farmOptions.map(f => (
-                  <button key={f} type="button" onClick={() => toggleFilter(setFarmFilters, f)}
-                    className={`nav-item ${farmFilters.includes(f) ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '0.9rem', flexShrink: 0 }}>{farmFilters.includes(f) ? '✓' : ''}</span>
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p className="label" style={{ marginBottom: '0.5rem' }}>Farm</p>
+              <MultiSelectDropdown label="Select farms" options={farmOptions} selected={farmFilters}
+                onToggle={f => toggleFilter(setFarmFilters, f)} onClear={() => setFarmFilters([])} />
+            </div>
           )}
 
           {regionOptions.length > 0 && (
-            <>
-              <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                Region
-                {regionFilters.length > 0 && (
-                  <button type="button" onClick={() => setRegionFilters([])} style={{ background: 'none', border: 'none', color: 'var(--moss)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
-                )}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '1.5rem' }}>
-                {regionOptions.map(r => (
-                  <button key={r} type="button" onClick={() => toggleFilter(setRegionFilters, r)}
-                    className={`nav-item ${regionFilters.includes(r) ? 'active' : ''}`} style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ width: '0.9rem', flexShrink: 0 }}>{regionFilters.includes(r) ? '✓' : ''}</span>
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p className="label" style={{ marginBottom: '0.5rem' }}>Region</p>
+              <MultiSelectDropdown label="Select regions" options={regionOptions} selected={regionFilters}
+                onToggle={r => toggleFilter(setRegionFilters, r)} onClear={() => setRegionFilters([])} />
+            </div>
           )}
 
           <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

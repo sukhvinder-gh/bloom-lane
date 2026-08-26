@@ -30,6 +30,27 @@ export async function GET(request: NextRequest) {
   const isB2B = url.searchParams.get('b2b') !== 'false'
   const category = url.searchParams.get('category') || ''
   const ownOnly = url.searchParams.get('own') === 'true'
+  const facetsOnly = url.searchParams.get('facets') === 'true'
+
+  // Distinct farm/region names across ALL currently-listed products — used
+  // to populate the marketplace's Farm/Region filter dropdowns. This must
+  // stay independent of category/color/farmer_id filters, otherwise once a
+  // buyer is scoped to one farm (e.g. via a grower-profile link), the filter
+  // list itself would only ever contain that one farm, with no way to add
+  // or switch to another from within it.
+  if (facetsOnly) {
+    let facetQuery = supabase
+      .from('products')
+      .select('farmers(business_name, region)')
+      .eq('is_listed_this_week', true)
+      .eq('is_active', true)
+    facetQuery = isB2B ? facetQuery.gt('b2b_available', 0) : facetQuery.gt('b2c_available', 0)
+    const { data: facetRows, error: facetError } = await facetQuery
+    if (facetError) return NextResponse.json({ error: facetError.message }, { status: 500 })
+    const farms = [...new Set((facetRows || []).map((r: any) => r.farmers?.business_name).filter(Boolean))].sort()
+    const regions = [...new Set((facetRows || []).map((r: any) => r.farmers?.region).filter(Boolean))].sort()
+    return NextResponse.json({ data: { farms, regions } })
+  }
 
   if (ownOnly) {
     // Farmer fetching their own products (all, including unlisted)

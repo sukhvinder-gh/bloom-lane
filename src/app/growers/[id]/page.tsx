@@ -114,7 +114,11 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(12rem, 1fr))', gap: '1px', background: 'var(--border-light)' }}>
                   {products.map(p => (
                     <div key={p.id} style={{ background: 'white', padding: '1rem' }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{EMOJI[p.category] || '🌿'}</div>
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '5rem', objectFit: 'cover', borderRadius: '0.5rem', marginBottom: '0.5rem' }} />
+                      ) : (
+                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{EMOJI[p.category] || '🌿'}</div>
+                      )}
                       <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--navy)', marginBottom: '0.15rem' }}>{p.name}</p>
                       <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: '0.5rem' }}>per {p.unit} · {p.b2c_available} left</p>
                       <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', letterSpacing: '-0.02em' }}>

@@ -21,6 +21,7 @@ const NAV = [
   { href: '/dashboard/farmer/pack-list',      label: 'Pack List',     icon: '📦' },
   { href: '/dashboard/farmer/storefront',     label: 'My Storefront', icon: '🏪' },
   { href: '/dashboard/farmer/payouts',        label: 'Payouts',       icon: '💳' },
+  { href: '/dashboard/farmer/invoices',       label: 'Invoices',      icon: '🧾' },
   { href: '/dashboard/farmer/membership',     label: 'Membership',    icon: '🎫' },
   { href: '/dashboard/farmer/reports',        label: 'Reports',       icon: '📊' },
 ]
