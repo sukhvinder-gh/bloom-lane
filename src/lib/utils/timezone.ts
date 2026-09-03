@@ -135,6 +135,34 @@ export function isWithinWeeklyWindow(dayName: string, startTime: string, endTime
 }
 
 /**
+ * The next upcoming occurrence of a weekly recurring day+time (e.g. "the
+ * next Wednesday 20:00 AEST"), evaluated in Sydney time — rolls to next
+ * week if today's occurrence has already passed. Used to auto-derive a
+ * default "grower fulfils by" date from a hub/farm's market-close schedule,
+ * so that never has to be a manual per-order admin task.
+ */
+export function nextWeeklyOccurrence(dayName: string, time: string): Date | null {
+  const targetDay = DAY_NAMES.indexOf(dayName.toLowerCase())
+  if (targetDay === -1) return null
+
+  const [h, m] = time.split(':').map(Number)
+  const sydneyNow = toZonedTime(new Date(), AU_TIMEZONE)
+  const sunday = new Date(sydneyNow)
+  sunday.setDate(sydneyNow.getDate() - sydneyNow.getDay())
+  sunday.setHours(0, 0, 0, 0)
+
+  const candidate = new Date(sunday)
+  candidate.setDate(sunday.getDate() + targetDay)
+  candidate.setHours(h, m || 0, 0, 0)
+
+  let candidateUTC = fromZonedTime(candidate, AU_TIMEZONE)
+  if (candidateUTC.getTime() <= Date.now()) {
+    candidateUTC = new Date(candidateUTC.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }
+  return candidateUTC
+}
+
+/**
  * Calculate dispute deadline (T + dispute_window_hrs)
  */
 export function calculateDisputeDeadline(

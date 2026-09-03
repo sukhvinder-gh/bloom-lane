@@ -10,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import QRCode from 'qrcode'
 import { sendPOEmail } from '@/lib/email/sendPOEmail'
 import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderConfirmationEmail'
+import { computeDefaultFulfillmentDate } from '@/lib/orders/defaultFulfillmentDate'
 
 export async function finalizeOrderPayment(
   supabase: ReturnType<typeof createAdminClient>,
@@ -59,7 +60,7 @@ export async function finalizeOrderPayment(
 
     const { data: orderRow } = await supabase
       .from('orders')
-      .select('farm_pickup_farmer_ids, fulfillment_option_selections')
+      .select('farm_pickup_farmer_ids, fulfillment_option_selections, grower_fulfillment_date')
       .eq('id', orderId)
       .single()
     const farmPickupIds = new Set((orderRow as any)?.farm_pickup_farmer_ids || [])
@@ -67,6 +68,15 @@ export async function finalizeOrderPayment(
 
     if (orderItems && orderItems.length > 0) {
       const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
+
+      // Auto-set the fulfilment date right here — this must never depend on
+      // an admin hand-editing every order after the fact. Only fills it in
+      // if nothing's set yet, so an admin override always wins.
+      if (!(orderRow as any)?.grower_fulfillment_date) {
+        const defaultDate = await computeDefaultFulfillmentDate(supabase, farmerIds)
+        await supabase.from('orders').update({ grower_fulfillment_date: defaultDate.toISOString() }).eq('id', orderId)
+      }
+
       await supabase
         .from('purchase_orders')
         .upsert(

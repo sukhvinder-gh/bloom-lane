@@ -66,6 +66,17 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
     ],
   },
   {
+    // Fallback only — a hub or farm with its own market-close schedule set
+    // (Hub management / grower storefront) always takes priority over this.
+    // This exists so an order still gets an automatic date even before any
+    // schedule has been configured, rather than needing a per-order admin
+    // hand-edit.
+    title: 'Fulfilment Scheduling', icon: '🌾', tier: 'platform_admin',
+    items: [
+      { key: 'default_harvest_lead_days', label: 'Default Harvest Lead Time (days)', hint: 'Used only when a farm/hub has no market schedule set — days from order placement to auto-set "grower fulfils by"', type: 'number' },
+    ],
+  },
+  {
     title: 'Platform', icon: '⚙', tier: 'super_admin',
     items: [
       { key: 'platform_name', label: 'Platform Name', hint: 'Display name shown across the app', type: 'text' },
