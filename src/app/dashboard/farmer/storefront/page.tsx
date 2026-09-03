@@ -280,8 +280,11 @@ export default function FarmerStorefrontPage() {
           {form.banner_url && <img src={form.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
         </div>
         <div style={{ padding: '1.25rem', background: 'white', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-          <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: form.brand_color, flexShrink: 0, overflow: 'hidden', marginTop: '-2rem', border: '3px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
-            {form.logo_url && <img src={form.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          <div style={{ width: '4.5rem', height: '4.5rem', borderRadius: '1rem', background: form.brand_color, flexShrink: 0, overflow: 'hidden', border: '3px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+            {form.logo_url
+              ? <img src={form.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.75rem' }}>{(form.business_name || 'F')[0]}</div>
+            }
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: form.brand_color }}>

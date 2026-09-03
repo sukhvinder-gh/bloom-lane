@@ -5,6 +5,12 @@ import { formatPrice, getBuyerUnitPrice } from '@/lib/utils/pricing'
 
 const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '🌾', flowers_native: '🌼', foliage: '🍃', vegetables: '🥦', herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦' }
 
+// Without this, Next statically caches whichever version of this page
+// happened to render first (e.g. before a grower ever set a logo/banner)
+// and keeps serving that forever — a grower's storefront edits (or stock
+// changes) would never actually reach this public page.
+export const dynamic = 'force-dynamic'
+
 export default async function GrowerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const admin = createAdminClient()
