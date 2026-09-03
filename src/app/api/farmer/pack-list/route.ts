@@ -69,11 +69,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: { orders: [], order_count: 0, unscheduled_order_count: 0, from, to } })
   }
 
+  // A cancelled order's purchase_orders row can be left at 'pending' (it's
+  // never transitioned on cancellation), so the PO-status filter above
+  // alone isn't enough to keep a cancelled order out of this list — check
+  // the order's own status too, or a stale PO leaks a dead order in
+  // permanently (with no date to ever satisfy it).
   const { data: allActiveOrders } = await admin
     .from('orders')
     .select('id, order_number, created_at, fulfillment_type, buyer_id, grower_fulfillment_date, order_items(id, quantity, notes, packed_at, products(name, unit))')
     .in('id', activeOrderIds)
     .eq('order_items.farmer_id', farmer.id)
+    .neq('status', 'cancelled')
     .order('created_at', { ascending: true })
 
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {

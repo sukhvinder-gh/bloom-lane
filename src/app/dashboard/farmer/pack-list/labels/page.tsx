@@ -41,6 +41,9 @@ export default async function PackListLabelsPage() {
         .select('id, order_number, buyer_id, order_items(id, quantity, unit_price_cents, subtotal_cents, products(name, unit))')
         .in('id', orderIds)
         .eq('order_items.farmer_id', farmer.id)
+        // A cancelled order's PO can be left at 'pending' (never transitioned
+        // on cancellation) — see the identical check in harvest-list/pack-list routes.
+        .neq('status', 'cancelled')
     : { data: [] as any[] }
 
   const buyerIds = [...new Set((orders || []).map((o: any) => o.buyer_id))]

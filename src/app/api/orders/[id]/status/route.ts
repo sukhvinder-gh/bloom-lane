@@ -68,5 +68,18 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Cancelling an order left its purchase_orders row(s) stuck at 'pending'
+  // forever (nothing else ever transitions them) — that stale PO alone was
+  // enough to keep a dead order permanently visible on the farmer's
+  // harvest/pack lists, since those only checked PO status, not the order's.
+  // 'rejected' is the closest terminal state the PO status enum allows.
+  if (newStatus === 'cancelled') {
+    await adminClient
+      .from('purchase_orders')
+      .update({ status: 'rejected', rejection_reason: 'Order cancelled', rejected_at: new Date().toISOString() })
+      .eq('order_id', id)
+      .eq('status', 'pending')
+  }
+
   return NextResponse.json({ ok: true, status: newStatus })
 }
