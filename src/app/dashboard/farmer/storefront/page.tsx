@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import SingleImageUpload from '@/components/SingleImageUpload'
 
 export default function FarmerStorefrontPage() {
   const supabase = createClient()
@@ -19,6 +20,8 @@ export default function FarmerStorefrontPage() {
   const [form, setForm] = useState({
     business_name: '',
     bio: '',
+    logo_url: null as string | null,
+    banner_url: null as string | null,
     brand_color: '#01472e',
     suburb: '',
     state: 'VIC',
@@ -66,6 +69,8 @@ export default function FarmerStorefrontPage() {
       setForm({
         business_name:        data.business_name || '',
         bio:                  data.bio || '',
+        logo_url:             data.logo_url || null,
+        banner_url:           data.banner_url || null,
         brand_color:          data.brand_color || '#01472e',
         suburb:               data.suburb || '',
         state:                data.state || 'VIC',
@@ -199,6 +204,8 @@ export default function FarmerStorefrontPage() {
       .update({
         business_name:        form.business_name,
         bio:                  form.bio,
+        logo_url:             form.logo_url,
+        banner_url:           form.banner_url,
         brand_color:          form.brand_color,
         suburb:               form.suburb,
         state:                form.state,
@@ -269,17 +276,24 @@ export default function FarmerStorefrontPage() {
 
       {/* Live preview card */}
       <div style={{ marginBottom: '2rem', borderRadius: 'var(--r-card)', overflow: 'hidden', border: '1px solid var(--olive)' }}>
-        <div style={{ height: '4rem', background: form.brand_color }} />
-        <div style={{ padding: '1.25rem', background: 'white' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: form.brand_color }}>
-            {form.business_name || 'Your Farm Name'}
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.2rem' }}>
-            {[form.suburb, form.state, form.postcode].filter(Boolean).join(' ')}
-          </p>
-          <p style={{ fontSize: '0.875rem', color: 'var(--forest)', marginTop: '0.5rem', opacity: 0.7 }}>
-            {form.bio || 'Your farm description will appear here...'}
-          </p>
+        <div style={{ height: '4rem', background: form.brand_color, position: 'relative', overflow: 'hidden' }}>
+          {form.banner_url && <img src={form.banner_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+        </div>
+        <div style={{ padding: '1.25rem', background: 'white', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+          <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: form.brand_color, flexShrink: 0, overflow: 'hidden', marginTop: '-2rem', border: '3px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+            {form.logo_url && <img src={form.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: form.brand_color }}>
+              {form.business_name || 'Your Farm Name'}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.2rem' }}>
+              {[form.suburb, form.state, form.postcode].filter(Boolean).join(' ')}
+            </p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--forest)', marginTop: '0.5rem', opacity: 0.7 }}>
+              {form.bio || 'Your farm description will appear here...'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -317,6 +331,30 @@ export default function FarmerStorefrontPage() {
             style={{ ...inputStyle, resize: 'vertical' }}
           />
         </div>
+
+        {/* Logo + farm/owner photo — only once the account is approved, same
+            requirement the upload endpoint itself enforces for every image
+            upload on the platform. */}
+        {farmer && farmer.status === 'approved' ? (
+          <>
+            <SingleImageUpload
+              label="Logo"
+              shape="square"
+              url={form.logo_url}
+              onChange={url => setForm(f => ({ ...f, logo_url: url }))}
+            />
+            <SingleImageUpload
+              label="Farm / Owner Photo"
+              shape="wide"
+              url={form.banner_url}
+              onChange={url => setForm(f => ({ ...f, banner_url: url }))}
+            />
+          </>
+        ) : farmer && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.6, background: 'var(--olive)', padding: '0.75rem 1rem', borderRadius: '0.625rem' }}>
+            🖼 Logo and farm/owner photo uploads become available once your account is approved.
+          </p>
+        )}
 
         {/* Region */}
         <div>
