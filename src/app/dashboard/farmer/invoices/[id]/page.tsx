@@ -4,6 +4,7 @@ import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
+import { invoiceTitle, invoiceFooterText } from '@/lib/invoicing/rcti'
 
 // A grower's own copy of their invoice for one order — strictly their own
 // line items only, even when the order also contains other farms' items
@@ -17,7 +18,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
   const admin = createAdminClient()
   const { data: farmer } = await admin
     .from('farmers')
-    .select('id, business_name, abn, gst_registered, address, suburb, state, postcode, email')
+    .select('id, business_name, abn, gst_registered, address, suburb, state, postcode, email, rcti_agreed, rcti_agreed_at, rcti_full_name')
     .eq('user_id', sessionUser.id)
     .maybeSingle()
 
@@ -70,8 +71,8 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-                {isTaxInvoice ? 'Tax Invoice' : 'Invoice'}
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && farmer.rcti_agreed ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+                {invoiceTitle(isTaxInvoice, !!farmer.rcti_agreed)}
               </div>
               <div style={{ fontSize: '0.875rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Order #{order.order_number}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.1rem' }}>{formatAEST(order.created_at, 'dd MMMM yyyy')}</div>
@@ -125,11 +126,10 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
           </div>
 
           <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
-            {isTaxInvoice ? (
-              <p>This is a tax invoice for supplies made by {farmer.business_name}. GST of 10% applies to applicable items.</p>
-            ) : (
-              <p>{farmer.business_name} is not registered for GST. No GST has been charged on this invoice.</p>
-            )}
+            <p>{invoiceFooterText({
+              isTaxInvoice, rctiAgreed: !!farmer.rcti_agreed, businessName: farmer.business_name,
+              rctiFullName: farmer.rcti_full_name, rctiAgreedAt: farmer.rcti_agreed_at,
+            })}</p>
           </div>
         </div>
       </div>

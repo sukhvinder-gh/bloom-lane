@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
+import { invoiceTitle, invoiceFooterText } from '@/lib/invoicing/rcti'
 
 // Admin-side counterpart to the buyer's own invoice view — same per-grower
 // document rendering (never a single combined tax invoice across growers),
@@ -36,7 +37,7 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
   const farmerIds = [...new Set(items.map(i => i.farmer_id))]
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, business_name, abn, gst_registered, address, suburb, state, postcode, email')
+    .select('id, business_name, abn, gst_registered, address, suburb, state, postcode, email, rcti_agreed, rcti_agreed_at, rcti_full_name')
     .in('id', farmerIds)
 
   const farmerById = new Map((farmers || []).map(f => [f.id, f]))
@@ -119,8 +120,8 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-                  {isTaxInvoice ? 'Tax Invoice' : 'Invoice'}
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && farmer?.rcti_agreed ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+                  {invoiceTitle(isTaxInvoice, !!farmer?.rcti_agreed)}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Order #{order.order_number}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.1rem' }}>{formatAEST(order.created_at, 'dd MMMM yyyy')}</div>
@@ -177,13 +178,12 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
               </div>
             </div>
 
-            {/* Footer — GST status statement */}
+            {/* Footer — GST/RCTI status statement */}
             <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
-              {isTaxInvoice ? (
-                <p>This is a tax invoice for supplies made by {farmer?.business_name || 'this grower'}. GST of 10% applies to applicable items.</p>
-              ) : (
-                <p>{farmer?.business_name || 'This supplier'} is not registered for GST. No GST has been charged on this invoice.</p>
-              )}
+              <p>{invoiceFooterText({
+                isTaxInvoice, rctiAgreed: !!farmer?.rcti_agreed, businessName: farmer?.business_name,
+                rctiFullName: farmer?.rcti_full_name, rctiAgreedAt: farmer?.rcti_agreed_at,
+              })}</p>
             </div>
           </div>
         ))}
