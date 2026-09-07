@@ -641,22 +641,6 @@ export default function MarketplacePage() {
             })}
           </div>
 
-          {farmOptions.length > 0 && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <p className="label" style={{ marginBottom: '0.5rem' }}>Farm</p>
-              <MultiSelectDropdown label="Select farms" options={farmOptions} selected={farmFilters}
-                onToggle={f => toggleFilter(setFarmFilters, f)} onClear={() => setFarmFilters([])} />
-            </div>
-          )}
-
-          {regionOptions.length > 0 && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <p className="label" style={{ marginBottom: '0.5rem' }}>Region</p>
-              <MultiSelectDropdown label="Select regions" options={regionOptions} selected={regionFilters}
-                onToggle={r => toggleFilter(setRegionFilters, r)} onClear={() => setRegionFilters([])} />
-            </div>
-          )}
-
           <p className="label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             Color
             {colors.length > 0 && (
@@ -677,7 +661,7 @@ export default function MarketplacePage() {
 
         {/* Product grid */}
         <main style={{ flex: 1, padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <h1 className="type-subheading" style={{ color: 'var(--forest)' }}>
               {category ? CATEGORIES.find(c => c.id === category)?.label : 'All Products'}
             </h1>
@@ -685,6 +669,28 @@ export default function MarketplacePage() {
               {loading ? '…' : `${filtered.length} products`}
             </span>
           </div>
+
+          {/* Farm / Region filters — moved here from the sidebar so they sit
+              in the open page area with room to breathe, rather than inside
+              a narrow, scrollable sidebar column. */}
+          {(farmOptions.length > 0 || regionOptions.length > 0) && (
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+              {farmOptions.length > 0 && (
+                <div>
+                  <p className="label" style={{ marginBottom: '0.5rem' }}>Farm</p>
+                  <MultiSelectDropdown label="Select farms" options={farmOptions} selected={farmFilters}
+                    onToggle={f => toggleFilter(setFarmFilters, f)} onClear={() => setFarmFilters([])} />
+                </div>
+              )}
+              {regionOptions.length > 0 && (
+                <div>
+                  <p className="label" style={{ marginBottom: '0.5rem' }}>Region</p>
+                  <MultiSelectDropdown label="Select regions" options={regionOptions} selected={regionFilters}
+                    onToggle={r => toggleFilter(setRegionFilters, r)} onClear={() => setRegionFilters([])} />
+                </div>
+              )}
+            </div>
+          )}
 
           {loading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(14rem, 1fr))', gap: '1.25rem' }}>
