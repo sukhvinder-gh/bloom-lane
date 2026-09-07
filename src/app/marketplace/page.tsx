@@ -672,9 +672,22 @@ export default function MarketplacePage() {
 
           {/* Farm / Region filters — moved here from the sidebar so they sit
               in the open page area with room to breathe, rather than inside
-              a narrow, scrollable sidebar column. */}
+              a narrow, scrollable sidebar column. Search sits right before
+              them (same `search` state as the header's search box, so
+              typing in either one stays in sync). */}
           {(farmOptions.length > 0 || regionOptions.length > 0) && (
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
+              <div style={{ minWidth: '14rem', flex: '1 1 14rem', position: 'relative' }}>
+                <p className="label" style={{ marginBottom: '0.5rem' }}>Search</p>
+                <span style={{ position: 'absolute', left: '0.85rem', bottom: '0.65rem', color: 'var(--moss)', fontSize: '0.9rem' }}>🔍</span>
+                <input
+                  className="input"
+                  style={{ paddingLeft: '2.25rem' }}
+                  placeholder="Search products, farms or regions…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
               {farmOptions.length > 0 && (
                 <div>
                   <p className="label" style={{ marginBottom: '0.5rem' }}>Farm</p>
