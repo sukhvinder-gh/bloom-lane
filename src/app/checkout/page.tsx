@@ -51,6 +51,25 @@ const STRIPE_APPEARANCE: Appearance = {
       border: '1px solid #c9d9c6',
       backgroundColor: 'rgba(255,255,255,0.08)',
     },
+    // Stripe's 'night' theme dims tab icon/label color by default (tuned
+    // for its own darker default surface) — against this page's forest
+    // green that reads as barely-there grey text on Card/Klarna/Zip.
+    // Cream for the normal state; dark forest for the selected state,
+    // since the selected tab's background lightens (rgba white overlay
+    // above) and cream-on-cream would just recreate the same problem.
+    '.TabLabel': {
+      color: '#f0ebe0',
+      fontWeight: '600',
+    },
+    '.TabIcon': {
+      fill: '#f0ebe0',
+    },
+    '.TabLabel--selected': {
+      color: '#173222',
+    },
+    '.TabIcon--selected': {
+      fill: '#173222',
+    },
     // The "save my info" / Link signup block defaults to Stripe's own
     // night-theme surface color (near-black), which reads as a jarring
     // navy box against this page's forest-green card — explicit rule so
