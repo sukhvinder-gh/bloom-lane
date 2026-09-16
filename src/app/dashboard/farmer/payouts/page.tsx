@@ -4,7 +4,12 @@ import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 
-export default async function FarmerPayoutsPage() {
+export default async function FarmerPayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ stripe_error?: string }>
+}) {
+  const { stripe_error } = await searchParams
   const sessionUser = await getSessionUserFromCookie()
   if (!sessionUser) redirect('/auth/login')
 
@@ -43,6 +48,12 @@ export default async function FarmerPayoutsPage() {
       <p style={{ color: 'var(--forest)', opacity: 0.5, marginBottom: '2rem', fontSize: '0.9rem' }}>
         Your payouts after {Math.round(farmer.commission_rate * 100)}% platform commission
       </p>
+
+      {stripe_error && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '1rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', color: '#991b1b', fontSize: '0.85rem' }}>
+          ⚠ Something went wrong setting up Stripe. Please try again, or contact support if it keeps happening.
+        </div>
+      )}
 
       {/* Stripe onboarding banner */}
       {!farmer.stripe_onboarding_complete ? (
