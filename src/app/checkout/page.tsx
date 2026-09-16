@@ -47,16 +47,15 @@ const STRIPE_APPEARANCE: Appearance = {
     '.Tab:hover': {
       border: '1px solid rgba(255,255,255,0.4)',
     },
+    // Solid (not translucent) selected background — a translucent overlay
+    // stacks unpredictably on top of whatever Stripe's own 'night' theme
+    // already paints there, so the resulting tone (and therefore whether
+    // dark or light icon/text reads against it) isn't actually controlled.
+    // A flat, known color guarantees which text color pairs with it.
     '.Tab--selected': {
       border: '1px solid #c9d9c6',
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: '#c9d9c6',
     },
-    // Stripe's 'night' theme dims tab icon/label color by default (tuned
-    // for its own darker default surface) — against this page's forest
-    // green that reads as barely-there grey text on Card/Klarna/Zip.
-    // Cream for the normal state; dark forest for the selected state,
-    // since the selected tab's background lightens (rgba white overlay
-    // above) and cream-on-cream would just recreate the same problem.
     '.TabLabel': {
       color: '#f0ebe0',
       fontWeight: '600',
