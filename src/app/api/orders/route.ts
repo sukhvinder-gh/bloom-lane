@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { createPaymentIntent } from '@/lib/stripe'
+import { createPaymentIntent, cancelPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
 import { isMarketOpenForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
@@ -58,6 +58,33 @@ export async function POST(request: NextRequest) {
   }
 
   const isB2B = profile?.role === 'buyer_b2b' && profile?.abn_verified === true
+
+  // Release stock from this buyer's own abandoned checkout attempts before
+  // reserving more. A pending_payment order holds its stock until Stripe
+  // reports success/failure/cancellation via webhook — but a buyer who never
+  // finishes paying (navigates away, retries checkout, or is just clicking
+  // through to see the form) never triggers any of those, so the reservation
+  // was otherwise stuck until someone manually cancelled it. Only ever
+  // touches this buyer's own rows, so it can't affect anyone else's order.
+  const { data: abandonedOrders } = await adminSupabase
+    .from('orders')
+    .select('id, stripe_payment_intent_id, order_items(product_id, quantity, is_b2b)')
+    .eq('buyer_id', user.id)
+    .eq('status', 'pending_payment')
+    .not('stripe_payment_intent_id', 'is', null)
+
+  for (const abandoned of abandonedOrders || []) {
+    const abandonedItems = (abandoned as any).order_items as { product_id: string; quantity: number; is_b2b: boolean }[]
+    if (abandonedItems.length > 0) {
+      await adminSupabase.rpc('checkout_release_stock', {
+        p_items: abandonedItems.map(i => ({ product_id: i.product_id, quantity: i.quantity, is_b2b: i.is_b2b })),
+      })
+    }
+    if (abandoned.stripe_payment_intent_id) {
+      await cancelPaymentIntent(abandoned.stripe_payment_intent_id)
+    }
+    await adminSupabase.from('orders').update({ status: 'cancelled', stripe_payment_status: 'canceled' }).eq('id', abandoned.id)
+  }
 
   const body = await request.json()
   const parsed = checkoutSchema.safeParse(body)

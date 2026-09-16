@@ -121,6 +121,20 @@ export async function createRefund(
 }
 
 /**
+ * Cancel a still-open PaymentIntent (buyer abandoned checkout before
+ * paying). No-op if Stripe has already moved it past a cancellable state
+ * (e.g. already succeeded) — that's a normal race, not an error worth
+ * surfacing to the caller.
+ */
+export async function cancelPaymentIntent(paymentIntentId: string): Promise<void> {
+  try {
+    await stripe.paymentIntents.cancel(paymentIntentId)
+  } catch (err: any) {
+    if (err?.code !== 'payment_intent_unexpected_state') throw err
+  }
+}
+
+/**
  * Verify Stripe webhook signature
  */
 export function constructWebhookEvent(
