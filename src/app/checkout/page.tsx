@@ -8,8 +8,51 @@ import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import { getStripe } from '@/lib/stripe/client'
 import StripePaymentForm from './StripePaymentForm'
+import type { Appearance } from '@stripe/stripe-js'
 
 const DELIVERY_FEE = 2000
+
+// Stripe's built-in 'night' theme picks its own field/border colors, tuned
+// for a neutral dark background — against this page's actual dark
+// forest-green card those defaults read as too low-contrast (borders
+// between fields barely visible). Explicit variables/rules here instead,
+// so field boundaries stay legible regardless of what Stripe ships next.
+const STRIPE_APPEARANCE: Appearance = {
+  theme: 'night',
+  variables: {
+    colorPrimary: '#c9d9c6',
+    colorBackground: 'rgba(255,255,255,0.06)',
+    colorText: '#f0ebe0',
+    colorTextSecondary: '#a8c2a0',
+    colorTextPlaceholder: 'rgba(240,235,224,0.45)',
+    colorDanger: '#ff8a80',
+    borderRadius: '10px',
+    fontSizeBase: '15px',
+  },
+  rules: {
+    '.Input': {
+      border: '1px solid rgba(255,255,255,0.3)',
+      boxShadow: 'none',
+    },
+    '.Input:focus': {
+      border: '1px solid #c9d9c6',
+      boxShadow: '0 0 0 1px #c9d9c6',
+    },
+    '.Label': {
+      color: '#cfe0cc',
+    },
+    '.Tab': {
+      border: '1px solid rgba(255,255,255,0.22)',
+    },
+    '.Tab:hover': {
+      border: '1px solid rgba(255,255,255,0.4)',
+    },
+    '.Tab--selected': {
+      border: '1px solid #c9d9c6',
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+  },
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -323,7 +366,7 @@ export default function CheckoutPage() {
               <div style={{ marginTop: '1.5rem' }}>
                 <Elements
                   stripe={getStripe()}
-                  options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#01472e' } } }}
+                  options={{ clientSecret, appearance: STRIPE_APPEARANCE }}
                 >
                   <StripePaymentForm
                     amountLabel={`Pay ${formatPrice(total)}`}

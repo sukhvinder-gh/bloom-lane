@@ -233,7 +233,13 @@ body {
   border: 1.5px solid var(--border);
 }
 .btn-cream:hover {
-  background: var(--bloom-soft);
+  /* Was var(--bloom-soft) — a ~10%-opacity overlay from the pre-rebrand
+     navy+pink theme. Fine on a light page, but .btn-cream is now also used
+     on dark forest-green cards (e.g. checkout), where that near-transparent
+     hover let the dark backdrop bleed through while the text stayed dark
+     navy — dark-on-dark, unreadable. A solid, slightly darker cream stays
+     legible regardless of what's behind the button. */
+  background: var(--offwhite);
 }
 .btn-sm {
   padding: 0.4rem 1rem;
