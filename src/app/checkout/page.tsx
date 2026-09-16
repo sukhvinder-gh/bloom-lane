@@ -51,6 +51,21 @@ const STRIPE_APPEARANCE: Appearance = {
       border: '1px solid #c9d9c6',
       backgroundColor: 'rgba(255,255,255,0.08)',
     },
+    // The "save my info" / Link signup block defaults to Stripe's own
+    // night-theme surface color (near-black), which reads as a jarring
+    // navy box against this page's forest-green card — explicit rule so
+    // it stays in the same family as the input fields above it.
+    '.Block': {
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.16)',
+      boxShadow: 'none',
+    },
+    '.BlockDivider': {
+      backgroundColor: 'rgba(255,255,255,0.16)',
+    },
+    '.CheckboxLabel': {
+      color: '#cfe0cc',
+    },
   },
 }
 
