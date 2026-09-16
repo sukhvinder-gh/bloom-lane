@@ -2,9 +2,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Elements } from '@stripe/react-stripe-js'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
+import { getStripe } from '@/lib/stripe/client'
+import StripePaymentForm from './StripePaymentForm'
 
 const DELIVERY_FEE = 2000
 
@@ -15,6 +18,14 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState({ line1: '', suburb: '', state: 'VIC', postcode: '' })
   const [notes, setNotes]     = useState('')
   const [error, setError]     = useState('')
+
+  // Set once the order is created and Stripe has issued a PaymentIntent —
+  // switches the right-hand panel from "place order" into "enter card
+  // details." Stays null in NEXT_PUBLIC_TEST_MODE, since the server
+  // finalizes the order immediately in that mode and there's no payment to
+  // collect.
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
 
   const [hubs, setHubs]                 = useState<any[]>([])
   const [selectedHubId, setSelectedHubId] = useState<string>('')
@@ -163,8 +174,19 @@ export default function CheckoutPage() {
       })
       const orderData = await res.json()
       if (!res.ok) { setError(orderData.error || 'Something went wrong'); setLoading(false); return }
-      clearCart()
-      router.push(`/dashboard/buyer/orders/${orderData.data.order_id}?new=true`)
+
+      if (orderData.data.client_secret) {
+        // Real payment required — order exists as pending_payment, stock is
+        // already reserved. Switch to the card-entry step; the order only
+        // finalizes once Stripe confirms payment (webhook -> finalizeOrderPayment).
+        setPendingOrderId(orderData.data.order_id)
+        setClientSecret(orderData.data.client_secret)
+        setLoading(false)
+      } else {
+        // NEXT_PUBLIC_TEST_MODE bypass — order was finalized server-side immediately.
+        clearCart()
+        router.push(`/dashboard/buyer/orders/${orderData.data.order_id}?new=true`)
+      }
     } catch {
       setError('Network error. Please try again.')
       setLoading(false)
@@ -297,14 +319,29 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <button
-              onClick={placeOrder}
-              disabled={loading}
-              className="btn btn-cream"
-              style={{ width: '100%', marginTop: '1.5rem' }}
-            >
-              {loading ? 'Placing order…' : `Pay ${formatPrice(total)}`}
-            </button>
+            {clientSecret && pendingOrderId ? (
+              <div style={{ marginTop: '1.5rem' }}>
+                <Elements
+                  stripe={getStripe()}
+                  options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#01472e' } } }}
+                >
+                  <StripePaymentForm
+                    amountLabel={`Pay ${formatPrice(total)}`}
+                    returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/checkout/complete?order_id=${pendingOrderId}`}
+                    onSuccess={() => { clearCart(); router.push(`/dashboard/buyer/orders/${pendingOrderId}?new=true`) }}
+                  />
+                </Elements>
+              </div>
+            ) : (
+              <button
+                onClick={placeOrder}
+                disabled={loading}
+                className="btn btn-cream"
+                style={{ width: '100%', marginTop: '1.5rem' }}
+              >
+                {loading ? 'Placing order…' : 'Continue to Payment'}
+              </button>
+            )}
             <p className="type-label-sm" style={{ color: 'var(--moss)', textAlign: 'center', marginTop: '0.875rem' }}>
               {isB2B ? 'Secure via Stripe · GST itemised above' : 'Secure via Stripe · GST included'}
             </p>
@@ -312,7 +349,10 @@ export default function CheckoutPage() {
         </div>
 
         {/* ── Left: Delivery form ── */}
-        <div className="checkout-form" style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Locked once the order is created and we're collecting payment —
+            these choices are already snapshotted onto the order; editing
+            them here now would do nothing but could read as if it still did. */}
+        <div className="checkout-form" style={{ gridColumn: '1', display: 'flex', flexDirection: 'column', gap: '1.5rem', opacity: clientSecret ? 0.5 : 1, pointerEvents: clientSecret ? 'none' : 'auto' }}>
 
           {/* Farm pickup — per grower, on top of the pooled hub/delivery choice below */}
           {pickupEligibleFarmers.length > 0 && (
