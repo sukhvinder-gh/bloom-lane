@@ -87,8 +87,12 @@ export async function POST(request: NextRequest) {
       break
     }
 
-    case 'transfer.created':
-    case 'transfer.paid': {
+    // Stripe has no transfer.paid/transfer.failed events — a Transfer to a
+    // connected account's balance is synchronous, so transfer.created IS the
+    // success signal (if the API call that created it succeeded, the funds
+    // moved). transfer.reversed is the real "something went wrong after the
+    // fact" signal, e.g. the connected account couldn't accept the funds.
+    case 'transfer.created': {
       const transfer = event.data.object as any
       if (transfer.metadata?.order_id && transfer.metadata?.farmer_id) {
         await supabase
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
       break
     }
 
-    case 'transfer.failed': {
+    case 'transfer.reversed': {
       const transfer = event.data.object as any
       await supabase
         .from('payouts')
