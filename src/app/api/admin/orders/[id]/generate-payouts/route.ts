@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
-
-const COMMISSION_RATE = 0.05
+import { calculateFarmerPayout } from '@/lib/utils/pricing'
 
 // POST /api/admin/orders/[id]/generate-payouts
-// Creates a payout record per farmer for this order (5% commission deducted).
+// Creates a payout record per farmer for this order, commission deducted at
+// each farmer's own commission_rate (matches the automated post-dispute
+// payout in src/lib/inngest/functions.ts — this route previously used a
+// hardcoded 5% regardless of the farmer's actual rate).
 // Idempotent — skips farmers who already have a payout for this order.
 export async function POST(
   _request: NextRequest,
@@ -52,11 +54,17 @@ export async function POST(
     byFarmer[item.farmer_id].gross += item.subtotal_cents
   }
 
+  const { data: farmerRows } = await admin
+    .from('farmers')
+    .select('id, commission_rate')
+    .in('id', Object.keys(byFarmer))
+  const commissionRates = new Map((farmerRows || []).map(f => [f.id, f.commission_rate]))
+
   const created: any[] = []
   for (const [farmerId, data] of Object.entries(byFarmer)) {
     if (alreadyPaid.has(farmerId)) continue
 
-    const commission = Math.round(data.gross * COMMISSION_RATE)
+    const { commission } = calculateFarmerPayout(data.gross, commissionRates.get(farmerId) ?? 0.10)
     const availableForClawback = data.gross - commission
 
     // Apply pending balance adjustments (refund clawbacks) oldest-first, up to
