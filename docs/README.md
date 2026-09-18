@@ -49,7 +49,7 @@ src/
 │       ├── products/   # Product CRUD
 │       ├── orders/     # Checkout + order management
 │       │   └── ppod/   # Photo Proof of Delivery
-│       ├── payments/   # Stripe Connect
+│       ├── stripe/     # Stripe Connect onboarding
 │       ├── webhooks/   # Stripe webhooks
 │       └── abn/        # ABN verification
 ├── components/
@@ -94,10 +94,15 @@ src/
 2. Add the API route: `src/app/api/inngest/route.ts`
 3. Register functions at Inngest dashboard
 
-### 5. Resend (Email)
-1. Create account at [resend.com](https://resend.com)
-2. Verify your domain (must be `.com.au` ideally)
-3. Add `RESEND_API_KEY` to `.env.local`
+### 5. Email (dual provider)
+The app sends through whichever provider `EMAIL_PROVIDER` selects (or infers —
+see `.env.example`). Resend's free sandbox sender can only deliver to the
+Resend account owner's own inbox, so most environments actually run on Gmail
+SMTP until a verified sending domain is in place:
+1. **Resend:** create an account at [resend.com](https://resend.com), verify
+   your domain (`.com.au` ideally), add `RESEND_API_KEY` + `EMAIL_FROM`.
+2. **Gmail (interim path):** generate a Gmail App Password and set
+   `GMAIL_USER` + `GMAIL_APP_PASSWORD` — no domain verification needed.
 
 ---
 
@@ -151,23 +156,31 @@ Before any production deployment, verify:
 
 ---
 
-## Deployment (Vercel)
+## Deployment (Azure App Service)
+
+Deployment is automatic — GitHub Actions (`.github/workflows/azure-deploy.yml`)
+builds and deploys on every push to `main`. There is no manual deploy step for
+normal changes.
 
 ```bash
-# 1. Push to GitHub
+# 1. Push to GitHub — this alone triggers the deploy
 git push origin main
 
-# 2. Connect to Vercel
-vercel --prod
-
-# 3. Set environment variables in Vercel dashboard
-# (all vars from .env.example)
-
-# 4. Set Stripe webhook to production URL
-# https://yourdomain.com.au/api/webhooks/stripe
-
-# 5. Configure Inngest production environment
+# 2. Watch the run
+gh run list --limit 1
+gh run view <run-id>
 ```
+
+The workflow runs `npm run build` (output: 'standalone'), copies
+`.next/static` and `public` into the standalone bundle, and deploys it to the
+**bloom-lane-app** Azure Web App via `azure/webapps-deploy@v3` using a
+publish-profile secret. A full deploy typically takes ~3 minutes.
+
+- Environment variables live in Azure App Service's own Configuration
+  (Application Settings), not in a committed `.env.production` — only
+  `NEXT_PUBLIC_*` values are safe to commit there.
+- Stripe webhook endpoint: `https://bloom-lane-app.azurewebsites.net/api/webhooks/stripe`
+- `deploy-azure.ps1` (repo root) is a manual/local deploy helper — not used by CI.
 
 ---
 

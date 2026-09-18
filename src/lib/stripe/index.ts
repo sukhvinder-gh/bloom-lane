@@ -49,10 +49,14 @@ export async function createOnboardingLink(
   stripeAccountId: string,
   farmerId: string
 ): Promise<string> {
+  // Falls back to the known production URL rather than silently producing a
+  // broken "undefined/dashboard/..." link if NEXT_PUBLIC_APP_URL is unset —
+  // matches the fallback already used for NEXT_PUBLIC_SITE_URL in the email templates.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bloom-lane-app.azurewebsites.net'
   const link = await stripe.accountLinks.create({
     account: stripeAccountId,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/farmer/stripe/refresh`,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/farmer/stripe/complete`,
+    refresh_url: `${appUrl}/dashboard/farmer/stripe/refresh`,
+    return_url: `${appUrl}/dashboard/farmer/stripe/complete`,
     type: 'account_onboarding',
   })
 
