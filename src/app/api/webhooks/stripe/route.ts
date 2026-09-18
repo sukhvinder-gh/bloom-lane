@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { constructWebhookEvent } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
+import { finalizeGrowerSubscriptionPayment } from '@/lib/subscriptions/finalizeGrowerSubscriptionPayment'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -28,6 +29,14 @@ export async function POST(request: NextRequest) {
   switch (eventType) {
     case 'payment_intent.succeeded': {
       const pi = event.data.object as any
+
+      // Grower Hub Membership payments share this same event type but
+      // aren't an order — route them to their own finalizer instead.
+      if (pi.metadata?.type === 'grower_subscription') {
+        await finalizeGrowerSubscriptionPayment(supabase, pi)
+        break
+      }
+
       const orderId = pi.metadata?.order_id
 
       if (!orderId) {

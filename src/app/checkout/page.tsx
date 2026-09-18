@@ -7,85 +7,10 @@ import { useCart } from '@/hooks/useCart'
 import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import { getStripe } from '@/lib/stripe/client'
-import StripePaymentForm from './StripePaymentForm'
-import type { Appearance } from '@stripe/stripe-js'
+import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
+import StripePaymentForm from '@/components/StripePaymentForm'
 
 const DELIVERY_FEE = 2000
-
-// Stripe's built-in 'night' theme picks its own field/border colors, tuned
-// for a neutral dark background — against this page's actual dark
-// forest-green card those defaults read as too low-contrast (borders
-// between fields barely visible). Explicit variables/rules here instead,
-// so field boundaries stay legible regardless of what Stripe ships next.
-const STRIPE_APPEARANCE: Appearance = {
-  theme: 'night',
-  variables: {
-    colorPrimary: '#c9d9c6',
-    colorBackground: 'rgba(255,255,255,0.06)',
-    colorText: '#f0ebe0',
-    colorTextSecondary: '#a8c2a0',
-    colorTextPlaceholder: 'rgba(240,235,224,0.45)',
-    colorDanger: '#ff8a80',
-    borderRadius: '10px',
-    fontSizeBase: '15px',
-  },
-  rules: {
-    '.Input': {
-      border: '1px solid rgba(255,255,255,0.3)',
-      boxShadow: 'none',
-    },
-    '.Input:focus': {
-      border: '1px solid #c9d9c6',
-      boxShadow: '0 0 0 1px #c9d9c6',
-    },
-    '.Label': {
-      color: '#cfe0cc',
-    },
-    '.Tab': {
-      border: '1px solid rgba(255,255,255,0.22)',
-    },
-    '.Tab:hover': {
-      border: '1px solid rgba(255,255,255,0.4)',
-    },
-    // Solid (not translucent) selected background — a translucent overlay
-    // stacks unpredictably on top of whatever Stripe's own 'night' theme
-    // already paints there, so the resulting tone (and therefore whether
-    // dark or light icon/text reads against it) isn't actually controlled.
-    // A flat, known color guarantees which text color pairs with it.
-    '.Tab--selected': {
-      border: '1px solid #c9d9c6',
-      backgroundColor: '#c9d9c6',
-    },
-    '.TabLabel': {
-      color: '#f0ebe0',
-      fontWeight: '600',
-    },
-    '.TabIcon': {
-      fill: '#f0ebe0',
-    },
-    '.TabLabel--selected': {
-      color: '#173222',
-    },
-    '.TabIcon--selected': {
-      fill: '#173222',
-    },
-    // The "save my info" / Link signup block defaults to Stripe's own
-    // night-theme surface color (near-black), which reads as a jarring
-    // navy box against this page's forest-green card — explicit rule so
-    // it stays in the same family as the input fields above it.
-    '.Block': {
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.16)',
-      boxShadow: 'none',
-    },
-    '.BlockDivider': {
-      backgroundColor: 'rgba(255,255,255,0.16)',
-    },
-    '.CheckboxLabel': {
-      color: '#cfe0cc',
-    },
-  },
-}
 
 export default function CheckoutPage() {
   const router = useRouter()

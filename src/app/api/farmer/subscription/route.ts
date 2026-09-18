@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { sendSubscriptionConfirmation } from '@/lib/email/sendSubscriptionEmail'
+import { stripe } from '@/lib/stripe'
 
 // GET — fetch current farmer subscription status
 export async function GET() {
@@ -144,8 +145,8 @@ export async function POST(request: NextRequest) {
   }
   const amount = priceMap[billing_period] || 6000
 
-  // Create pending subscription record
-  const { data: sub } = await admin
+  // Create/update the pending subscription record
+  const { data: sub, error: subErr } = await admin
     .from('subscriptions')
     .upsert({
       user_id: user.id,
@@ -159,7 +160,43 @@ export async function POST(request: NextRequest) {
     .select()
     .single()
 
-  return NextResponse.json({ ok: true, subscription: sub, requiresPayment: true, amount_cents: amount })
+  if (subErr || !sub) return NextResponse.json({ error: subErr?.message || 'Failed to save subscription' }, { status: 500 })
+
+  // Hub Membership is a fixed-term purchase, not a recurring Stripe
+  // subscription (see finalizeGrowerSubscriptionPayment — status just moves
+  // to 'active' with an expires_at, same one-off PaymentIntent pattern
+  // already used for order checkout). A fresh PaymentIntent is created on
+  // every save so the amount always matches whatever billing period is
+  // currently selected, even if the farmer changes it before paying.
+  let paymentIntent
+  try {
+    paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'aud',
+      metadata: {
+        type: 'grower_subscription',
+        subscription_id: sub.id,
+        user_id: user.id,
+        billing_period,
+      },
+      automatic_payment_methods: { enabled: true },
+    })
+  } catch (stripeErr) {
+    return NextResponse.json({ error: 'Payment setup failed. Please try again.' }, { status: 500 })
+  }
+
+  await admin
+    .from('subscriptions')
+    .update({ stripe_payment_intent_id: paymentIntent.id })
+    .eq('id', sub.id)
+
+  return NextResponse.json({
+    ok: true,
+    subscription: sub,
+    requiresPayment: true,
+    amount_cents: amount,
+    client_secret: paymentIntent.client_secret,
+  })
 }
 
 // DELETE — cancel the grower's active subscription

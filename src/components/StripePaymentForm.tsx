@@ -2,9 +2,11 @@
 import { useState } from 'react'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 
-// Card entry + confirmation step — only ever mounted inside an <Elements>
-// provider that already has the order's PaymentIntent client_secret, so
-// there's nothing to create here, only to confirm.
+// Generic card entry + confirmation step — only ever mounted inside an
+// <Elements> provider that already has a PaymentIntent client_secret, so
+// there's nothing to create here, only to confirm. Shared by order checkout
+// and grower Hub Membership payment — both are a single PaymentIntent
+// confirmed the same way.
 export default function StripePaymentForm({
   amountLabel,
   returnUrl,
@@ -35,8 +37,7 @@ export default function StripePaymentForm({
 
     // redirect: 'if_required' keeps the buyer on this page for the common
     // card case — Stripe only navigates away for payment methods that
-    // genuinely require it (e.g. certain bank redirects). /checkout/complete
-    // is the fallback return_url for exactly that case.
+    // genuinely require it. returnUrl is the fallback for exactly that case.
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: { return_url: returnUrl },

@@ -2,6 +2,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Elements } from '@stripe/react-stripe-js'
+import { getStripe } from '@/lib/stripe/client'
+import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
+import StripePaymentForm from '@/components/StripePaymentForm'
 
 // Display label only — the underlying plan value ('wholesale_collection')
 // is unchanged in the database/subscriptions.plan enum. This tier is a
@@ -103,6 +107,47 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Pending Hub Membership payment ────────────────────────────────────────────
+// Shown whenever there's a pending Hub Membership subscription, regardless
+// of whether that pending state was just created by the form below or the
+// farmer is returning later to finish paying — those are the same UI, just
+// a different source for the client_secret (the submit response vs. the
+// /pay resume endpoint).
+function PendingPaymentCard({ amountCents, clientSecret, onResume, resuming, onSuccess }: {
+  amountCents: number
+  clientSecret: string | null
+  onResume: () => void
+  resuming: boolean
+  onSuccess: () => void
+}) {
+  if (!clientSecret) {
+    return (
+      <div className="card-forest" style={{ padding: '1.75rem', marginBottom: '1.75rem' }}>
+        <p style={{ color: 'var(--cream)', fontWeight: 700, marginBottom: '0.375rem' }}>Payment required to activate</p>
+        <p style={{ color: 'var(--sage)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+          Your Hub Membership details are saved — pay ${(amountCents / 100).toFixed(2)} to activate it.
+        </p>
+        <button onClick={onResume} disabled={resuming} className="btn btn-cream" style={{ width: '100%' }}>
+          {resuming ? 'Loading payment form…' : `Pay $${(amountCents / 100).toFixed(2)} now`}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card-forest" style={{ padding: '1.75rem', marginBottom: '1.75rem' }}>
+      <p style={{ color: 'var(--cream)', fontWeight: 700, marginBottom: '1.25rem' }}>Pay ${(amountCents / 100).toFixed(2)} to activate Hub Membership</p>
+      <Elements stripe={getStripe()} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
+        <StripePaymentForm
+          amountLabel={`Pay $${(amountCents / 100).toFixed(2)}`}
+          returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard/farmer/membership`}
+          onSuccess={onSuccess}
+        />
+      </Elements>
     </div>
   )
 }
@@ -293,6 +338,8 @@ export default function GrowerSubscriptionPage() {
   const [cancelConfirm, setCancelConfirm]   = useState(false)
   const [cancelling, setCancelling]         = useState(false)
   const [hasFarmerProfile, setHasFarmerProfile] = useState(true)
+  const [payClientSecret, setPayClientSecret] = useState<string | null>(null)
+  const [resumingPay, setResumingPay]         = useState(false)
   // Once a membership is set up, this page should open on a read-only
   // summary, not the plan picker — "edit" only ever shows again via the
   // explicit "Change Plan" action.
@@ -382,12 +429,39 @@ export default function GrowerSubscriptionPage() {
     }
     if (data.subscription) setCurrent(data.subscription)
     if (data.requiresPayment) {
-      setMsg({ type: 'ok', text: `Subscription saved. Payment of $${((data.amount_cents || 0) / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
+      setViewMode('details')
+      if (data.client_secret) {
+        setPayClientSecret(data.client_secret)
+        setMsg(null)
+      } else {
+        setMsg({ type: 'err', text: 'Subscription saved, but payment setup failed. Use the "Pay now" button below to try again.' })
+      }
     } else {
       setMsg({ type: 'ok', text: `${FREE_TIER_LABEL} registration complete! Your listings are now active.` })
       setTimeout(() => router.push('/dashboard/farmer'), 2000)
     }
     setSaving(false)
+  }
+
+  async function resumePayment() {
+    setResumingPay(true); setMsg(null)
+    const res = await fetch('/api/farmer/subscription/pay', { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) {
+      setMsg({ type: 'err', text: data.error || 'Could not start payment. Please try again.' })
+      setResumingPay(false)
+      return
+    }
+    setPayClientSecret(data.client_secret)
+    setResumingPay(false)
+  }
+
+  async function handlePaymentSuccess() {
+    setPayClientSecret(null)
+    setMsg({ type: 'ok', text: 'Payment received! Your Hub Membership is now active.' })
+    const res = await fetch('/api/farmer/subscription')
+    const data = await res.json().catch(() => null)
+    if (data?.subscription) setCurrent(data.subscription)
   }
 
   async function executeCancel() {
@@ -399,6 +473,7 @@ export default function GrowerSubscriptionPage() {
       setMsg({ type: 'err', text: data.error || 'Failed to cancel membership' })
     } else {
       setCurrent(null)
+      setPayClientSecret(null)
       setMsg({ type: 'ok', text: 'Your membership has been cancelled.' })
     }
     setCancelling(false)
@@ -440,6 +515,16 @@ export default function GrowerSubscriptionPage() {
 
       {hasExistingSub && (
         <CurrentSubscriptionRow sub={current} onCancel={() => setCancelConfirm(true)} onChangePlan={() => setViewMode('edit')} />
+      )}
+
+      {current?.status === 'pending' && current?.plan === 'hub_membership' && (
+        <PendingPaymentCard
+          amountCents={current.amount_cents || 0}
+          clientSecret={payClientSecret}
+          onResume={resumePayment}
+          resuming={resumingPay}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
 
       {hasExistingSub && viewMode === 'details' ? (
