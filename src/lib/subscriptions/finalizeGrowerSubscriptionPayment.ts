@@ -33,10 +33,14 @@ export async function finalizeGrowerSubscriptionPayment(
 
   // Idempotent against webhook retries — a subscription already activated
   // by this same PaymentIntent is left alone rather than re-extending the
-  // expiry from "now" a second time.
+  // expiry from "now" a second time. select('*'), not a named column list —
+  // stripe_payment_intent_id may not exist yet if migration 036 hasn't been
+  // applied, and naming an unknown column explicitly makes the whole query
+  // fail instead of just omitting it, which would otherwise silently skip
+  // activation entirely.
   const { data: sub } = await supabase
     .from('subscriptions')
-    .select('id, status, stripe_payment_intent_id')
+    .select('*')
     .eq('id', subscriptionId)
     .single()
 

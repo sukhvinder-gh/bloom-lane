@@ -16,9 +16,12 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
+  // select('*') deliberately, not a named column list — stripe_payment_intent_id
+  // may not exist yet if migration 036 hasn't been applied, and naming an
+  // unknown column explicitly makes PostgREST error the whole query, unlike '*'.
   const { data: sub } = await admin
     .from('subscriptions')
-    .select('id, status, stripe_payment_intent_id, amount_cents')
+    .select('*')
     .eq('user_id', user.id)
     .eq('subscriber_type', 'grower')
     .eq('plan', 'hub_membership')
