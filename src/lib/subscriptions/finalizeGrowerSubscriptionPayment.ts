@@ -42,15 +42,23 @@ export async function finalizeGrowerSubscriptionPayment(
 
   if (!sub || (sub.status === 'active' && sub.stripe_payment_intent_id === paymentIntent.id)) return
 
+  // Activation itself must never be blocked by the audit column below —
+  // if stripe_payment_intent_id doesn't exist yet (migration not applied),
+  // a single combined update would fail entirely and leave a paid grower
+  // stuck on 'pending'. Kept as two calls so that can't happen.
   await supabase
     .from('subscriptions')
     .update({
       status: 'active',
       starts_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
-      stripe_payment_intent_id: paymentIntent.id,
       updated_at: now.toISOString(),
     })
+    .eq('id', subscriptionId)
+
+  await supabase
+    .from('subscriptions')
+    .update({ stripe_payment_intent_id: paymentIntent.id })
     .eq('id', subscriptionId)
 
   const { data: farmer } = await supabase
