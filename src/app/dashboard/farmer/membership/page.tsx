@@ -445,6 +445,19 @@ export default function GrowerSubscriptionPage() {
 
   async function resumePayment() {
     setResumingPay(true); setMsg(null)
+
+    // Covers returning after an earlier payment that actually succeeded but
+    // never got picked up (e.g. the webhook hadn't caught up yet last time)
+    // — confirm first so this never charges a card twice for the same term.
+    const confirmRes = await fetch('/api/farmer/subscription/confirm', { method: 'POST' }).catch(() => null)
+    const confirmData = confirmRes ? await confirmRes.json().catch(() => null) : null
+    if (confirmData?.subscription?.status === 'active') {
+      setCurrent(confirmData.subscription)
+      setMsg({ type: 'ok', text: 'You’d already paid for this — your membership is now active.' })
+      setResumingPay(false)
+      return
+    }
+
     const res = await fetch('/api/farmer/subscription/pay', { method: 'POST' })
     const data = await res.json()
     if (!res.ok) {
@@ -458,10 +471,21 @@ export default function GrowerSubscriptionPage() {
 
   async function handlePaymentSuccess() {
     setPayClientSecret(null)
-    setMsg({ type: 'ok', text: 'Payment received! Your Hub Membership is now active.' })
+    setMsg({ type: 'ok', text: 'Payment received — activating your membership…' })
+    // Stripe has already confirmed the charge on the client at this point,
+    // but the webhook that normally activates the subscription runs async
+    // and can lag behind — confirm directly first so the page doesn't show
+    // a stale "pending" state while that catches up. Safe to call even if
+    // the webhook wins the race; both paths are idempotent.
+    await fetch('/api/farmer/subscription/confirm', { method: 'POST' }).catch(() => null)
     const res = await fetch('/api/farmer/subscription')
     const data = await res.json().catch(() => null)
     if (data?.subscription) setCurrent(data.subscription)
+    if (data?.subscription?.status === 'active') {
+      setMsg({ type: 'ok', text: 'Payment received! Your Hub Membership is now active.' })
+    } else {
+      setMsg({ type: 'ok', text: 'Payment received — your membership will show as active shortly. Refresh this page if it doesn’t update within a minute.' })
+    }
   }
 
   async function executeCancel() {
