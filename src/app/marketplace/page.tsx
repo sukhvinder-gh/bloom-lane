@@ -18,7 +18,11 @@ const CATEGORIES = [
 
 // Non-flower categories aren't fully supported yet — shown but disabled
 // with a "Coming soon" note rather than hidden entirely.
-const COMING_SOON_CATEGORIES = new Set(['vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other'])
+// Retail buying isn't open yet, so the Wholesale/Retail "View as" switch is
+// hidden for now. The switch itself is intact — flip this to true to bring it back.
+const SHOW_RETAIL_VIEW_TOGGLE = false
+
+const COMING_SOON_CATEGORIES =new Set(['vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other'])
 
 const CATEGORY_LABEL: Record<string, string> = {
   flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
@@ -540,7 +544,7 @@ export default function MarketplacePage() {
 
       {/* Mobile controls */}
       <div className="market-cats-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0', borderBottom: '1px solid var(--border-light)', background: 'white' }}>
-        {isAdminOrFarmer && (
+        {SHOW_RETAIL_VIEW_TOGGLE && isAdminOrFarmer && (
           <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid var(--border-light)' }}>
             <span className="type-label-sm" style={{ color: 'var(--moss)', flexShrink: 0 }}>View as</span>
             <div style={{ display: 'flex', background: 'var(--offwhite)', borderRadius: '99px', padding: '0.2rem', gap: '0.2rem' }}>
@@ -609,7 +613,7 @@ export default function MarketplacePage() {
 
         {/* Sidebar */}
         <aside className="market-sidebar" style={{ width: '13rem', flexShrink: 0, padding: '1.5rem', position: 'sticky', top: '4.5rem', height: 'calc(100vh - 4.5rem)', overflowY: 'auto', borderRight: '1px solid var(--olive)', background: 'white' }}>
-          {isAdminOrFarmer && (
+          {SHOW_RETAIL_VIEW_TOGGLE && isAdminOrFarmer && (
             <div style={{ marginBottom: '1.75rem' }}>
               <p className="label" style={{ marginBottom: '0.75rem' }}>View as</p>
               <div className="card" style={{ padding: '0.25rem', display: 'flex', background: 'var(--olive)', borderRadius: '2rem' }}>
@@ -685,14 +689,16 @@ export default function MarketplacePage() {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
-              {farmOptions.length > 0 && (
+              {/* Farm/Region filters only make sense across all growers — when
+                  scoped to one grower via ?farmer_id=, there's nothing to pick. */}
+              {!farmerId && farmOptions.length > 0 && (
                 <div>
                   <p className="label" style={{ marginBottom: '0.5rem' }}>Farm</p>
                   <MultiSelectDropdown label="Select farms" options={farmOptions} selected={farmFilters}
                     onToggle={f => toggleFilter(setFarmFilters, f)} onClear={() => setFarmFilters([])} />
                 </div>
               )}
-              {regionOptions.length > 0 && (
+              {!farmerId && regionOptions.length > 0 && (
                 <div>
                   <p className="label" style={{ marginBottom: '0.5rem' }}>Region</p>
                   <MultiSelectDropdown label="Select regions" options={regionOptions} selected={regionFilters}
