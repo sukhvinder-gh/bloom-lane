@@ -14,6 +14,7 @@ type HubRow = {
   market_open_day?: string | null
   market_open_time?: string | null
   market_close_time?: string | null
+  market_windows?: { day: string; open: string; close: string }[] | null
 }
 
 type Coordinator = { id: string; full_name: string | null; email: string | null }
@@ -140,9 +141,17 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
   const [name,          setName]          = useState(hub?.name           ?? '')
   const [region,        setRegion]        = useState(hub?.region         ?? '')
   const [coordinatorId, setCoordinatorId] = useState(hub?.coordinator_id ?? '')
-  const [marketOpenDay,   setMarketOpenDay]   = useState(hub?.market_open_day   ?? '')
-  const [marketOpenTime,  setMarketOpenTime]  = useState(hub?.market_open_time  ?? '')
-  const [marketCloseTime, setMarketCloseTime] = useState(hub?.market_close_time ?? '')
+  // Existing hubs without a market_windows list fall back to their single
+  // legacy window, shown as row 1.
+  const [windows, setWindows] = useState<{ day: string; open: string; close: string }[]>(() => {
+    if (hub?.market_windows && hub.market_windows.length > 0) return hub.market_windows
+    if (hub?.market_open_day && hub.market_open_time && hub.market_close_time) {
+      return [{ day: hub.market_open_day, open: hub.market_open_time, close: hub.market_close_time }]
+    }
+    return []
+  })
+  const updateWindow = (i: number, patch: Partial<{ day: string; open: string; close: string }>) =>
+    setWindows(ws => ws.map((w, idx) => idx === i ? { ...w, ...patch } : w))
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
@@ -157,9 +166,7 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
       name:               name.trim(),
       region:             region.trim() || null,
       coordinator_id:     coordinatorId || null,
-      market_open_day:    marketOpenDay || null,
-      market_open_time:   marketOpenTime || null,
-      market_close_time:  marketCloseTime || null,
+      market_windows:     windows,
     }
     if (isEdit) body.id = hub.id
 
@@ -212,19 +219,29 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Ordering Window</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Ordering Windows</label>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
-              When buyers can order from growers in this hub (unless a grower overrides it individually). Leave blank to stay open at all times.
+              When buyers can order from growers in this hub (unless a grower overrides it individually). Add as many windows as you need — ordering is open during any of them. With none, the hub stays open at all times.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.6rem' }}>
-              <select className="input" value={marketOpenDay} onChange={e => setMarketOpenDay(e.target.value)}>
-                <option value="">No schedule</option>
-                {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
-                  <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
-                ))}
-              </select>
-              <input className="input" type="time" value={marketOpenTime} onChange={e => setMarketOpenTime(e.target.value)} />
-              <input className="input" type="time" value={marketCloseTime} onChange={e => setMarketCloseTime(e.target.value)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {windows.map((w, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                  <select className="input" value={w.day} onChange={e => updateWindow(i, { day: e.target.value })} required>
+                    <option value="">Day…</option>
+                    {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                      <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input className="input" type="time" value={w.open} onChange={e => updateWindow(i, { open: e.target.value })} required aria-label="Opens" />
+                  <input className="input" type="time" value={w.close} onChange={e => updateWindow(i, { close: e.target.value })} required aria-label="Closes" />
+                  <button type="button" onClick={() => setWindows(ws => ws.filter((_, idx) => idx !== i))} aria-label="Remove window"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '1rem', padding: '0.25rem 0.4rem' }}>✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setWindows(ws => [...ws, { day: '', open: '08:00', close: '17:00' }])}
+                className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>
+                + Add ordering window
+              </button>
             </div>
           </div>
 

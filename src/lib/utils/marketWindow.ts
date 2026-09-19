@@ -10,6 +10,45 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { isWithinWeeklyWindow, nextWeeklyOccurrence } from '@/lib/utils/timezone'
 
+export type MarketWindow = { day: string; open: string; close: string }
+
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/** Validates/normalises a client-supplied list of windows. Returns an error string on bad input. */
+export function sanitizeMarketWindows(input: unknown): MarketWindow[] | string {
+  if (!Array.isArray(input)) return 'market_windows must be a list'
+  const out: MarketWindow[] = []
+  for (const w of input) {
+    const day = String(w?.day ?? '').toLowerCase()
+    const open = String(w?.open ?? '')
+    const close = String(w?.close ?? '')
+    // Fully blank rows (added but never filled in) are just dropped.
+    if (!day && !open && !close) continue
+    if (!DAYS.includes(day) || !TIME_RE.test(open) || !TIME_RE.test(close)) {
+      return 'Each ordering window needs a day, an opening time and a closing time'
+    }
+    if (open >= close) return `The ${day} ordering window must close after it opens`
+    out.push({ day, open, close })
+  }
+  return out
+}
+
+/**
+ * A hub's windows: the market_windows list if it has one, otherwise the
+ * legacy single open-day/open/close columns as a one-item list. Empty means
+ * no schedule (always open).
+ */
+export function hubMarketWindows(hub: any): MarketWindow[] {
+  if (Array.isArray(hub?.market_windows) && hub.market_windows.length > 0) {
+    return hub.market_windows.filter((w: any) => w?.day && w?.open && w?.close)
+  }
+  if (hub?.market_open_day && hub?.market_open_time && hub?.market_close_time) {
+    return [{ day: hub.market_open_day, open: hub.market_open_time, close: hub.market_close_time }]
+  }
+  return []
+}
+
 export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> {
   const admin = createAdminClient()
 
@@ -28,14 +67,18 @@ export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> 
   }
 
   if (farmer?.hub_id) {
+    // select('*'), not a named list: market_windows may not exist yet if
+    // migration 037 hasn't been applied, and naming an unknown column makes
+    // the whole query fail instead of falling back to the legacy columns.
     const { data: hub } = await admin
       .from('hubs')
-      .select('market_open_day, market_open_time, market_close_time')
+      .select('*')
       .eq('id', farmer.hub_id)
       .single()
 
-    if (hub?.market_open_day && hub?.market_open_time && hub?.market_close_time) {
-      return isWithinWeeklyWindow(hub.market_open_day, hub.market_open_time, hub.market_close_time)
+    const windows = hubMarketWindows(hub)
+    if (windows.length > 0) {
+      return windows.some(w => isWithinWeeklyWindow(w.day, w.open, w.close))
     }
   }
 
@@ -65,13 +108,15 @@ export async function nextMarketCloseForFarmer(farmerId: string): Promise<Date |
   if (farmer?.hub_id) {
     const { data: hub } = await admin
       .from('hubs')
-      .select('market_open_day, market_close_time')
+      .select('*')
       .eq('id', farmer.hub_id)
       .single()
 
-    if (hub?.market_open_day && hub?.market_close_time) {
-      return nextWeeklyOccurrence(hub.market_open_day, hub.market_close_time)
-    }
+    // With several windows, the next one to close is the relevant deadline.
+    const closes = hubMarketWindows(hub)
+      .map(w => nextWeeklyOccurrence(w.day, w.close))
+      .filter((d): d is Date => d !== null)
+    if (closes.length > 0) return new Date(Math.min(...closes.map(d => d.getTime())))
   }
 
   return null
