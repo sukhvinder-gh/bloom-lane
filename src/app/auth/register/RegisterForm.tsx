@@ -104,48 +104,21 @@ export default function RegisterForm() {
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub or collective' },
   ]
 
-  const botanicals = (
-    <>
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: 'clamp(180px, 24vw, 460px)', pointerEvents: 'none', zIndex: 0 }}>
-        <img src="/botanicals-leaves.png" alt="" style={{ display: 'block', width: '100%', height: 'auto', mixBlendMode: 'multiply' }} />
-      </div>
-      <div aria-hidden="true" style={{ position: 'absolute', right: 0, bottom: 0, width: 'clamp(180px, 24vw, 460px)', pointerEvents: 'none', zIndex: 0 }}>
-        <img src="/botanicals.png" alt="" style={{ display: 'block', width: '100%', height: 'auto', mixBlendMode: 'multiply' }} />
-      </div>
-    </>
-  )
-
   if (step === 'done') return (
-    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f0e4', overflow: 'hidden' }}>
-      {botanicals}
-      <div className="card-forest reveal" style={{ position: 'relative', zIndex: 1, padding: '4rem', textAlign: 'center', maxWidth: '28rem' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🌱</div>
-        <h2 className="type-subheading" style={{ color: 'var(--cream)', marginBottom: '1rem' }}>You're in!</h2>
-        <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '2.5rem', lineHeight: 1.8 }}>
-          Check your email to confirm.
-          {role === 'farmer' ? ' We review grower applications within 24 hours.' : ''}
-          {role === 'coordinator' ? ' Once confirmed, you can register your hub.' : ''}
-        </p>
-        <Link href="/auth/login" className="btn btn-cream" style={{ width: '100%' }}>Go to sign in</Link>
-      </div>
+    <div className="card-forest" style={{ padding: '2.5rem', textAlign: 'center' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌱</div>
+      <h2 className="type-subheading" style={{ color: 'var(--cream)', marginBottom: '0.75rem' }}>You're in!</h2>
+      <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '1.75rem', lineHeight: 1.8 }}>
+        Check your email to confirm.
+        {role === 'farmer' ? ' We review grower applications within 24 hours.' : ''}
+        {role === 'coordinator' ? ' Once confirmed, you can register your hub.' : ''}
+      </p>
+      <Link href="/auth/login" className="btn btn-cream" style={{ width: '100%' }}>Go to sign in</Link>
     </div>
   )
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f0e4', overflow: 'hidden', padding: '0.75rem 1.5rem' }}>
-      {botanicals}
-      <div className="reveal" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '30rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '0.75rem' }}>
-            <div style={{ width: '2rem', height: '2rem', borderRadius: '0.5rem', background: 'var(--forest)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1rem' }}>T</div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.03em' }}>The Green Guild</span>
-          </Link>
-          <h1 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Create account</h1>
-          <p className="type-label" style={{ color: 'var(--moss)' }}>
-            Already have one? <Link href="/auth/login" style={{ color: 'var(--navy)', textDecoration: 'underline', textUnderlineOffset: '3px' }}>Sign in</Link>
-          </p>
-        </div>
-
+    <div>
         <div className="card" style={{ padding: '0.375rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.25rem', marginBottom: '0.75rem', background: 'var(--olive)' }}>
           {roles.map(opt => (
             <button key={opt.id} type="button" onClick={() => !opt.disabled && setRole(opt.id as Role)}
@@ -218,7 +191,6 @@ export default function RegisterForm() {
             <button type="submit" className="btn btn-forest" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
           </div>
         </form>
-      </div>
     </div>
   )
 }

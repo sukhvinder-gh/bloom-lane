@@ -43,7 +43,17 @@ export interface SendEmailOptions {
   to: string | string[]
   subject: string
   html: string
+  replyTo?: string
   attachments?: Array<{ filename: string; content: Buffer | string }>
+}
+
+/**
+ * Where platform-side notifications go (contact form messages, new hub
+ * registrations awaiting approval). CONTACT_EMAIL if set, otherwise the
+ * address the app already sends from.
+ */
+export function getAdminInbox(): string | null {
+  return process.env.CONTACT_EMAIL || process.env.GMAIL_USER || process.env.EMAIL_FROM || null
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
@@ -59,6 +69,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      replyTo: options.replyTo,
       attachments: options.attachments,
     })
     return
@@ -78,6 +89,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
     to: options.to,
     subject: options.subject,
     html: options.html,
+    reply_to: options.replyTo,
     attachments: options.attachments?.map(a => ({
       filename: a.filename,
       content: typeof a.content === 'string' ? a.content : a.content.toString('base64'),

@@ -1,50 +1,15 @@
-import Link from 'next/link'
 import type { Metadata } from 'next'
+import PublicShell from '../_components/PublicShell'
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions — The Green Guild',
 }
 
-const BG  = '#EDE9DF'
-const FG  = '#1B3A2D'
-const INK = '#898C62'
+const FG = 'var(--navy)'
 
 export default function TermsPage() {
   return (
-    <main style={{ fontFamily: 'var(--font-body)', background: BG, minHeight: '100vh' }}>
-
-      {/* Nav */}
-      <nav style={{
-        padding: '1rem 2.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: `1px solid rgba(27,58,45,0.1)`,
-      }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 700, color: FG, margin: 0 }}>
-            The Green Guild
-          </p>
-          <p style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.22em', color: INK, textTransform: 'uppercase', margin: 0 }}>
-            Direct. Local. Seasonal.
-          </p>
-        </Link>
-        <Link href="/" style={{ color: FG, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
-          ← Back to home
-        </Link>
-      </nav>
-
-      {/* Content */}
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '4rem 2rem 6rem' }}>
-
-        <p style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, marginBottom: '0.75rem' }}>
-          Legal
-        </p>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 400, color: FG, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
-          Terms &amp; Conditions
-        </h1>
-        <p style={{ color: INK, fontSize: '0.875rem', marginBottom: '3rem' }}>
-          Last updated: 1 June 2025
-        </p>
-
+    <PublicShell title="Terms &amp; Conditions" intro="Last updated: 1 June 2025" card>
         <Section title="1. Acceptance of Terms">
           By accessing or using The Green Guild platform (&ldquo;Platform&rdquo;) operated by The Green Guild Pty Ltd (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;), you agree to be bound by these Terms &amp; Conditions. If you do not agree to these terms, you must not use the Platform. These terms apply to all users including growers, buyers, and hub coordinators.
         </Section>
@@ -143,13 +108,7 @@ export default function TermsPage() {
           The Green Guild Pty Ltd<br />
           <a href="mailto:support@thegreenguild.com.au" style={{ color: FG }}>support@thegreenguild.com.au</a>
         </Section>
-
-        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: `1px solid rgba(27,58,45,0.12)`, display: 'flex', gap: '2rem' }}>
-          <Link href="/privacy" style={{ color: INK, fontSize: '0.875rem' }}>Privacy Policy →</Link>
-          <Link href="/" style={{ color: INK, fontSize: '0.875rem' }}>Back to home →</Link>
-        </div>
-      </div>
-    </main>
+    </PublicShell>
   )
 }
 
@@ -158,7 +117,7 @@ const listStyle: React.CSSProperties = {
   marginTop: '0.75rem',
   marginBottom: '0.75rem',
   lineHeight: 1.8,
-  color: '#4A5240',
+  color: 'var(--moss)',
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -171,7 +130,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       }}>
         {title}
       </h2>
-      <p style={{ color: '#4A5240', lineHeight: 1.8, fontSize: '0.95rem' }}>
+      <p style={{ color: 'var(--moss)', lineHeight: 1.8, fontSize: '0.95rem' }}>
         {children}
       </p>
     </div>

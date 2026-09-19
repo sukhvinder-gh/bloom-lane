@@ -1,0 +1,174 @@
+/* Public info pages (FAQ, Contact, Privacy, Terms). Same layout as the home
+   page: header + big botanical corners + centred hero area on the cream
+   background, and the dark community band at the bottom (CommunitySection,
+   styled by ../page.module.css). Only the middle of the hero, the title and
+   the page's own content, changes from page to page. The hero grows with its
+   content, so long pages (FAQ, Terms) simply scroll. */
+
+.page {
+  background: #f3f0e4;
+  color: #23402f;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  font-family: var(--font-work-sans), sans-serif;
+}
+
+.hero {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px clamp(64px, 6vw, 104px) 16px;
+  overflow: hidden;
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.logoLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.logo {
+  font-family: var(--font-lora), Georgia, serif;
+  font-size: 2.6rem;
+  line-height: 1;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.2px;
+  color: #23402f;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+  color: #3a4f41;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding-top: 10px;
+  font-size: 0.95rem;
+  color: #3a4f41;
+}
+
+.nav a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 1020px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 0 24px;
+}
+
+.heroContent h1 {
+  font-family: var(--font-lora), Georgia, serif;
+  font-size: clamp(2.2rem, 4.2vw, 3.6rem);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  margin: 0;
+  color: #23402f;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 20px 0 14px;
+}
+
+.divider span {
+  width: 110px;
+  height: 1px;
+  background: #b9bdab;
+}
+
+.heroSubtitle {
+  font-size: 1.2rem;
+  color: #3a4f41;
+  margin: 0;
+  max-width: 44rem;
+}
+
+/* The page's own content (form, FAQ list, legal text) */
+.content {
+  width: 100%;
+  margin: 28px auto 0;
+  text-align: left;
+}
+
+.botanicalLeft,
+.botanicalRight {
+  position: absolute;
+  bottom: 0;
+  width: clamp(230px, 30vw, 560px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.botanicalLeft { left: 0; }
+.botanicalRight { right: 0; }
+
+.botanicalLeft img,
+.botanicalRight img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
+}
+
+/* Short pages (Contact): tighter title area so the form fits without scrolling */
+.compact .heroContent { padding-top: 0; padding-bottom: 12px; }
+.compact .heroContent h1 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.compact .divider { margin: 10px 0 8px; }
+.compact .heroSubtitle { font-size: 1.05rem; }
+.compact .content { margin-top: 14px; }
+
+@media (max-width: 1024px) {
+  .hero { padding: 18px 32px 14px; }
+  .botanicalLeft, .botanicalRight { width: clamp(160px, 22vw, 320px); }
+}
+
+@media (max-height: 760px) {
+  .botanicalLeft, .botanicalRight { width: clamp(140px, 16vw, 260px); }
+}
+
+@media (max-width: 768px) {
+  .hero { padding: 16px 20px 24px; }
+  .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .logo { font-size: 2rem; }
+  .nav { gap: 16px; padding-top: 0; flex-wrap: wrap; }
+  .nav a { font-size: 0.85rem; }
+  .botanicalLeft, .botanicalRight { display: none; }
+  .heroContent { padding-top: 24px; }
+  .heroSubtitle { font-size: 1.05rem; }
+}
+
+@media (max-width: 480px) {
+  .logo { font-size: 1.8rem; }
+  .heroContent h1 { font-size: clamp(1.6rem, 9vw, 2.2rem); }
+}
