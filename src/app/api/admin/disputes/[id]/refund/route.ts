@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 import { createRefund } from '@/lib/stripe'
 
 export async function POST(
@@ -96,9 +97,10 @@ export async function POST(
   const farmerIds = [...byFarmer.keys()]
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, commission_rate')
+    .select('id, commission_rate, subscription_type')
     .in('id', farmerIds)
-  const commissionByFarmer = new Map((farmers || []).map(f => [f.id, f.commission_rate ?? 0.10]))
+  const rates = await getCommissionRates(admin)
+  const commissionByFarmer = new Map((farmers || []).map(f => [f.id, effectiveCommissionRate(f, rates)]))
 
   const creditNotes: any[] = []
   for (const [farmerId, alloc] of byFarmer.entries()) {

@@ -14,7 +14,7 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
     title: 'Pricing & Commission', icon: '💰', tier: 'super_admin',
     items: [
       { key: 'markup_pct_b2c',         label: 'B2C Markup %',            hint: 'e.g. 0.45 = 45% over wholesale',       type: 'number' },
-      { key: 'commission_rate_default', label: 'Default Commission Rate',  hint: 'e.g. 0.10 = 10% platform cut',         type: 'number' },
+      { key: 'commission_rate_default', label: 'Default Commission Rate',  hint: 'Commission charged on every grower except those on the Free Grower Listing plan, e.g. 0.20 = 20%',         type: 'number' },
       { key: 'delivery_fee_cents',      label: 'Delivery Fee',            hint: 'In cents — 2000 = $20.00',              type: 'number' },
       { key: 'min_order_b2b_cents',     label: 'Min B2B Order',           hint: '0 = no minimum, 5000 = $50',            type: 'number' },
     ],
@@ -25,7 +25,7 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
       { key: 'hub_membership_monthly_cents',  label: 'Hub Membership — Monthly',         hint: 'In cents — 6000 = $60.00',  type: 'number' },
       { key: 'hub_membership_seasonal_cents', label: 'Hub Membership — Seasonal (3 mo)', hint: 'In cents — 15000 = $150.00', type: 'number' },
       { key: 'hub_membership_annual_cents',   label: 'Hub Membership — Annual',          hint: 'In cents — 48000 = $480.00', type: 'number' },
-      { key: 'wholesale_commission_pct',      label: 'Free Grower Listing Commission',   hint: 'e.g. 0.15 = 15% per order',  type: 'number' },
+      { key: 'wholesale_commission_pct',      label: 'Free Grower Listing Commission',   hint: 'Commission charged on growers on the Free Grower Listing plan, e.g. 0.15 = 15%',  type: 'number' },
     ],
   },
   {

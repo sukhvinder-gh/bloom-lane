@@ -11,6 +11,7 @@ import QRCode from 'qrcode'
 import { sendPOEmail } from '@/lib/email/sendPOEmail'
 import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderConfirmationEmail'
 import { computeDefaultFulfillmentDate } from '@/lib/orders/defaultFulfillmentDate'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 
 export async function finalizeOrderPayment(
   supabase: ReturnType<typeof createAdminClient>,
@@ -179,9 +180,10 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
   const farmerIds = [...byFarmer.keys()]
   const { data: farmers } = await supabase
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state, commission_rate, gst_registered')
+    .select('id, business_name, abn, email, suburb, state, commission_rate, subscription_type, gst_registered')
     .in('id', farmerIds)
   if (!farmers) { console.error('[EMAIL] Farmers fetch failed'); return }
+  const rates = await getCommissionRates(supabase)
 
   await Promise.allSettled(
     farmers.map(async farmer => {
@@ -202,7 +204,7 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
           buyer_business_name: buyerProfile?.business_name ?? null,
           buyer_full_name: buyerProfile?.full_name ?? null,
           buyer_email: buyerProfile?.email ?? null,
-          commission_rate: farmer.commission_rate ?? 0.10,
+          commission_rate: effectiveCommissionRate(farmer as any, rates),
           items: farmerItems.map(i => ({
             id: i.id,
             quantity: i.quantity,

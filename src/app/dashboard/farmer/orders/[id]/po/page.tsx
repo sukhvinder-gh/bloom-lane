@@ -2,6 +2,7 @@ import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/serv
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
 import { RejectPOForm } from './RejectPOForm'
@@ -18,7 +19,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch the farmer record for this user — limit(1) handles multiple records gracefully
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state, commission_rate, gst_registered')
+    .select('id, business_name, abn, email, suburb, state, commission_rate, subscription_type, gst_registered')
     .eq('user_id', sessionUser.id)
     .limit(1)
 
@@ -99,7 +100,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
     selectedFulfillmentOption = data
   }
 
-  const commissionRate: number = (farmer as any).commission_rate ?? 0.10
+  const commissionRate: number = effectiveCommissionRate(farmer as any, await getCommissionRates(admin))
   const gross = items.reduce((s, i) => s + i.subtotal_cents, 0)
   const commission = Math.round(gross * commissionRate)
   const net = gross - commission

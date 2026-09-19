@@ -7,6 +7,7 @@ import { Inngest } from 'inngest'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createFarmerPayout } from '@/lib/stripe'
 import { calculateFarmerPayout } from '@/lib/utils/pricing'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 import { getThisWeekMarketWindow } from '@/lib/utils/timezone'
 import { sendWeeklyAvailabilityDigest, sendMarketOpenNotification } from '@/lib/email/sendSubscriptionEmail'
 
@@ -151,7 +152,7 @@ export const processPayoutAfterDispute = inngest.createFunction(
     // Check order status — skip if disputed or already refunded
     const { data: order } = await supabase
       .from('orders')
-      .select('*, order_items(*, farmers(stripe_account_id, stripe_onboarding_complete, commission_rate, id))')
+      .select('*, order_items(*, farmers(stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id))')
       .eq('id', orderId)
       .single()
 
@@ -174,6 +175,7 @@ export const processPayoutAfterDispute = inngest.createFunction(
 
     const payouts = await step.run('execute-payouts', async () => {
       const results = []
+      const rates = await getCommissionRates(supabase)
 
       for (const [farmerId, data] of Object.entries(farmerItems) as any) {
         if (!data.farmer?.stripe_account_id || !data.farmer?.stripe_onboarding_complete) {
@@ -197,7 +199,7 @@ export const processPayoutAfterDispute = inngest.createFunction(
 
         const { gross, commission, net } = calculateFarmerPayout(
           data.total,
-          data.farmer.commission_rate
+          effectiveCommissionRate(data.farmer, rates)
         )
 
         // Insert payout record as 'processing' BEFORE calling Stripe

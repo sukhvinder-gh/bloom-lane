@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 
 function periodStart(period: string): string | null {
   const now = new Date()
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: farmer } = await admin
     .from('farmers')
-    .select('id, commission_rate')
+    .select('id, commission_rate, subscription_type')
     .eq('user_id', user.id)
     .single()
   if (!farmer) return NextResponse.json({ error: 'Farmer profile not found' }, { status: 403 })
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
   const { data: items, error } = await q.order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const rate = Number(farmer.commission_rate) || 0.10
+  const rate = effectiveCommissionRate(farmer, await getCommissionRates(admin))
   const rows = items || []
 
   // Summary

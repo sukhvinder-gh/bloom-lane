@@ -3,6 +3,7 @@ import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/se
 import { isAdminRole } from '@/lib/utils/permissions'
 import { sendOrderConfirmationEmail } from '@/lib/email/sendOrderConfirmationEmail'
 import { sendPOEmail } from '@/lib/email/sendPOEmail'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 
 // POST /api/admin/resend-order-emails
 // Body: { order_number: "ORD-XXXXXXXX" }
@@ -109,8 +110,9 @@ export async function POST(request: NextRequest) {
   const farmerIds = [...byFarmer.keys()]
   const { data: farmers } = await admin
     .from('farmers')
-    .select('id, business_name, abn, email, suburb, state, commission_rate')
+    .select('id, business_name, abn, email, suburb, state, commission_rate, subscription_type')
     .in('id', farmerIds)
+  const rates = await getCommissionRates(admin)
 
   await Promise.allSettled(
     (farmers || []).map(async farmer => {
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
           farmer_abn: farmer.abn,
           farmer_suburb: farmer.suburb,
           farmer_state: farmer.state,
-          commission_rate: farmer.commission_rate ?? 0.10,
+          commission_rate: effectiveCommissionRate(farmer, rates),
           items: farmerItems.map(i => ({
             id: i.id,
             quantity: i.quantity,

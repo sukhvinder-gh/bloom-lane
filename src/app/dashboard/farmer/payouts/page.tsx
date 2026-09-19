@@ -3,6 +3,7 @@ import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/serv
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
+import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 
 export default async function FarmerPayoutsPage({
   searchParams,
@@ -17,7 +18,7 @@ export default async function FarmerPayoutsPage({
 
   const { data: farmer } = await adminSupabase
     .from('farmers')
-    .select('id, business_name, commission_rate, stripe_account_id, stripe_onboarding_complete')
+    .select('id, business_name, commission_rate, subscription_type, stripe_account_id, stripe_onboarding_complete')
     .eq('user_id', sessionUser.id)
     .single()
 
@@ -46,7 +47,7 @@ export default async function FarmerPayoutsPage({
         Earnings
       </h1>
       <p style={{ color: 'var(--forest)', opacity: 0.5, marginBottom: '2rem', fontSize: '0.9rem' }}>
-        Your payouts after {Math.round(farmer.commission_rate * 100)}% platform commission
+        Your payouts after {Math.round(effectiveCommissionRate(farmer, await getCommissionRates(adminSupabase)) * 100)}% platform commission
       </p>
 
       {stripe_error && (
