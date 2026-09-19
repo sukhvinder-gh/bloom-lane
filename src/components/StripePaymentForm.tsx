@@ -26,34 +26,42 @@ export default function StripePaymentForm({
     setSubmitting(true)
     setError('')
 
-    // Validates the PaymentElement's own fields (surfaces inline errors on
-    // the element itself) before attempting to confirm.
-    const { error: submitError } = await elements.submit()
-    if (submitError) {
-      setError(submitError.message || 'Please check your payment details.')
-      setSubmitting(false)
-      return
-    }
+    // A thrown error (Stripe.js integration errors are thrown, not returned)
+    // would otherwise skip every setSubmitting(false) below and leave the
+    // button stuck on "Processing…" with nothing on screen explaining why.
+    try {
+      // Validates the PaymentElement's own fields (surfaces inline errors on
+      // the element itself) before attempting to confirm.
+      const { error: submitError } = await elements.submit()
+      if (submitError) {
+        setError(submitError.message || 'Please check your payment details.')
+        setSubmitting(false)
+        return
+      }
 
-    // redirect: 'if_required' keeps the buyer on this page for the common
-    // card case — Stripe only navigates away for payment methods that
-    // genuinely require it. returnUrl is the fallback for exactly that case.
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      redirect: 'if_required',
-    })
+      // redirect: 'if_required' keeps the buyer on this page for the common
+      // card case — Stripe only navigates away for payment methods that
+      // genuinely require it. returnUrl is the fallback for exactly that case.
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl },
+        redirect: 'if_required',
+      })
 
-    if (confirmError) {
-      setError(confirmError.message || 'Payment failed. Please try again.')
-      setSubmitting(false)
-      return
-    }
+      if (confirmError) {
+        setError(confirmError.message || 'Payment failed. Please try again.')
+        setSubmitting(false)
+        return
+      }
 
-    if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
-      onSuccess()
-    } else {
-      setError('Payment did not complete. Please try again.')
+      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+        onSuccess()
+      } else {
+        setError('Payment did not complete. Please try again.')
+        setSubmitting(false)
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong while processing your payment. Please try again.')
       setSubmitting(false)
     }
   }
