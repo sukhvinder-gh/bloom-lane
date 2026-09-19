@@ -137,7 +137,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
 
       <!-- CTA -->
       <div style="text-align:center;margin-bottom:28px">
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'}/dashboard/farmer/orders"
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'}/dashboard/farmer/orders?order=${encodeURIComponent(po.order_number)}"
            style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">
           View in Dashboard →
         </a>

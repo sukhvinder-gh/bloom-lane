@@ -38,6 +38,12 @@ export default function FarmerOrdersPage() {
   const [openMenuId, setOpenMenuId]   = useState<string | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
+  // Set when arriving from a PO email's "View in Dashboard" link
+  // (?order=ORD-XXXX) — narrows the list to that one order until cleared.
+  const [orderFilter, setOrderFilter]     = useState<string | null>(null)
+  useEffect(() => {
+    setOrderFilter(new URLSearchParams(window.location.search).get('order'))
+  }, [])
   const fileRef   = useRef<HTMLInputElement>(null)
   const activeRef = useRef<string | null>(null)
 
@@ -206,6 +212,18 @@ export default function FarmerOrdersPage() {
         </div>
       )}
 
+      {orderFilter && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', marginBottom: '1rem', background: '#EAF3DE', border: '1px solid #C0DD97', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#27500A' }}>
+          <span>Showing only order <strong>{orderFilter}</strong></span>
+          <button
+            onClick={() => { setOrderFilter(null); window.history.replaceState(null, '', window.location.pathname) }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', color: '#27500A', fontWeight: 700, fontSize: '0.85rem' }}
+          >
+            Show all orders
+          </button>
+        </div>
+      )}
+
       {orders.length === 0 ? (
         <div style={{ background: 'white', borderRadius: 'var(--r-card)', padding: '5rem', textAlign: 'center', border: '1px solid var(--olive)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📦</div>
@@ -229,7 +247,7 @@ export default function FarmerOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.map(order => {
+              {orders.filter(o => !orderFilter || o.order_number === orderFilter).map(order => {
                 const os  = ORDER_STATUS[order.status] || { label: order.status?.replace(/_/g, ' ') || '', bg: '#F1EFE8', color: '#5F5E5A' }
                 const poS = poStatuses[order.id]
                 const ps  = poS ? PO_STATUS[poS] : null
