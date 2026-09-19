@@ -86,7 +86,7 @@ export function PODocument({ po }: { po: POData }) {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.brandName}>THE GREEN GUILD</Text>
-            <Text style={styles.brandSub}>{po.farmer_gst_registered ? 'GST registered · ABN on file' : 'Not registered for GST · ABN on file'}</Text>
+            <Text style={styles.brandSub}>{po.farmer_gst_registered ? 'Grower is GST registered · ABN on file' : 'Grower is not registered for GST · ABN on file'}</Text>
           </View>
           <View>
             <Text style={styles.poTitle}>PURCHASE ORDER</Text>

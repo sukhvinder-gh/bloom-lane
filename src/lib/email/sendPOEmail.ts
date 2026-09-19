@@ -47,7 +47,7 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
       <tr>
         <td style="padding:32px 40px" valign="top" align="left">
           <div style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-transform:uppercase">THE GREEN GUILD</div>
-          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${po.farmer_gst_registered ? 'GST registered' : 'Not registered for GST'}</div>
+          <div style="color:#a8c8a8;font-size:12px;margin-top:4px">${po.farmer_gst_registered ? 'Grower is GST registered' : 'Grower is not registered for GST'}</div>
         </td>
         <td style="padding:32px 40px" valign="top" align="right">
           <div style="color:white;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">PURCHASE ORDER</div>
