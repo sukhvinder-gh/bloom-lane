@@ -498,6 +498,14 @@ body {
   .po-dates-label { width: auto !important; }
 }
 
+/* PO document: with the dashboard sidebar open, a laptop-width window leaves
+   too little room for To / From / Dates side by side — the Dates column
+   squeezes and its values wrap word by word. Stack the strip earlier on
+   screens (not print) so each date sits on one line at full width. */
+@media screen and (max-width: 1100px) {
+  .po-grid { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
+}
+
 @media (min-width: 768px) {
   .mobile-only        { display: none !important; }
   .market-cats-mobile { display: none !important; }

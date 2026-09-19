@@ -157,7 +157,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
         </div>
 
         {/* To / From / Dates */}
-        <div className="po-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+        <div className="po-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.6fr', gap: '2rem', marginBottom: '2rem' }}>
           <div>
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>To (Grower)</p>
             <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.2rem' }}>{farmer.business_name}</p>
@@ -175,17 +175,17 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
             <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--moss)', fontWeight: 700, marginBottom: '0.5rem' }}>Dates</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Order placed:</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>{formatAEST(order.created_at, 'dd MMM yyyy')}</span>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Order placed:</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>{formatAEST(order.created_at, 'dd MMM yyyy')}</span>
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Fulfil by:</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Fulfil by:</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   {order.grower_fulfillment_date ? formatAEST(order.grower_fulfillment_date, 'dd MMM yyyy, h:mm a') : 'TBC — see admin'}
                 </span>
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Delivery method:</span>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Delivery method:</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
                   {pickupMethod === 'farm_pickup' ? (
                     selectedFulfillmentOption
@@ -202,8 +202,8 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
               </div>
               {pickupMethod !== 'farm_pickup' && order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
                 <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
-                  <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '9rem', flexShrink: 0 }}>Collection window:</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
+                  <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Collection window:</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {hubZone.hub_collection_day ? `${hubZone.hub_collection_day.charAt(0).toUpperCase()}${hubZone.hub_collection_day.slice(1)}` : ''}{' '}
                     {hubZone.hub_collection_time_start && hubZone.hub_collection_time_end ? `${hubZone.hub_collection_time_start} – ${hubZone.hub_collection_time_end}` : ''}
                   </span>

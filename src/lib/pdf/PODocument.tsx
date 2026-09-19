@@ -12,8 +12,8 @@ const styles = StyleSheet.create({
   colVal: { fontSize: 9, color: '#1a3a2a', fontFamily: 'Helvetica-Bold', marginBottom: 2 },
   colSub: { fontSize: 8, color: '#4a7a5a', marginBottom: 2 },
   dateRow: { flexDirection: 'row', marginBottom: 4 },
-  dateKey: { fontSize: 8, color: '#4a7a5a', width: 100 },
-  dateVal: { fontSize: 8, color: '#1a3a2a', fontFamily: 'Helvetica-Bold' },
+  dateKey: { fontSize: 8, color: '#4a7a5a', width: 68 },
+  dateVal: { fontSize: 8, color: '#1a3a2a', fontFamily: 'Helvetica-Bold', flex: 1 },
   tableHead: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: '#1a3a2a', paddingBottom: 6, marginBottom: 4 },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#d4e8d4', paddingVertical: 6 },
   thProduct: { flex: 3, fontSize: 7, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.8, color: '#1a3a2a' },
@@ -111,7 +111,7 @@ export function PODocument({ po }: { po: POData }) {
             {po.buyer_business_name && po.buyer_full_name && <Text style={styles.colSub}>{po.buyer_full_name}</Text>}
             {po.buyer_email && <Text style={styles.colSub}>{po.buyer_email}</Text>}
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1.7 }}>
             <Text style={styles.colLabel}>Dates</Text>
             <View style={styles.dateRow}>
               <Text style={styles.dateKey}>Order placed:</Text>
