@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
 import { sanitizeMarketWindows, type MarketWindow } from '@/lib/utils/marketWindow'
+import { sendEmail } from '@/lib/email/mailer'
 
 const HUB_SELECT = '*, profiles!hubs_coordinator_id_fkey(full_name, email)'
 
@@ -74,6 +75,13 @@ export async function PATCH(request: NextRequest) {
   const { id } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
+  // Needed to spot a pending -> active approval, which emails the coordinator.
+  let previousStatus: string | null = null
+  if (body.status === 'active') {
+    const { data: before } = await check.admin.from('hubs').select('status').eq('id', id).maybeSingle()
+    previousStatus = before?.status ?? null
+  }
+
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (body.status !== undefined)         updates.status         = body.status
   if (body.name  !== undefined)          updates.name           = body.name.trim()
@@ -99,5 +107,22 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (previousStatus === 'pending' && data?.status === 'active') {
+    const coord = (data as any).profiles as { full_name: string | null; email: string | null } | null
+    if (coord?.email) {
+      const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
+      const hubName = String(data.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      sendEmail({
+        to: coord.email,
+        subject: `Your hub "${data.name}" is approved`,
+        html: `<p>Hi ${coord.full_name || 'Coordinator'},</p>
+<p>Good news — your hub <strong>${hubName}</strong> has been approved and is now active. Growers can start joining it.</p>
+<p><a href="${site}/dashboard">Go to your dashboard</a></p>
+<p>— The Green Guild</p>`,
+      }).catch(() => {})
+    }
+  }
+
   return NextResponse.json({ ok: true, hub: data })
 }

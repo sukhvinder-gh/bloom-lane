@@ -6,6 +6,7 @@ import { constructWebhookEvent } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
 import { finalizeGrowerSubscriptionPayment } from '@/lib/subscriptions/finalizeGrowerSubscriptionPayment'
+import { finalizeCoordinatorRegistrationPayment } from '@/lib/subscriptions/finalizeCoordinatorRegistrationPayment'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -34,6 +35,10 @@ export async function POST(request: NextRequest) {
       // aren't an order — route them to their own finalizer instead.
       if (pi.metadata?.type === 'grower_subscription') {
         await finalizeGrowerSubscriptionPayment(supabase, pi)
+        break
+      }
+      if (pi.metadata?.type === 'coordinator_registration') {
+        await finalizeCoordinatorRegistrationPayment(supabase, pi)
         break
       }
 
