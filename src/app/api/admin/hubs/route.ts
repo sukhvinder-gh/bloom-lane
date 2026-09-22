@@ -22,9 +22,9 @@ async function requireAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized', status: 401 as const }
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('role, full_name, email').eq('id', user.id).single()
   if (!isAdminRole(profile?.role)) return { error: 'Forbidden', status: 403 as const }
-  return { admin }
+  return { admin, adminName: profile?.full_name || profile?.email || 'an admin' }
 }
 
 export async function GET() {
@@ -82,6 +82,8 @@ export async function PATCH(request: NextRequest) {
     previousStatus = before?.status ?? null
   }
 
+  const isApproval = previousStatus === 'pending' && body.status === 'active'
+
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (body.status !== undefined)         updates.status         = body.status
   if (body.name  !== undefined)          updates.name           = body.name.trim()
@@ -94,21 +96,31 @@ export async function PATCH(request: NextRequest) {
     windows = parsed
     Object.assign(updates, legacyWindowColumns(parsed))
   }
+  if (windows) updates.market_windows = windows
+  // Snapshot who approved this and when — a plain text/timestamp pair
+  // (migration 038), not a live lookup, so it still reads correctly even if
+  // that admin account is later renamed or removed.
+  if (isApproval) {
+    updates.approved_by_name = check.adminName
+    updates.approved_at = new Date().toISOString()
+  }
 
-  let { data, error } = await check.admin
-    .from('hubs')
-    .update(windows ? { ...updates, market_windows: windows } : updates)
-    .eq('id', id)
-    .select(HUB_SELECT)
-    .single()
-  // Migration 037 not applied yet: fall back to saving just the first window.
-  if (error && windows && /market_windows/.test(error.message)) {
+  let { data, error } = await check.admin.from('hubs').update(updates).eq('id', id).select(HUB_SELECT).single()
+  // A column from migration 037 or 038 doesn't exist in this database yet —
+  // drop whichever keys it's complaining about and retry, rather than
+  // failing the whole request over an optional audit/scheduling field.
+  while (error && /market_windows|approved_by_name|approved_at/.test(error.message)) {
+    const before = Object.keys(updates).length
+    for (const col of ['market_windows', 'approved_by_name', 'approved_at']) {
+      if (error.message.includes(col)) delete updates[col]
+    }
+    if (Object.keys(updates).length === before) break // nothing matched — avoid looping forever
     ;({ data, error } = await check.admin.from('hubs').update(updates).eq('id', id).select(HUB_SELECT).single())
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (previousStatus === 'pending' && data?.status === 'active') {
+  if (isApproval) {
     const coord = (data as any).profiles as { full_name: string | null; email: string | null } | null
     if (coord?.email) {
       const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'

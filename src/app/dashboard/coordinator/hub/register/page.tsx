@@ -13,6 +13,12 @@ const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }>
 
 type Hub = { id: string; name: string; region: string | null; status: string }
 type Sub = { status: string; amount_cents: number } | null
+type Member = {
+  id: string
+  business_name: string | null
+  profiles: { full_name: string | null; email: string | null } | null
+  subscriptions: { status: string; plan: string; expires_at: string | null }[]
+}
 
 function Banner({ type, text }: { type: 'ok' | 'err'; text: string }) {
   return (
@@ -33,6 +39,8 @@ export default function CoordinatorHubRegisterPage() {
   const [msg, setMsg]       = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [payment, setPayment] = useState<{ clientSecret: string; feeCents: number } | null>(null)
   const [resuming, setResuming] = useState(false)
+  const [members, setMembers] = useState<Member[]>([])
+  const [membersLoaded, setMembersLoaded] = useState(false)
 
   function loadStatus() {
     return fetch('/api/coordinator/hub').then(r => r.json()).then(data => {
@@ -42,6 +50,15 @@ export default function CoordinatorHubRegisterPage() {
   }
 
   useEffect(() => { loadStatus().finally(() => setLoading(false)) }, [])
+
+  const hasActiveHub = hubs.some(h => h.status === 'active')
+  useEffect(() => {
+    if (!hasActiveHub) return
+    fetch('/api/coordinator/hub/members').then(r => r.json()).then(data => {
+      setMembers(data.data || [])
+      setMembersLoaded(true)
+    }).catch(() => setMembersLoaded(true))
+  }, [hasActiveHub])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -99,11 +116,11 @@ export default function CoordinatorHubRegisterPage() {
   const pendingPayment = sub?.status === 'pending' && (sub.amount_cents || 0) > 0
 
   if (loading) return (
-    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '36rem', color: 'var(--moss)' }}>Loading…</div>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '44rem', color: 'var(--moss)' }}>Loading…</div>
   )
 
   return (
-    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '36rem' }}>
+    <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '44rem' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Register a Hub / Collective</h1>
       <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '2rem' }}>
         Register your growing collective. Once approved, growers can join your hub.
@@ -150,6 +167,37 @@ export default function CoordinatorHubRegisterPage() {
           )}
 
           {msg && <Banner type={msg.type} text={msg.text} />}
+
+          {hasActiveHub && (
+            <div className="card" style={{ padding: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Growers in your hub</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1.25rem' }}>
+                Growers join by selecting Hub Membership and picking your hub on their Membership page — there's nothing for you to approve.
+              </p>
+              {!membersLoaded ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>Loading…</p>
+              ) : members.length === 0 ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>No growers have joined yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  {members.map(m => {
+                    const activeSub = m.subscriptions?.find(s => s.status === 'active')
+                    return (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{m.business_name || m.profiles?.full_name || 'Grower'}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>{m.profiles?.email}</p>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--moss)', whiteSpace: 'nowrap' }}>
+                          {activeSub ? `Active · renews ${activeSub.expires_at ? new Date(activeSub.expires_at).toLocaleDateString('en-AU') : '—'}` : 'No active membership'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

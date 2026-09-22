@@ -15,6 +15,8 @@ type HubRow = {
   market_open_time?: string | null
   market_close_time?: string | null
   market_windows?: { day: string; open: string; close: string }[] | null
+  approved_by_name?: string | null
+  approved_at?: string | null
 }
 
 type Coordinator = { id: string; full_name: string | null; email: string | null }
@@ -602,6 +604,11 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
                     <span style={{ padding: '3px 10px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700, background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
                       {hub.status.charAt(0).toUpperCase() + hub.status.slice(1)}
                     </span>
+                    {hub.status === 'active' && hub.approved_by_name && (
+                      <p style={{ fontSize: '0.68rem', color: 'var(--moss)', opacity: 0.75, marginTop: '0.3rem', whiteSpace: 'nowrap' }}>
+                        Approved by {hub.approved_by_name}{hub.approved_at ? ` · ${formatAEST(hub.approved_at, 'dd MMM yyyy')}` : ''}
+                      </p>
+                    )}
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem', textAlign: 'right' }}>
                     <ActionsMenu
