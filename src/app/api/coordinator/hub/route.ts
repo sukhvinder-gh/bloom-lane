@@ -9,6 +9,24 @@ function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+// GET — this coordinator's own hub(s) + their coordinator subscription, so
+// the register page can show "already registered" instead of a blank form
+// (previously it always showed the form, even after approval/payment,
+// since nothing ever checked for an existing registration).
+export async function GET() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const [{ data: hubs }, { data: subscription }] = await Promise.all([
+    admin.from('hubs').select('id, name, region, status').eq('coordinator_id', user.id).order('created_at', { ascending: false }),
+    admin.from('subscriptions').select('*').eq('user_id', user.id).eq('subscriber_type', 'coordinator').eq('plan', 'coordinator').maybeSingle(),
+  ])
+
+  return NextResponse.json({ hubs: hubs || [], subscription: subscription || null })
+}
+
 // POST — register a new hub (coordinator).
 // Self-registered hubs always start 'pending' and only go live when an admin
 // approves them (Admin > Hubs). If a registration fee is configured
