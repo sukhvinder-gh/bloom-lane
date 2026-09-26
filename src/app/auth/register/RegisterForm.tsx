@@ -97,10 +97,20 @@ export default function RegisterForm() {
     }
   }
 
+  // Public sign-up for buyers and growers is paused for a few weeks while
+  // we work through interest registrations first — set these back to true
+  // to reopen. Coordinator registration (hub setup) stays open throughout.
+  const PUBLIC_SIGNUP_OPEN: Record<Role, boolean> = {
+    buyer_b2b: false,
+    buyer_b2c: false,
+    farmer: false,
+    coordinator: true,
+  }
+
   const roles = [
-    { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: 'Buyer pricing with ABN' },
+    { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: PUBLIC_SIGNUP_OPEN.buyer_b2b ? 'Buyer pricing with ABN' : 'Register interest', interestHref: '/register-interest/buyer' },
     { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Coming soon', disabled: true },
-    { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: 'List & sell produce' },
+    { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: PUBLIC_SIGNUP_OPEN.farmer ? 'List & sell produce' : 'Register interest', interestHref: '/register-interest/grower' },
     { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub or collective' },
   ]
 
@@ -134,6 +144,19 @@ export default function RegisterForm() {
 
         {error && <div className="badge badge-red" style={{ width: '100%', padding: '0.625rem', borderRadius: '0.75rem', marginBottom: '0.75rem', justifyContent: 'flex-start', fontSize: '0.75rem' }}>⚠ {error}</div>}
 
+        {!PUBLIC_SIGNUP_OPEN[role] ? (
+          <div className="card" style={{ padding: '2rem', background: 'white', textAlign: 'center' }}>
+            <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.5rem' }}>
+              {role === 'farmer' ? 'Grower' : 'Buyer'} sign-ups open soon
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              We're opening to {role === 'farmer' ? 'growers' : 'buyers'} in the next few weeks. Register your interest and we'll email you as soon as sign-ups are open.
+            </p>
+            <Link href={roles.find(r => r.id === role)?.interestHref || '/'} className="btn btn-forest" style={{ width: '100%' }}>
+              Register interest
+            </Link>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="card" style={{ padding: '1.25rem', display: 'grid', gap: '0.625rem', background: 'white' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             <div><label className="label">Full name *</label><input className="input" placeholder="Jane Smith" value={form.fullName} onChange={e => up('fullName', e.target.value)} required /></div>
@@ -191,6 +214,7 @@ export default function RegisterForm() {
             <button type="submit" className="btn btn-forest" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
           </div>
         </form>
+        )}
     </div>
   )
 }

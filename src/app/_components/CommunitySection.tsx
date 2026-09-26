@@ -12,7 +12,7 @@ export default function CommunitySection() {
 
           <div className={styles.cards}>
 
-            <Link href="/auth/register?role=farmer" className={styles.card}>
+            <Link href="/register-interest/grower" className={styles.card}>
               <div className={styles.icon}>
                 <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 27 V12" />
@@ -22,7 +22,7 @@ export default function CommunitySection() {
                 </svg>
               </div>
               <div>
-                <h4>Register – Grower</h4>
+                <h4>Register Interest – Grower</h4>
                 <p>Join our network of trusted growers.</p>
               </div>
             </Link>
@@ -47,7 +47,7 @@ export default function CommunitySection() {
 
             <div className={styles.cardDivider} aria-hidden="true" />
 
-            <Link href="/auth/register" className={styles.card}>
+            <Link href="/register-interest/buyer" className={styles.card}>
               <div className={styles.icon}>
                 <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M10 13 C10 8.5 13 6 16 6 C19 6 22 8.5 22 13" />
@@ -58,7 +58,7 @@ export default function CommunitySection() {
                 </svg>
               </div>
               <div>
-                <h4>Register – Buyer</h4>
+                <h4>Register Interest – Buyer</h4>
                 <p>Source fresh produce direct from growers.</p>
               </div>
             </Link>
