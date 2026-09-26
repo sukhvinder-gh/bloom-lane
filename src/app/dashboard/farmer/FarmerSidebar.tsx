@@ -72,10 +72,6 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
           <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🏠</span>
           Home
         </Link>
-        <Link href="/marketplace?as=buyer" onClick={() => setOpen(false)} className="rf-nav-item">
-          <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🛍️</span>
-          Shop as Buyer
-        </Link>
         <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.5rem 1.25rem' }} />
 
         {NAV.map(item => {
