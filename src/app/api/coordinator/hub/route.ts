@@ -19,8 +19,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
+  // select('*') on hubs, not a named list — stripe_account_id/stripe_onboarding_complete
+  // may not exist yet if migration 040 hasn't been applied, and naming an unknown
+  // column explicitly makes PostgREST error the whole query instead of just omitting it.
   const [{ data: hubs }, { data: subscription }] = await Promise.all([
-    admin.from('hubs').select('id, name, region, status').eq('coordinator_id', user.id).order('created_at', { ascending: false }),
+    admin.from('hubs').select('*').eq('coordinator_id', user.id).order('created_at', { ascending: false }),
     admin.from('subscriptions').select('*').eq('user_id', user.id).eq('subscriber_type', 'coordinator').eq('plan', 'coordinator').maybeSingle(),
   ])
 

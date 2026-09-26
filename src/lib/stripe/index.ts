@@ -43,11 +43,13 @@ export async function createFarmerStripeAccount(farmer: {
 }
 
 /**
- * Generate Stripe onboarding link for farmer
+ * Generate a Stripe onboarding link for a connected account (farmer or hub).
+ * Defaults to the farmer's own return/refresh pages for backward compatibility.
  */
 export async function createOnboardingLink(
   stripeAccountId: string,
-  farmerId: string
+  _entityId: string,
+  paths: { refreshPath?: string; returnPath?: string } = {}
 ): Promise<string> {
   // Falls back to the known production URL rather than silently producing a
   // broken "undefined/dashboard/..." link if NEXT_PUBLIC_APP_URL is unset —
@@ -55,12 +57,39 @@ export async function createOnboardingLink(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bloom-lane-app.azurewebsites.net'
   const link = await stripe.accountLinks.create({
     account: stripeAccountId,
-    refresh_url: `${appUrl}/dashboard/farmer/stripe/refresh`,
-    return_url: `${appUrl}/dashboard/farmer/stripe/complete`,
+    refresh_url: `${appUrl}${paths.refreshPath || '/dashboard/farmer/stripe/refresh'}`,
+    return_url: `${appUrl}${paths.returnPath || '/dashboard/farmer/stripe/complete'}`,
     type: 'account_onboarding',
   })
 
   return link.url
+}
+
+/**
+ * Create a Stripe Connect Express account for a hub, so a grower's payout
+ * can go to their hub instead of directly to them (see migration 040). No
+ * ABN/tax id upfront — a hub isn't required to have one on file the way a
+ * grower's ABN is captured at sign-up, so Stripe's own hosted onboarding
+ * collects whatever company details it needs directly from the coordinator.
+ */
+export async function createHubStripeAccount(hub: {
+  email: string
+  businessName: string
+}): Promise<string> {
+  const account = await stripe.accounts.create({
+    type: 'express',
+    country: 'AU',
+    email: hub.email,
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+    business_type: 'company',
+    company: { name: hub.businessName },
+    metadata: { platform: 'agri-marketplace', entity: 'hub' },
+  })
+
+  return account.id
 }
 
 /**
@@ -94,6 +123,7 @@ export async function createFarmerPayout(params: {
   netAmountCents: number
   orderId: string
   farmerId: string
+  hubId?: string
 }): Promise<Stripe.Transfer> {
   return stripe.transfers.create({
     amount: params.netAmountCents,
@@ -102,6 +132,7 @@ export async function createFarmerPayout(params: {
     metadata: {
       order_id: params.orderId,
       farmer_id: params.farmerId,
+      ...(params.hubId ? { hub_id: params.hubId } : {}),
     },
   })
 }

@@ -101,7 +101,7 @@ export default async function FarmerPayoutsPage({
           <span style={{ fontSize: '1.25rem' }}>✅</span>
           <div>
             <p style={{ fontWeight: 700, color: '#166534', fontSize: '0.875rem' }}>Stripe account connected</p>
-            <p style={{ color: '#166534', fontSize: '0.8rem', opacity: 0.8 }}>You'll receive payouts automatically after each order's dispute window closes (6 hours post-delivery).</p>
+            <p style={{ color: '#166534', fontSize: '0.8rem', opacity: 0.8 }}>You're paid automatically as soon as an order is marked delivered.</p>
           </div>
         </div>
       )}
@@ -128,15 +128,15 @@ export default async function FarmerPayoutsPage({
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--cream)' }}>
-              {['Date', 'Gross', 'Commission', 'Net (You Get)', 'Status', 'Transfer'].map(h => (
+              {['Date', 'Gross', 'Commission', 'Net', 'Paid to', 'Status', 'Transfer'].map(h => (
                 <th key={h} style={{ padding: '0.75rem 1.25rem', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--forest)', opacity: 0.6 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {(payouts || []).length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--forest)', opacity: 0.4 }}>
-                No payouts yet — payouts are triggered 6 hours after delivery confirmation
+              <tr><td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--forest)', opacity: 0.4 }}>
+                No payouts yet — payouts are triggered as soon as an order is marked delivered
               </td></tr>
             ) : (payouts || []).map(payout => (
               <tr key={payout.id} style={{ borderTop: '1px solid var(--olive)' }}>
@@ -147,6 +147,9 @@ export default async function FarmerPayoutsPage({
                 <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.875rem', color: 'var(--forest)', opacity: 0.6 }}>−{formatPrice(payout.commission_cents)}</td>
                 <td style={{ padding: '0.875rem 1.25rem' }}>
                   <span style={{ fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(payout.net_amount_cents)}</span>
+                </td>
+                <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.8rem', color: 'var(--forest)', opacity: 0.7 }}>
+                  {payout.paid_to_hub_id ? 'Your hub' : 'You directly'}
                 </td>
                 <td style={{ padding: '0.875rem 1.25rem' }}>
                   <span style={{ padding: '0.2rem 0.6rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, ...statusStyle[payout.status] }}>

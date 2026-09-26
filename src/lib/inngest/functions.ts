@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { createFarmerPayout } from '@/lib/stripe'
 import { calculateFarmerPayout } from '@/lib/utils/pricing'
 import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
+import { resolvePayoutDestination } from '@/lib/utils/payoutDestination'
 import { getThisWeekMarketWindow } from '@/lib/utils/timezone'
 import { sendWeeklyAvailabilityDigest, sendMarketOpenNotification } from '@/lib/email/sendSubscriptionEmail'
 
@@ -129,32 +130,49 @@ export const wednesdayMarketOpen = inngest.createFunction(
 )
 
 // ============================================================
-// 3. AUTOMATED PAYOUTS — After dispute window expires
+// 3. AUTOMATED PAYOUTS — as soon as the sale is ready (order delivered)
 // Triggered: order/delivered event
 // BUG-05 FIX: Idempotent — checks existing payout record before creating
+//
+// Pays out immediately on delivery rather than waiting out the dispute
+// window — a deliberate choice: growers get paid the moment the sale is
+// ready, and a later dispute is recovered via the existing
+// farmer_balance_adjustments clawback (deducted from that grower's next
+// payout) rather than by delaying every payout to cover the rare disputed one.
 // ============================================================
 
 export const processPayoutAfterDispute = inngest.createFunction(
   {
     id: 'process-payout',
-    name: 'Process Farmer Payout After Dispute Window',
+    name: 'Process Farmer Payout on Delivery',
     retries: 3,
   },
   { event: 'order/delivered' },
   async ({ event, step }) => {
-    const { orderId, disputeWindowHrs = 6 } = event.data
-
-    // Wait for dispute window
-    await step.sleep('wait-for-dispute-window', `${disputeWindowHrs}h`)
+    const { orderId } = event.data
 
     const supabase = createAdminClient()
 
-    // Check order status — skip if disputed or already refunded
-    const { data: order } = await supabase
+    // Check order status — skip if disputed or already refunded (can only
+    // realistically happen if this retried after a very fast reversal)
+    const FARMER_SELECT_WITH_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, hub_id, hubs(id, stripe_account_id, stripe_onboarding_complete)'
+    const FARMER_SELECT_NO_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id'
+
+    let { data: order, error: orderErr } = await supabase
       .from('orders')
-      .select('*, order_items(*, farmers(stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id))')
+      .select(`*, order_items(*, farmers(${FARMER_SELECT_WITH_HUB}))`)
       .eq('id', orderId)
       .single()
+
+    // Migration 040 (hub payout columns) not applied yet — fall back to
+    // paying every grower directly, exactly like before that migration existed.
+    if (orderErr && /hub|stripe_account_id|stripe_onboarding_complete/.test(orderErr.message)) {
+      ;({ data: order, error: orderErr } = await supabase
+        .from('orders')
+        .select(`*, order_items(*, farmers(${FARMER_SELECT_NO_HUB}))`)
+        .eq('id', orderId)
+        .single())
+    }
 
     if (!order) return { skipped: true, reason: 'Order not found' }
 
@@ -178,7 +196,8 @@ export const processPayoutAfterDispute = inngest.createFunction(
       const rates = await getCommissionRates(supabase)
 
       for (const [farmerId, data] of Object.entries(farmerItems) as any) {
-        if (!data.farmer?.stripe_account_id || !data.farmer?.stripe_onboarding_complete) {
+        const destination = resolvePayoutDestination(data.farmer || {})
+        if (!destination) {
           results.push({ farmerId, status: 'skipped_no_stripe' })
           continue
         }
@@ -204,18 +223,24 @@ export const processPayoutAfterDispute = inngest.createFunction(
 
         // Insert payout record as 'processing' BEFORE calling Stripe
         // This acts as a distributed lock — if Inngest retries, idempotency check above catches it
-        const { data: payoutRecord, error: insertErr } = await supabase
+        const payoutRow: Record<string, unknown> = {
+          farmer_id: farmerId,
+          order_item_ids: data.items.map((i: any) => i.id),
+          gross_amount_cents: gross,
+          commission_cents: commission,
+          net_amount_cents: net,
+          status: 'processing',
+        }
+        let { data: payoutRecord, error: insertErr } = await supabase
           .from('payouts')
-          .insert({
-            farmer_id: farmerId,
-            order_item_ids: data.items.map((i: any) => i.id),
-            gross_amount_cents: gross,
-            commission_cents: commission,
-            net_amount_cents: net,
-            status: 'processing',
-          })
+          .insert(destination.hubId ? { ...payoutRow, paid_to_hub_id: destination.hubId } : payoutRow)
           .select('id')
           .single()
+        // paid_to_hub_id column not there yet (migration 040 not applied) — still
+        // record the payout itself, just without which-hub-received-it detail.
+        if (insertErr && destination.hubId && /paid_to_hub_id/.test(insertErr.message)) {
+          ;({ data: payoutRecord, error: insertErr } = await supabase.from('payouts').insert(payoutRow).select('id').single())
+        }
 
         if (insertErr || !payoutRecord) {
           results.push({ farmerId, status: 'insert_failed', error: insertErr?.message })
@@ -224,10 +249,11 @@ export const processPayoutAfterDispute = inngest.createFunction(
 
         try {
           const transfer = await createFarmerPayout({
-            stripeAccountId: data.farmer.stripe_account_id,
+            stripeAccountId: destination.stripeAccountId,
             netAmountCents: net,
             orderId,
             farmerId,
+            hubId: destination.hubId ?? undefined,
           })
 
           await supabase
@@ -239,7 +265,7 @@ export const processPayoutAfterDispute = inngest.createFunction(
             })
             .eq('id', payoutRecord.id)
 
-          results.push({ farmerId, status: 'paid', transferId: transfer.id })
+          results.push({ farmerId, status: 'paid', transferId: transfer.id, paidToHub: !!destination.hubId })
         } catch (stripeErr) {
           await supabase
             .from('payouts')

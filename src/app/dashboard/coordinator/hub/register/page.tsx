@@ -11,7 +11,10 @@ const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }>
   inactive: { label: 'Inactive', bg: '#F1EFE8', color: '#5F5E5A' },
 }
 
-type Hub = { id: string; name: string; region: string | null; status: string }
+type Hub = {
+  id: string; name: string; region: string | null; status: string
+  stripe_account_id?: string | null; stripe_onboarding_complete?: boolean
+}
 type Sub = { status: string; amount_cents: number } | null
 type Member = {
   id: string
@@ -167,6 +170,25 @@ export default function CoordinatorHubRegisterPage() {
           )}
 
           {msg && <Banner type={msg.type} text={msg.text} />}
+
+          {hasActiveHub && (() => {
+            const activeHub = hubs.find(h => h.status === 'active')!
+            return activeHub.stripe_onboarding_complete ? (
+              <div style={{ padding: '0.875rem 1rem', background: '#D1FAE5', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#065F46', fontWeight: 600 }}>
+                ✓ Payout account connected — growers in this hub are paid out to your hub's account, not directly to them.
+              </div>
+            ) : (
+              <div className="card" style={{ padding: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>Connect a payout account</h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+                  Growers in your hub are paid directly by default. Connect your hub's own Stripe account and their payouts come to your hub instead, so you can distribute them yourselves.
+                </p>
+                <a href="/api/coordinator/stripe/onboarding" className="btn btn-forest" style={{ width: '100%', display: 'inline-flex', justifyContent: 'center' }}>
+                  {activeHub.stripe_account_id ? 'Continue Setup' : 'Connect Payout Account'}
+                </a>
+              </div>
+            )
+          })()}
 
           {hasActiveHub && (
             <div className="card" style={{ padding: '1.5rem' }}>

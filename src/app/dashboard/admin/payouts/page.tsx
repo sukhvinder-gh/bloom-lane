@@ -63,14 +63,14 @@ export default async function AdminPayoutsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--offwhite)', borderBottom: '1px solid var(--border-light)' }}>
-                {['Farmer', 'Gross', 'Commission', 'Net Payout', 'Status', 'Paid At', 'Transfer ID'].map(h => (
+                {['Farmer', 'Gross', 'Commission', 'Net Payout', 'Paid To', 'Status', 'Paid At', 'Transfer ID'].map(h => (
                   <th key={h} className="type-label-sm" style={{ padding: '0.875rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.15em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {list.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
+                <tr><td colSpan={8} style={{ padding: '4rem', textAlign: 'center' }}>
                   <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💸</p>
                   <p className="type-label" style={{ color: 'var(--moss)' }}>No payouts yet</p>
                 </td></tr>
@@ -84,6 +84,11 @@ export default async function AdminPayoutsPage() {
                   <td style={{ padding: '0.875rem 1.25rem', color: 'var(--moss)', fontSize: '0.875rem' }}>{formatPrice(payout.commission_cents)}</td>
                   <td style={{ padding: '0.875rem 1.25rem' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: 'var(--navy)', letterSpacing: '-0.02em', fontWeight: 700 }}>{formatPrice(payout.net_amount_cents)}</span>
+                  </td>
+                  <td style={{ padding: '0.875rem 1.25rem' }}>
+                    <span className="type-label-sm" style={{ color: (payout as any).paid_to_hub_id ? 'var(--navy)' : 'var(--moss)', fontWeight: (payout as any).paid_to_hub_id ? 700 : 400 }}>
+                      {(payout as any).paid_to_hub_id ? 'Hub' : 'Farmer directly'}
+                    </span>
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem' }}>
                     <span className={STATUS_BADGE[payout.status] || 'badge badge-cream'}>{STATUS_LABEL[payout.status] || payout.status}</span>
