@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import SingleImageUpload from '@/components/SingleImageUpload'
 import { sanitizeABNInput } from '@/lib/utils/abn'
 
+type MarketWindow = { day: string; open: string; close: string }
+
 export default function FarmerStorefrontPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -34,9 +36,7 @@ export default function FarmerStorefrontPage() {
     seasonal_specialties: '',
     sustainability: '',
     offers_farm_pickup: false,
-    market_open_day_override: '',
-    market_open_time_override: '',
-    market_close_time_override: '',
+    market_windows: [] as MarketWindow[],
   })
 
   type FulfillmentOption = {
@@ -83,9 +83,13 @@ export default function FarmerStorefrontPage() {
         seasonal_specialties: (data.seasonal_specialties || []).join(', '),
         sustainability:       (data.sustainability || []).join(', '),
         offers_farm_pickup:   data.offers_farm_pickup || false,
-        market_open_day_override:   data.market_open_day_override || '',
-        market_open_time_override:  data.market_open_time_override || '',
-        market_close_time_override: data.market_close_time_override || '',
+        // market_windows_override list if set, else the legacy single
+        // override columns as a one-item list, else no override at all.
+        market_windows: Array.isArray(data.market_windows_override) && data.market_windows_override.length > 0
+          ? data.market_windows_override
+          : (data.market_open_day_override && data.market_open_time_override && data.market_close_time_override
+              ? [{ day: data.market_open_day_override, open: data.market_open_time_override, close: data.market_close_time_override }]
+              : []),
       })
 
       const { data: options } = await supabase
@@ -210,29 +214,37 @@ export default function FarmerStorefrontPage() {
     setSaving(true)
     setError(null)
 
-    const { error } = await supabase
-      .from('farmers')
-      .update({
-        business_name:        form.business_name,
-        bio:                  form.bio,
-        logo_url:             form.logo_url,
-        banner_url:           form.banner_url,
-        brand_color:          form.brand_color,
-        suburb:               form.suburb,
-        state:                form.state,
-        postcode:             form.postcode,
-        address:              form.address,
-        region:               form.region || null,
-        growing_practices:    form.growing_practices || null,
-        seasonal_specialties: form.seasonal_specialties ? form.seasonal_specialties.split(',').map(s => s.trim()).filter(Boolean) : [],
-        sustainability:       form.sustainability ? form.sustainability.split(',').map(s => s.trim()).filter(Boolean) : [],
-        offers_farm_pickup:   form.offers_farm_pickup,
-        market_open_day_override:   form.market_open_day_override || null,
-        market_open_time_override:  form.market_open_time_override || null,
-        market_close_time_override: form.market_close_time_override || null,
-        updated_at:           new Date().toISOString(),
-      })
-      .eq('id', farmer.id)
+    const updates: Record<string, unknown> = {
+      business_name:        form.business_name,
+      bio:                  form.bio,
+      logo_url:             form.logo_url,
+      banner_url:           form.banner_url,
+      brand_color:          form.brand_color,
+      suburb:               form.suburb,
+      state:                form.state,
+      postcode:             form.postcode,
+      address:              form.address,
+      region:               form.region || null,
+      growing_practices:    form.growing_practices || null,
+      seasonal_specialties: form.seasonal_specialties ? form.seasonal_specialties.split(',').map(s => s.trim()).filter(Boolean) : [],
+      sustainability:       form.sustainability ? form.sustainability.split(',').map(s => s.trim()).filter(Boolean) : [],
+      offers_farm_pickup:   form.offers_farm_pickup,
+      market_windows_override:    form.market_windows,
+      // Legacy single-window columns kept in sync from window #1, for
+      // anything still reading them directly (see migration 042).
+      market_open_day_override:   form.market_windows[0]?.day ?? null,
+      market_open_time_override:  form.market_windows[0]?.open ?? null,
+      market_close_time_override: form.market_windows[0]?.close ?? null,
+      updated_at:           new Date().toISOString(),
+    }
+
+    let { error } = await supabase.from('farmers').update(updates).eq('id', farmer.id)
+    // Migration 042 (market_windows_override) not applied yet — drop it and
+    // retry with just the legacy columns rather than failing the whole save.
+    if (error && /market_windows_override/.test(error.message)) {
+      delete updates.market_windows_override
+      ;({ error } = await supabase.from('farmers').update(updates).eq('id', farmer.id))
+    }
 
     if (error) {
       setError(error.message)
@@ -467,21 +479,44 @@ export default function FarmerStorefrontPage() {
           <div style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
             <p style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '0.8rem' }}>Ordering window override (optional)</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.6 }}>
-              By default your hub's ordering window applies. Set all three fields to override it just for your farm — leave blank to use the hub's schedule.
+              By default your hub's ordering window applies. Add one or more windows to override it just for your farm —
+              ordering is open during any of them. With none, your hub's schedule is used.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
-              <select
-                value={form.market_open_day_override}
-                onChange={e => setForm(f => ({ ...f, market_open_day_override: e.target.value }))}
-                style={inputStyle}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {form.market_windows.map((w, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                  <select
+                    style={inputStyle}
+                    value={w.day}
+                    onChange={e => setForm(f => ({ ...f, market_windows: f.market_windows.map((mw, idx) => idx === i ? { ...mw, day: e.target.value } : mw) }))}
+                  >
+                    <option value="">Day…</option>
+                    {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                      <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="time" style={inputStyle} value={w.open} aria-label="Opens"
+                    onChange={e => setForm(f => ({ ...f, market_windows: f.market_windows.map((mw, idx) => idx === i ? { ...mw, open: e.target.value } : mw) }))}
+                  />
+                  <input
+                    type="time" style={inputStyle} value={w.close} aria-label="Closes"
+                    onChange={e => setForm(f => ({ ...f, market_windows: f.market_windows.map((mw, idx) => idx === i ? { ...mw, close: e.target.value } : mw) }))}
+                  />
+                  <button
+                    type="button" aria-label="Remove window"
+                    onClick={() => setForm(f => ({ ...f, market_windows: f.market_windows.filter((_, idx) => idx !== i) }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '1rem', padding: '0.25rem 0.4rem' }}
+                  >✕</button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, market_windows: [...f.market_windows, { day: '', open: '08:00', close: '17:00' }] }))}
+                className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}
               >
-                <option value="">No override</option>
-                {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
-                  <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
-                ))}
-              </select>
-              <input type="time" style={inputStyle} value={form.market_open_time_override} onChange={e => setForm(f => ({ ...f, market_open_time_override: e.target.value }))} />
-              <input type="time" style={inputStyle} value={form.market_close_time_override} onChange={e => setForm(f => ({ ...f, market_close_time_override: e.target.value }))} />
+                + Add ordering window
+              </button>
             </div>
           </div>
         )}

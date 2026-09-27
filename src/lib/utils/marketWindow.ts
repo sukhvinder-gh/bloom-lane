@@ -50,6 +50,21 @@ export function hubMarketWindows(hub: any): MarketWindow[] {
 }
 
 /**
+ * A farmer's own ordering-window override: the market_windows_override list
+ * if they have one, otherwise the legacy single override columns as a
+ * one-item list. Empty means no override -> falls through to the hub.
+ */
+export function farmerMarketWindows(farmer: any): MarketWindow[] {
+  if (Array.isArray(farmer?.market_windows_override) && farmer.market_windows_override.length > 0) {
+    return farmer.market_windows_override.filter((w: any) => w?.day && w?.open && w?.close)
+  }
+  if (farmer?.market_open_day_override && farmer?.market_open_time_override && farmer?.market_close_time_override) {
+    return [{ day: farmer.market_open_day_override, open: farmer.market_open_time_override, close: farmer.market_close_time_override }]
+  }
+  return []
+}
+
+/**
  * Same resolution as isMarketOpenForFarmer (farm override -> hub schedule ->
  * unconfigured/always-open), but also returns the actual windows so a caller
  * can tell a buyer *when* a closed grower reopens instead of just that
@@ -58,15 +73,18 @@ export function hubMarketWindows(hub: any): MarketWindow[] {
 export async function marketStatusForFarmer(farmerId: string): Promise<{ open: boolean; windows: MarketWindow[] }> {
   const admin = createAdminClient()
 
+  // select('*'), not a named list: market_windows_override may not exist yet
+  // if migration 042 hasn't been applied, and naming an unknown column makes
+  // the whole query fail instead of falling back to the legacy columns.
   const { data: farmer } = await admin
     .from('farmers')
-    .select('hub_id, market_open_day_override, market_open_time_override, market_close_time_override')
+    .select('*')
     .eq('id', farmerId)
     .single()
 
-  if (farmer?.market_open_day_override && farmer?.market_open_time_override && farmer?.market_close_time_override) {
-    const windows = [{ day: farmer.market_open_day_override, open: farmer.market_open_time_override, close: farmer.market_close_time_override }]
-    return { open: isWithinWeeklyWindow(windows[0].day, windows[0].open, windows[0].close), windows }
+  const ownWindows = farmerMarketWindows(farmer)
+  if (ownWindows.length > 0) {
+    return { open: ownWindows.some(w => isWithinWeeklyWindow(w.day, w.open, w.close)), windows: ownWindows }
   }
 
   if (farmer?.hub_id) {
@@ -104,12 +122,16 @@ export async function nextMarketCloseForFarmer(farmerId: string): Promise<Date |
 
   const { data: farmer } = await admin
     .from('farmers')
-    .select('hub_id, market_open_day_override, market_close_time_override')
+    .select('*')
     .eq('id', farmerId)
     .single()
 
-  if (farmer?.market_open_day_override && farmer?.market_close_time_override) {
-    return nextWeeklyOccurrence(farmer.market_open_day_override, farmer.market_close_time_override)
+  const ownWindows = farmerMarketWindows(farmer)
+  if (ownWindows.length > 0) {
+    const closes = ownWindows
+      .map(w => nextWeeklyOccurrence(w.day, w.close))
+      .filter((d): d is Date => d !== null)
+    if (closes.length > 0) return new Date(Math.min(...closes.map(d => d.getTime())))
   }
 
   if (farmer?.hub_id) {
