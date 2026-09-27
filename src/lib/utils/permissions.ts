@@ -66,6 +66,7 @@ export function roleLabel(role: string | null | undefined): string {
     case 'farmer':         return 'Grower'
     case 'buyer_b2b':      return 'B2B Buyer'
     case 'buyer_b2c':      return 'B2C Buyer'
+    case 'coordinator':    return 'Coordinator'
     default:               return role || 'Unknown'
   }
 }

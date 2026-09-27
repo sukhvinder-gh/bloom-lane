@@ -90,6 +90,22 @@ export default function RegisterForm() {
       return
     }
 
+    // Supabase never returns an error for signUp() on an email that already
+    // has an account but hasn't confirmed it yet — by design, to avoid
+    // leaking which emails are registered. Instead it silently re-sends that
+    // EXISTING account's original confirmation link and discards everything
+    // just submitted (role, business name, ABN, all of it) with no signal
+    // to the caller except one: a fresh signup's user comes back with a
+    // non-empty `identities` array, a pre-existing user's comes back empty.
+    // Without this check, someone re-registering an old test email under a
+    // different role sees "check your email", confirms, and is silently
+    // logged into the original stale account instead.
+    if (data.user && data.user.identities?.length === 0) {
+      setError('An account with this email already exists but hasn’t been confirmed yet. Check your inbox for the original confirmation link, or reset your password from the sign-in page.')
+      setLoading(false)
+      return
+    }
+
     if (data.user && !data.session) {
       setStep('done')
     } else if (data.session) {
