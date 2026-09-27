@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { validateABNFormat } from '@/lib/utils/abn'
 
 const STATUS_BADGE: Record<string, string> = {
   pending_approval: 'badge badge-amber',
@@ -40,8 +41,18 @@ export default function EditFarmerForm({ farmer: initial, requesterRole }: { far
   }
 
   async function save() {
-    setSaving(true)
     setMsg(null)
+    // Only gate on ABN format when it's actually being changed — a farmer
+    // with a pre-existing bad ABN (e.g. entered before this check existed)
+    // shouldn't be unable to save an unrelated field like their bio.
+    // Stripe rejects a malformed ABN outright when this farmer later
+    // connects payouts, so catching it here beats a confusing stripe_error
+    // redirect on the payouts page.
+    if (form.abn.trim() && form.abn !== (initial.abn || '') && !validateABNFormat(form.abn)) {
+      setMsg({ type: 'err', text: 'That ABN doesn’t look valid — it should be exactly 11 digits and pass the ABN checksum.' })
+      return
+    }
+    setSaving(true)
     // Commission is no longer set per grower — it comes from Admin > Config.
     const { commission_rate: _unused, ...formFields } = form
     const payload = {

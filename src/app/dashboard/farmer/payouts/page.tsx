@@ -8,9 +8,9 @@ import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commiss
 export default async function FarmerPayoutsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe_error?: string }>
+  searchParams: Promise<{ stripe_error?: string; stripe_error_msg?: string }>
 }) {
-  const { stripe_error } = await searchParams
+  const { stripe_error, stripe_error_msg } = await searchParams
   const sessionUser = await getSessionUserFromCookie()
   if (!sessionUser) redirect('/auth/login')
 
@@ -52,7 +52,9 @@ export default async function FarmerPayoutsPage({
 
       {stripe_error && (
         <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '1rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', color: '#991b1b', fontSize: '0.85rem' }}>
-          ⚠ Something went wrong setting up Stripe. Please try again, or contact support if it keeps happening.
+          ⚠ Something went wrong setting up Stripe.
+          {stripe_error_msg ? <span style={{ display: 'block', marginTop: '0.35rem', opacity: 0.85 }}>{stripe_error_msg}</span> : null}
+          <span style={{ display: 'block', marginTop: '0.35rem' }}>Please try again, or contact support if it keeps happening.</span>
         </div>
       )}
 

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Elements } from '@stripe/react-stripe-js'
 import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
@@ -32,6 +33,7 @@ function Banner({ type, text }: { type: 'ok' | 'err'; text: string }) {
 }
 
 export default function CoordinatorHubRegisterPage() {
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [hubs, setHubs]       = useState<Hub[]>([])
   const [sub, setSub]         = useState<Sub>(null)
@@ -40,6 +42,12 @@ export default function CoordinatorHubRegisterPage() {
   const [region, setRegion] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg]       = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('stripe_error') !== '1') return
+    const detail = searchParams.get('stripe_error_msg')
+    setMsg({ type: 'err', text: detail ? `Something went wrong setting up Stripe: ${detail}` : 'Something went wrong setting up Stripe. Please try again, or contact support if it keeps happening.' })
+  }, [searchParams])
   const [payment, setPayment] = useState<{ clientSecret: string; feeCents: number } | null>(null)
   const [resuming, setResuming] = useState(false)
   const [members, setMembers] = useState<Member[]>([])

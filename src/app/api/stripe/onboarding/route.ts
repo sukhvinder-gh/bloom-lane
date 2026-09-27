@@ -12,8 +12,16 @@ import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/serv
 import { createFarmerStripeAccount, createOnboardingLink } from '@/lib/stripe'
 
 export async function GET(request: NextRequest) {
+  // Use forwarded headers so redirects go to the public hostname, not the
+  // internal Azure container address (e.g. http://dd2d00ce69eb:8080) — see
+  // the same fix already applied in auth/callback and auth/logout.
+  const reqUrl = new URL(request.url)
+  const host = request.headers.get('x-forwarded-host') ?? reqUrl.host
+  const proto = request.headers.get('x-forwarded-proto') ?? reqUrl.protocol.replace(':', '')
+  const origin = `${proto}://${host}`
+
   const sessionUser = await getSessionUserFromCookie()
-  if (!sessionUser) return NextResponse.redirect(new URL('/auth/login', request.url))
+  if (!sessionUser) return NextResponse.redirect(new URL('/auth/login', origin))
 
   const admin = createAdminClient()
   const { data: farmer } = await admin
@@ -22,7 +30,7 @@ export async function GET(request: NextRequest) {
     .eq('user_id', sessionUser.id)
     .maybeSingle()
 
-  if (!farmer) return NextResponse.redirect(new URL('/dashboard/farmer/storefront', request.url))
+  if (!farmer) return NextResponse.redirect(new URL('/dashboard/farmer/storefront', origin))
 
   try {
     let stripeAccountId = farmer.stripe_account_id as string | null
@@ -40,6 +48,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(onboardingUrl)
   } catch (err) {
     console.error('[Stripe onboarding] failed for farmer', farmer.id, err)
-    return NextResponse.redirect(new URL('/dashboard/farmer/payouts?stripe_error=1', request.url))
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    const url = new URL('/dashboard/farmer/payouts', origin)
+    url.searchParams.set('stripe_error', '1')
+    url.searchParams.set('stripe_error_msg', msg.slice(0, 300))
+    return NextResponse.redirect(url)
   }
 }

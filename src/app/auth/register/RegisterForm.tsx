@@ -49,6 +49,9 @@ export default function RegisterForm() {
     if (role === 'farmer' && !form.postcode.trim()) {
       setError('Postcode is required for farmer accounts'); setLoading(false); return
     }
+    if (role === 'farmer' && !validateABNFormat(form.abn)) {
+      setError('Please enter a valid 11-digit ABN for your grower account'); setLoading(false); return
+    }
 
     const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({
