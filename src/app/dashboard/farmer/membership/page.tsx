@@ -6,6 +6,7 @@ import { Elements } from '@stripe/react-stripe-js'
 import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
+import { sanitizeABNInput } from '@/lib/utils/abn'
 
 // Display label only — the underlying plan value ('wholesale_collection')
 // is unchanged in the database/subscriptions.plan enum. This tier is a
@@ -14,7 +15,7 @@ import StripePaymentForm from '@/components/StripePaymentForm'
 const FREE_TIER_LABEL = 'Free Grower Listing'
 
 // ── Confirmation modal ────────────────────────────────────────────────────────
-type ConfirmScenario = 'new' | 'plan_change' | 'billing_change'
+type ConfirmScenario = 'new' | 'plan_change' | 'billing_change' | 'details_update'
 
 function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilling, priceCents, onConfirm, onCancel }: {
   scenario: ConfirmScenario
@@ -39,12 +40,13 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
       <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '26rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
         <div style={{ padding: '1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>
-            {scenario === 'new' ? '✅' : '🔄'}
+            {scenario === 'new' ? '✅' : scenario === 'details_update' ? '📝' : '🔄'}
           </div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: isAmber ? '#92400E' : 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>
             {scenario === 'new'            && 'Confirm Membership'}
             {scenario === 'plan_change'    && 'Switch Membership Plan?'}
             {scenario === 'billing_change' && 'Change Billing Period?'}
+            {scenario === 'details_update' && 'Save Membership Details?'}
           </h2>
 
           {scenario === 'new' && (
@@ -90,6 +92,12 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
               </div>
             </>
           )}
+
+          {scenario === 'details_update' && (
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-1)', marginBottom: '1rem', lineHeight: 1.55 }}>
+              You're still on <strong>{planLabel(newPlan)}</strong> — this just saves your updated business details.
+            </p>
+          )}
         </div>
 
         <div style={{ padding: '0 1.5rem 1.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
@@ -103,7 +111,7 @@ function ConfirmModal({ scenario, currentPlan, currentBilling, newPlan, newBilli
               fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
             }}
           >
-            {scenario === 'new' ? 'Confirm & Continue' : scenario === 'plan_change' ? 'Yes, Switch Plan' : 'Yes, Change Billing'}
+            {scenario === 'new' ? 'Confirm & Continue' : scenario === 'plan_change' ? 'Yes, Switch Plan' : scenario === 'billing_change' ? 'Yes, Change Billing' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -437,7 +445,12 @@ export default function GrowerSubscriptionPage() {
         setMsg({ type: 'err', text: 'Subscription saved, but payment setup failed. Use the "Pay now" button below to try again.' })
       }
     } else {
-      setMsg({ type: 'ok', text: `${FREE_TIER_LABEL} registration complete! Your listings are now active.` })
+      setMsg({
+        type: 'ok',
+        text: hasExistingSub
+          ? 'Your membership details have been updated.'
+          : `${FREE_TIER_LABEL} registration complete! Your listings are now active.`,
+      })
       setTimeout(() => router.push('/dashboard/farmer'), 2000)
     }
     setSaving(false)
@@ -658,7 +671,7 @@ export default function GrowerSubscriptionPage() {
             </div>
             <div>
               <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>ABN *</label>
-              <input className="input" value={abn} onChange={e => setAbn(e.target.value)} placeholder="XX XXX XXX XXX" required style={{ width: '100%' }} />
+              <input className="input" value={abn} onChange={e => setAbn(sanitizeABNInput(e.target.value))} placeholder="XX XXX XXX XXX" maxLength={11} required style={{ width: '100%' }} />
             </div>
             <div>
               <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Farm Address</label>
@@ -757,7 +770,13 @@ export default function GrowerSubscriptionPage() {
           className="btn btn-forest"
           style={{ padding: '0.875rem', fontSize: '1rem', borderRadius: '0.875rem' }}
         >
-          {saving ? 'Saving…' : plan === 'wholesale_collection' ? `Register for ${FREE_TIER_LABEL}` : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
+          {saving
+            ? 'Saving…'
+            : hasExistingSub && current?.plan === plan && (plan !== 'hub_membership' || current?.billing_period === billing)
+            ? 'Save Changes'
+            : plan === 'wholesale_collection'
+            ? `Register for ${FREE_TIER_LABEL}`
+            : `Continue to Payment — $${((priceMap[billing] || 0) / 100).toFixed(0)}`}
         </button>
       </form>
 
@@ -772,7 +791,7 @@ export default function GrowerSubscriptionPage() {
       {pendingConfirm && (() => {
         const isChangingPlan    = hasExistingSub && current?.plan !== plan
         const isChangingBilling = hasExistingSub && current?.plan === 'hub_membership' && plan === 'hub_membership' && current?.billing_period !== billing
-        const scenario: ConfirmScenario = isChangingPlan ? 'plan_change' : isChangingBilling ? 'billing_change' : 'new'
+        const scenario: ConfirmScenario = isChangingPlan ? 'plan_change' : isChangingBilling ? 'billing_change' : hasExistingSub ? 'details_update' : 'new'
         return (
           <ConfirmModal
             scenario={scenario}
