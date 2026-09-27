@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { sendSubscriptionConfirmation } from '@/lib/email/sendSubscriptionEmail'
 import { stripe } from '@/lib/stripe'
+import { validateABNFormat } from '@/lib/utils/abn'
 
 // GET — fetch current farmer subscription status
 export async function GET() {
@@ -69,6 +70,13 @@ export async function POST(request: NextRequest) {
   if (subscription_type === 'hub_membership' && !hub_id) missing.push('hub / collective')
   if (missing.length > 0) {
     return NextResponse.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 })
+  }
+  // Format-check here too, not just at registration — this route is also
+  // how an existing grower edits their ABN (via "Change Plan"), and a
+  // malformed value saved this way later fails Stripe payout setup with a
+  // confusing error instead of being caught at the point of entry.
+  if (!validateABNFormat(abn)) {
+    return NextResponse.json({ error: 'Please enter a valid 11-digit ABN' }, { status: 400 })
   }
   if (subscription_type === 'hub_membership' && !billing_period) {
     return NextResponse.json({ error: 'Billing period required for Hub Membership' }, { status: 400 })
