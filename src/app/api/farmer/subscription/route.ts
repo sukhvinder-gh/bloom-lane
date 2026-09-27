@@ -58,8 +58,17 @@ export async function POST(request: NextRequest) {
     farm_region,
   } = body
 
-  if (!subscription_type || !hub_id || !abn) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  // hub_id is only required for Hub Membership — the UI labels it
+  // "(optional)" for the Free Grower Listing plan, but this check used to
+  // require it unconditionally, so a grower on the free plan with no hub
+  // selected got a generic "Missing required fields" error with no
+  // indication of which field, even though the form looked complete.
+  const missing: string[] = []
+  if (!subscription_type) missing.push('plan')
+  if (!abn) missing.push('ABN')
+  if (subscription_type === 'hub_membership' && !hub_id) missing.push('hub / collective')
+  if (missing.length > 0) {
+    return NextResponse.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 })
   }
   if (subscription_type === 'hub_membership' && !billing_period) {
     return NextResponse.json({ error: 'Billing period required for Hub Membership' }, { status: 400 })
@@ -70,11 +79,14 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Update farmer profile
+  // Update farmer profile. hub_id must be a real UUID or null — an empty
+  // string (what the form sends when "— Select your hub —" is left as-is,
+  // valid for the Free Grower Listing plan) would otherwise fail at the
+  // database with an "invalid input syntax for type uuid" error.
   const farmerUpdate: Record<string, any> = {
     subscription_type,
     subscription_tier: billing_period || null,
-    hub_id,
+    hub_id: hub_id || null,
     abn,
     gst_registered: !!gst_registered,
     rcti_agreed: !!rcti_agreed,
