@@ -4,6 +4,15 @@
 // Falls back to format-only validation if API is unavailable
 
 /**
+ * Sanitize live ABN input: digits only, capped at 11 — used as an input's
+ * onChange filter so the field itself can't hold more than a real ABN ever
+ * has, rather than only catching an over-long value at submit time.
+ */
+export function sanitizeABNInput(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 11)
+}
+
+/**
  * Validate ABN format (11 digits, passes checksum)
  * Reference: https://abr.business.gov.au/Help/AbnFormat
  */

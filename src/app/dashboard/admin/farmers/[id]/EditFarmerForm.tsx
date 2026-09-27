@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { validateABNFormat } from '@/lib/utils/abn'
+import { validateABNFormat, sanitizeABNInput } from '@/lib/utils/abn'
 
 const STATUS_BADGE: Record<string, string> = {
   pending_approval: 'badge badge-amber',
@@ -160,7 +160,7 @@ export default function EditFarmerForm({ farmer: initial, requesterRole }: { far
 
           <div>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>ABN</label>
-            <input className="input" value={form.abn} onChange={e => set('abn', e.target.value)} placeholder="12 345 678 901" style={{ width: '100%' }} />
+            <input className="input" value={form.abn} onChange={e => set('abn', sanitizeABNInput(e.target.value))} placeholder="12 345 678 901" maxLength={11} style={{ width: '100%' }} />
           </div>
 
           <div>

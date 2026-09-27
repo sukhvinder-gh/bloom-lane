@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import SingleImageUpload from '@/components/SingleImageUpload'
+import { sanitizeABNInput } from '@/lib/utils/abn'
 
 export default function FarmerStorefrontPage() {
   const supabase = createClient()
@@ -316,7 +317,7 @@ export default function FarmerStorefrontPage() {
             <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
               ABN <span style={{ color: '#dc2626' }}>*</span>
             </label>
-            <input style={inputStyle} value={form.abn} onChange={e => setForm(f => ({ ...f, abn: e.target.value }))} placeholder="e.g. 51 824 753 556" />
+            <input style={inputStyle} value={form.abn} onChange={e => setForm(f => ({ ...f, abn: sanitizeABNInput(e.target.value) }))} placeholder="e.g. 51824753556" maxLength={11} />
             <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>
               Your ABN will be verified with the Australian Business Register
             </p>

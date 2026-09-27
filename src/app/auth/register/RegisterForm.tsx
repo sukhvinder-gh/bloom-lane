@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { validateABNFormat } from '@/lib/utils/abn'
+import { validateABNFormat, sanitizeABNInput } from '@/lib/utils/abn'
 
 type Role = 'buyer_b2b' | 'buyer_b2c' | 'farmer' | 'coordinator'
 
@@ -190,7 +190,7 @@ export default function RegisterForm() {
             <div>
               <label className="label">ABN (11 digits)</label>
               <div style={{ display: 'flex', gap: '0.625rem' }}>
-                <input className="input" placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => { up('abn', e.target.value); setAbnStatus('idle') }} style={{ flex: 1 }} />
+                <input className="input" placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => { up('abn', sanitizeABNInput(e.target.value)); setAbnStatus('idle') }} maxLength={11} style={{ flex: 1 }} />
                 <button type="button" onClick={checkABN} className="btn btn-ghost btn-sm" disabled={abnStatus === 'checking'} style={{ flexShrink: 0 }}>
                   {abnStatus === 'checking' ? '…' : 'Verify'}
                 </button>
