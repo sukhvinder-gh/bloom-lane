@@ -211,28 +211,34 @@ export default function CoordinatorHubRegisterPage() {
             )
           })()}
 
-          {hasActiveHub && (() => {
-            const activeHub = hubs.find(h => h.status === 'active')!
-            return activeHub.stripe_onboarding_complete ? (
-              <div style={{ padding: '0.875rem 1rem', background: '#D1FAE5', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#065F46', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <span>✓ Payout account connected — growers in this hub are paid out to your hub's account, not directly to them.</span>
-                <a href="/api/coordinator/stripe/onboarding"
+          {/* One payout section per active hub — a coordinator running more
+              than one hub needs to connect Stripe for each individually;
+              this used to only ever operate on whichever hub they created
+              most recently, leaving every other hub of theirs permanently
+              stuck unable to connect at all. */}
+          {hubs.filter(h => h.status === 'active').map(activeHub => (
+            activeHub.stripe_onboarding_complete ? (
+              <div key={activeHub.id} style={{ padding: '0.875rem 1rem', background: '#D1FAE5', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#065F46', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <span>✓ {hubs.filter(h => h.status === 'active').length > 1 ? `${activeHub.name}: ` : ''}Payout account connected — growers in this hub are paid out to your hub's account, not directly to them.</span>
+                <a href={`/api/coordinator/stripe/onboarding?hub_id=${activeHub.id}`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #6EE7B7', color: '#065F46', padding: '0.4rem 1rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700, flexShrink: 0 }}>
                   Update bank details →
                 </a>
               </div>
             ) : (
-              <div className="card" style={{ padding: '1.5rem' }}>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>Connect a payout account</h2>
+              <div key={activeHub.id} className="card" style={{ padding: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>
+                  Connect a payout account{hubs.filter(h => h.status === 'active').length > 1 ? ` — ${activeHub.name}` : ''}
+                </h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--moss)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
-                  Growers in your hub are paid directly by default. Connect your hub's own Stripe account and their payouts come to your hub instead, so you can distribute them yourselves.
+                  Growers in this hub are paid directly by default. Connect this hub's own Stripe account and their payouts come to it instead, so you can distribute them yourselves.
                 </p>
-                <a href="/api/coordinator/stripe/onboarding" className="btn btn-forest" style={{ width: '100%', display: 'inline-flex', justifyContent: 'center' }}>
+                <a href={`/api/coordinator/stripe/onboarding?hub_id=${activeHub.id}`} className="btn btn-forest" style={{ width: '100%', display: 'inline-flex', justifyContent: 'center' }}>
                   {activeHub.stripe_account_id ? 'Continue Setup' : 'Connect Payout Account'}
                 </a>
               </div>
             )
-          })()}
+          ))}
 
           {hasActiveHub && (
             <div className="card" style={{ padding: '1.5rem' }}>

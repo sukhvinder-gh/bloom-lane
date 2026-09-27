@@ -2,6 +2,14 @@
 // Connect account (see migration 040 — a grower's payout goes to their hub
 // once it's connected). Plain browser navigation, so this redirects rather
 // than returning JSON.
+//
+// Takes an explicit ?hub_id= — a coordinator can run more than one hub, and
+// picking "whichever hub this coordinator created most recently" silently
+// meant every hub past their first could never be individually connected at
+// all: the "Connect Payout Account" button only ever set up that one most-
+// recent hub, while every other one of theirs stayed permanently
+// unconnected with no way to select it. Falls back to the most-recent hub
+// only when hub_id is omitted, for old links/bookmarks.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
@@ -15,18 +23,20 @@ export async function GET(request: NextRequest) {
   const host = request.headers.get('x-forwarded-host') ?? reqUrl.host
   const proto = request.headers.get('x-forwarded-proto') ?? reqUrl.protocol.replace(':', '')
   const origin = `${proto}://${host}`
+  const requestedHubId = reqUrl.searchParams.get('hub_id')
 
   const sessionUser = await getSessionUserFromCookie()
   if (!sessionUser) return NextResponse.redirect(new URL('/auth/login', origin))
 
   const admin = createAdminClient()
-  const { data: hub } = await admin
+  let hubQuery = admin
     .from('hubs')
     .select('id, name, stripe_account_id')
     .eq('coordinator_id', sessionUser.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  hubQuery = requestedHubId
+    ? hubQuery.eq('id', requestedHubId)
+    : hubQuery.order('created_at', { ascending: false }).limit(1)
+  const { data: hub } = await hubQuery.maybeSingle()
 
   if (!hub) return NextResponse.redirect(new URL('/dashboard/coordinator/hub/register', origin))
 
@@ -42,8 +52,8 @@ export async function GET(request: NextRequest) {
     }
 
     const onboardingUrl = await createOnboardingLink(stripeAccountId, hub.id, {
-      refreshPath: '/dashboard/coordinator/stripe/refresh',
-      returnPath: '/dashboard/coordinator/stripe/complete',
+      refreshPath: `/dashboard/coordinator/stripe/refresh?hub_id=${hub.id}`,
+      returnPath: `/dashboard/coordinator/stripe/complete?hub_id=${hub.id}`,
     })
     return NextResponse.redirect(onboardingUrl)
   } catch (err) {
