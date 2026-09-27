@@ -1,45 +1,105 @@
 // src/lib/stripe/index.ts
-// Stripe Connect setup for multi-vendor marketplace
-// Using Express accounts (recommended for MVP vs Custom)
+// Stripe Connect setup for multi-vendor marketplace.
+//
+// Connected-account creation uses the v2 Core Accounts API
+// (stripe.v2.core.accounts), not the older v1 stripe.accounts.create() —
+// Stripe now rejects v1 account creation outright for this platform account
+// ("Stripe no longer recommends Accounts v1 for new Connect integrations")
+// unless a dashboard compatibility toggle is enabled, which isn't something
+// to depend on long-term. Every connected account here (farmer or hub) is a
+// pure *recipient*: the platform is always the merchant of record (buyers
+// pay the platform's own account; a separate stripe.transfers.create() call
+// — still v1, still the correct API for this — sends the connected account
+// its share afterward). That's exactly what the v2 "recipient" configuration
+// is for, as opposed to "merchant" (an account that processes its own
+// charges, which none of ours do).
+//
+// stripe.transfers.create(), stripe.paymentIntents.*, stripe.refunds.create()
+// and webhook signature verification are unaffected by this — only
+// *creating* a Connect account moved to v2.
 
 import Stripe from 'stripe'
 
 // Server-side Stripe instance
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2026-08-26.dahlia',
   typescript: true,
 })
 
+type RecipientAccount = Stripe.V2.Core.Account
+
 /**
- * Create a Stripe Connect Express account for a new farmer.
- * Express = Stripe handles KYC/identity verification UI.
- * Upgrade to Custom in V2 if you need branded onboarding.
+ * True once this recipient account can actually receive a transfer —
+ * i.e. the specific capability our stripe.transfers.create() calls depend
+ * on, rather than a generic "onboarding complete" flag (v2 accounts don't
+ * expose one; the old v1 details_submitted/charges_enabled/payouts_enabled
+ * trio doesn't exist on v2 Account objects at all).
+ */
+export function isRecipientReadyForTransfers(account: RecipientAccount): boolean {
+  return account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status === 'active'
+}
+
+async function createRecipientAccount(params: {
+  email: string
+  businessName: string
+  abn?: string
+}): Promise<string> {
+  const account = await stripe.v2.core.accounts.create({
+    contact_email: params.email,
+    display_name: params.businessName,
+    dashboard: 'express', // gives the recipient a lightweight self-serve view of their own payouts/bank details, same as the v1 Express accounts this replaces
+    identity: {
+      country: 'AU',
+      entity_type: 'company',
+      business_details: {
+        registered_name: params.businessName,
+        ...(params.abn ? { id_numbers: [{ type: 'au_abn', value: params.abn.replace(/\D/g, '') }] } : {}),
+      },
+    },
+    configuration: {
+      recipient: {
+        capabilities: { stripe_balance: { stripe_transfers: { requested: true } } },
+      },
+    },
+    // Separate Charges & Transfers: the platform is the merchant of record
+    // and already owns refund/loss handling manually (see
+    // farmer_balance_adjustments) — 'application' on both mirrors that.
+    defaults: {
+      responsibilities: { fees_collector: 'application', losses_collector: 'application' },
+    },
+    metadata: {
+      platform: 'agri-marketplace',
+      ...(params.abn ? { abn: params.abn } : {}),
+    },
+  })
+
+  return account.id
+}
+
+/**
+ * Create a Stripe Connect recipient account for a new farmer. Stripe's own
+ * hosted onboarding (the account link below) collects everything else —
+ * address, bank details, identity documents — directly from the grower.
  */
 export async function createFarmerStripeAccount(farmer: {
   email: string
   businessName: string
   abn: string
 }): Promise<string> {
-  const account = await stripe.accounts.create({
-    type: 'express',
-    country: 'AU',
-    email: farmer.email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_type: 'company',
-    company: {
-      name: farmer.businessName,
-      tax_id: farmer.abn.replace(/\D/g, ''), // ABN as tax ID
-    },
-    metadata: {
-      abn: farmer.abn,
-      platform: 'agri-marketplace',
-    },
-  })
+  return createRecipientAccount({ email: farmer.email, businessName: farmer.businessName, abn: farmer.abn })
+}
 
-  return account.id
+/**
+ * Create a Stripe Connect recipient account for a hub, so a grower's payout
+ * can go to their hub instead of directly to them (see migration 040). No
+ * ABN upfront — a hub isn't required to have one on file the way a grower's
+ * ABN is captured at sign-up.
+ */
+export async function createHubStripeAccount(hub: {
+  email: string
+  businessName: string
+}): Promise<string> {
+  return createRecipientAccount({ email: hub.email, businessName: hub.businessName })
 }
 
 /**
@@ -55,41 +115,19 @@ export async function createOnboardingLink(
   // broken "undefined/dashboard/..." link if NEXT_PUBLIC_APP_URL is unset —
   // matches the fallback already used for NEXT_PUBLIC_SITE_URL in the email templates.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bloom-lane-app.azurewebsites.net'
-  const link = await stripe.accountLinks.create({
+  const link = await stripe.v2.core.accountLinks.create({
     account: stripeAccountId,
-    refresh_url: `${appUrl}${paths.refreshPath || '/dashboard/farmer/stripe/refresh'}`,
-    return_url: `${appUrl}${paths.returnPath || '/dashboard/farmer/stripe/complete'}`,
-    type: 'account_onboarding',
+    use_case: {
+      type: 'account_onboarding',
+      account_onboarding: {
+        configurations: ['recipient'],
+        refresh_url: `${appUrl}${paths.refreshPath || '/dashboard/farmer/stripe/refresh'}`,
+        return_url: `${appUrl}${paths.returnPath || '/dashboard/farmer/stripe/complete'}`,
+      },
+    },
   })
 
   return link.url
-}
-
-/**
- * Create a Stripe Connect Express account for a hub, so a grower's payout
- * can go to their hub instead of directly to them (see migration 040). No
- * ABN/tax id upfront — a hub isn't required to have one on file the way a
- * grower's ABN is captured at sign-up, so Stripe's own hosted onboarding
- * collects whatever company details it needs directly from the coordinator.
- */
-export async function createHubStripeAccount(hub: {
-  email: string
-  businessName: string
-}): Promise<string> {
-  const account = await stripe.accounts.create({
-    type: 'express',
-    country: 'AU',
-    email: hub.email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_type: 'company',
-    company: { name: hub.businessName },
-    metadata: { platform: 'agri-marketplace', entity: 'hub' },
-  })
-
-  return account.id
 }
 
 /**

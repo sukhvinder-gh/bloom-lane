@@ -37,7 +37,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.53.0",
     "resend": "^3.0.0",
-    "stripe": "^16.0.0",
+    "stripe": "^22.6.2",
     "tailwind-merge": "^2.5.0",
     "zod": "^3.23.0",
     "zustand": "^4.5.0"

@@ -4,7 +4,7 @@
 // completed before marking stripe_onboarding_complete.
 import { redirect } from 'next/navigation'
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { stripe, isRecipientReadyForTransfers } from '@/lib/stripe'
 import { retryPendingPayoutsForFarmer } from '@/lib/payouts/retryPendingPayouts'
 
 export default async function StripeOnboardingCompletePage() {
@@ -21,8 +21,8 @@ export default async function StripeOnboardingCompletePage() {
   if (!farmer?.stripe_account_id) redirect('/dashboard/farmer/payouts')
 
   try {
-    const account = await stripe.accounts.retrieve(farmer.stripe_account_id)
-    const complete = !!account.details_submitted && !!account.charges_enabled && !!account.payouts_enabled
+    const account = await stripe.v2.core.accounts.retrieve(farmer.stripe_account_id, { include: ['configuration.recipient'] })
+    const complete = isRecipientReadyForTransfers(account)
     await admin.from('farmers').update({ stripe_onboarding_complete: complete }).eq('id', farmer.id)
 
     // Any sale that was ready to pay out before this farmer connected Stripe
