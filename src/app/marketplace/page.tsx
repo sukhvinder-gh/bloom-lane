@@ -247,7 +247,7 @@ function ProductDrawer({
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.25rem' }}>
                   {showsGstFree ? 'ex-GST · GST free' : 'ex-GST'}
-                  {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
+                  {SHOW_RETAIL_VIEW_TOGGLE && <>{' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}</>}
                 </p>
               </div>
             ) : (
@@ -784,7 +784,7 @@ export default function MarketplacePage() {
                               </div>
                               <div className="type-label-sm" style={{ color: 'var(--moss)' }}>
                                 {showsGstFree ? 'ex-GST · GST free' : 'ex-GST'}
-                                {' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}
+                                {SHOW_RETAIL_VIEW_TOGGLE && <>{' · '}Retail: {formatPrice(product.b2c_display_price ?? product.buyer_unit_price ?? Math.round((product.wholesale_price ?? 0) * 1.1))}</>}
                               </div>
                             </>
                           ) : (
