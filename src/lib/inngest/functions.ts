@@ -1,15 +1,13 @@
 // src/lib/inngest/functions.ts
-// FIX BUG-05: Payout is now idempotent — checks for existing payout before inserting
 // FIX BUG-06: Tuesday heartbeat logic fixed — was locking UNLISTED (is_active=false) products,
 //             now correctly locks ALL listed products when window closes
+//
+// Payout processing (idempotent — see src/lib/payouts/processOrderPayouts.ts)
+// used to live here as an Inngest-triggered function but no longer does; see
+// the note at "3. AUTOMATED PAYOUTS" below for why.
 
 import { Inngest } from 'inngest'
 import { createAdminClient } from '@/lib/supabase/server'
-import { createFarmerPayout } from '@/lib/stripe'
-import { calculateFarmerPayout } from '@/lib/utils/pricing'
-import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
-import { resolvePayoutDestination } from '@/lib/utils/payoutDestination'
-import { sendPayoutReadyEmail } from '@/lib/email/sendPayoutReadyEmail'
 import { getThisWeekMarketWindow } from '@/lib/utils/timezone'
 import { sendWeeklyAvailabilityDigest, sendMarketOpenNotification } from '@/lib/email/sendSubscriptionEmail'
 
@@ -131,214 +129,21 @@ export const wednesdayMarketOpen = inngest.createFunction(
 )
 
 // ============================================================
-// 3. AUTOMATED PAYOUTS — as soon as the sale is ready (order delivered)
-// Triggered: order/delivered event
-// BUG-05 FIX: Idempotent — checks existing payout record before creating
+// 3. AUTOMATED PAYOUTS — moved off Inngest.
 //
-// Pays out immediately on delivery rather than waiting out the dispute
-// window — a deliberate choice: growers get paid the moment the sale is
-// ready, and a later dispute is recovered via the existing
-// farmer_balance_adjustments clawback (deducted from that grower's next
-// payout) rather than by delaying every payout to cover the rare disputed one.
+// Used to be triggered here via an 'order/delivered' event. Now called
+// directly and synchronously from src/app/api/orders/[id]/ppod/route.ts the
+// moment an order is marked delivered (see processOrderPayouts()) — the same
+// idempotent, fast-enough logic the manual Admin > Orders > "Generate
+// Payouts" button has always called directly, so it doesn't need an
+// external event-delivery service (with its own credentials to keep valid)
+// in between. The "process-payout" and "expire-dispute" Inngest functions
+// that used to live here are gone; expire-dispute's dispute_window_expired
+// flag was already unread anywhere else in the app.
 // ============================================================
 
-export const processPayoutAfterDispute = inngest.createFunction(
-  {
-    id: 'process-payout',
-    name: 'Process Farmer Payout on Delivery',
-    retries: 3,
-  },
-  { event: 'order/delivered' },
-  async ({ event, step }) => {
-    const { orderId } = event.data
-
-    const supabase = createAdminClient()
-
-    // Check order status — skip if disputed or already refunded (can only
-    // realistically happen if this retried after a very fast reversal)
-    const FARMER_SELECT_WITH_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, email, business_name, hub_id, hubs(id, stripe_account_id, stripe_onboarding_complete)'
-    const FARMER_SELECT_NO_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, email, business_name'
-
-    let { data: order, error: orderErr } = await supabase
-      .from('orders')
-      .select(`*, order_items(*, farmers(${FARMER_SELECT_WITH_HUB}))`)
-      .eq('id', orderId)
-      .single()
-
-    // Migration 040 (hub payout columns) not applied yet — fall back to
-    // paying every grower directly, exactly like before that migration existed.
-    if (orderErr && /hub|stripe_account_id|stripe_onboarding_complete/.test(orderErr.message)) {
-      ;({ data: order, error: orderErr } = await supabase
-        .from('orders')
-        .select(`*, order_items(*, farmers(${FARMER_SELECT_NO_HUB}))`)
-        .eq('id', orderId)
-        .single())
-    }
-
-    if (!order) return { skipped: true, reason: 'Order not found' }
-
-    if (['disputed', 'refunded', 'cancelled'].includes(order.status)) {
-      return { skipped: true, reason: `Order status is ${order.status} — skipping payout` }
-    }
-
-    // Group items by farmer
-    const farmerItems = (order.order_items || []).reduce((acc: any, item: any) => {
-      const farmerId = item.farmer_id
-      if (!acc[farmerId]) {
-        acc[farmerId] = { items: [], farmer: item.farmers, total: 0 }
-      }
-      acc[farmerId].items.push(item)
-      acc[farmerId].total += item.subtotal_cents
-      return acc
-    }, {})
-
-    const payouts = await step.run('execute-payouts', async () => {
-      const results = []
-      const rates = await getCommissionRates(supabase)
-
-      for (const [farmerId, data] of Object.entries(farmerItems) as any) {
-        // BUG-05 FIX: Idempotency check — never pay (or re-flag) twice for the same order + farmer.
-        // 'pending' is included so a retried event doesn't re-insert or re-email a
-        // grower who's already been told this payout is waiting on their Stripe setup.
-        const { data: existingPayout } = await supabase
-          .from('payouts')
-          .select('id, status')
-          .eq('farmer_id', farmerId)
-          .contains('order_item_ids', data.items.map((i: any) => i.id))
-          .in('status', ['pending', 'processing', 'paid'])
-          .maybeSingle()
-
-        if (existingPayout) {
-          results.push({ farmerId, status: 'already_handled', payoutId: existingPayout.id })
-          continue
-        }
-
-        const { gross, commission, net } = calculateFarmerPayout(
-          data.total,
-          effectiveCommissionRate(data.farmer, rates)
-        )
-
-        const destination = resolvePayoutDestination(data.farmer || {})
-
-        if (!destination) {
-          // Onboarding isn't a gate on selling, so this is an expected, common
-          // case, not an error — held as 'pending' (not just skipped) so the
-          // money owed is tracked, and paid automatically the moment the
-          // grower connects Stripe (see retryPendingPayoutsForFarmer, called
-          // from the Stripe onboarding "complete" page).
-          await supabase.from('payouts').insert({
-            farmer_id: farmerId,
-            order_id: orderId,
-            order_item_ids: data.items.map((i: any) => i.id),
-            gross_amount_cents: gross,
-            commission_cents: commission,
-            net_amount_cents: net,
-            status: 'pending',
-          })
-
-          const email = data.farmer?.email
-          const name = data.farmer?.business_name
-          if (email) {
-            sendPayoutReadyEmail({ to: email, name: name || 'there', netAmountCents: net }).catch(() => {})
-          }
-
-          results.push({ farmerId, status: 'pending_no_stripe' })
-          continue
-        }
-
-        // Insert payout record as 'processing' BEFORE calling Stripe
-        // This acts as a distributed lock — if Inngest retries, idempotency check above catches it
-        const payoutRow: Record<string, unknown> = {
-          farmer_id: farmerId,
-          order_id: orderId,
-          order_item_ids: data.items.map((i: any) => i.id),
-          gross_amount_cents: gross,
-          commission_cents: commission,
-          net_amount_cents: net,
-          status: 'processing',
-        }
-        let { data: payoutRecord, error: insertErr } = await supabase
-          .from('payouts')
-          .insert(destination.hubId ? { ...payoutRow, paid_to_hub_id: destination.hubId } : payoutRow)
-          .select('id')
-          .single()
-        // paid_to_hub_id column not there yet (migration 040 not applied) — still
-        // record the payout itself, just without which-hub-received-it detail.
-        if (insertErr && destination.hubId && /paid_to_hub_id/.test(insertErr.message)) {
-          ;({ data: payoutRecord, error: insertErr } = await supabase.from('payouts').insert(payoutRow).select('id').single())
-        }
-
-        if (insertErr || !payoutRecord) {
-          results.push({ farmerId, status: 'insert_failed', error: insertErr?.message })
-          continue
-        }
-
-        try {
-          const transfer = await createFarmerPayout({
-            stripeAccountId: destination.stripeAccountId,
-            netAmountCents: net,
-            orderId,
-            farmerId,
-            hubId: destination.hubId ?? undefined,
-          })
-
-          await supabase
-            .from('payouts')
-            .update({
-              stripe_transfer_id: transfer.id,
-              status: 'paid',
-              paid_at: new Date().toISOString(),
-            })
-            .eq('id', payoutRecord.id)
-
-          results.push({ farmerId, status: 'paid', transferId: transfer.id, paidToHub: !!destination.hubId })
-        } catch (stripeErr) {
-          await supabase
-            .from('payouts')
-            .update({ status: 'failed' })
-            .eq('id', payoutRecord.id)
-
-          results.push({ farmerId, status: 'failed', error: String(stripeErr) })
-        }
-      }
-
-      return results
-    })
-
-    return { orderId, payouts }
-  }
-)
-
 // ============================================================
-// 4. DISPUTE EXPIRY — Set dispute_deadline timestamp
-// This is now informational only — the real guard is the DB trigger
-// setting dispute_deadline on status=delivered change
-// ============================================================
-
-export const expireDisputeWindow = inngest.createFunction(
-  { id: 'expire-dispute', name: 'Expire Dispute Window' },
-  { event: 'order/delivered' },
-  async ({ event, step }) => {
-    const { orderId, disputeWindowHrs = 6 } = event.data
-
-    await step.sleep('wait-for-window', `${disputeWindowHrs}h`)
-
-    const supabase = createAdminClient()
-    await step.run('mark-dispute-expired', async () => {
-      // Only update if order is still 'delivered' (not disputed/refunded)
-      await supabase
-        .from('orders')
-        .update({ dispute_window_expired: true })
-        .eq('id', orderId)
-        .eq('status', 'delivered')
-    })
-
-    return { orderId, expired: true }
-  }
-)
-
-// ============================================================
-// 5. CART RESERVATION SWEEP — release stock from abandoned carts
+// 4. CART RESERVATION SWEEP — release stock from abandoned carts
 // Cron: every 5 minutes
 // ============================================================
 
@@ -361,7 +166,5 @@ export const expireCartReservations = inngest.createFunction(
 export const inngestFunctions = [
   tuesdayHeartbeat,
   wednesdayMarketOpen,
-  processPayoutAfterDispute,
-  expireDisputeWindow,
   expireCartReservations,
 ]

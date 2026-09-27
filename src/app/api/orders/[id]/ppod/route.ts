@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
-import { inngest } from '@/lib/inngest/functions'
+import { processOrderPayouts } from '@/lib/payouts/processOrderPayouts'
 import QRCode from 'qrcode'
 
 export async function POST(
@@ -124,19 +124,18 @@ export async function POST(
       .single()
 
     if (updatedOrder) {
-      // Best-effort, like the QR generation right below it — an Inngest
-      // outage or bad event key must not take down the PPOD upload itself
-      // (it did: an unguarded throw here failed the whole request with no
-      // useful error, which the frontend then showed as a stuck spinner).
-      // A failure here does mean the automated payout for this order never
-      // fires, so it's worth logging loudly, not silently swallowing.
+      // Called directly rather than dispatched as an event — this used to go
+      // through Inngest, which added a whole external service (with its own
+      // credentials to keep valid) for logic that's already idempotent and
+      // fast enough to run inline; it's the same function the manual
+      // Admin > Orders > "Generate Payouts" button has always called
+      // directly. Best-effort, like the QR generation right below it: a
+      // Stripe hiccup must not take down the PPOD upload itself, but is
+      // worth logging loudly since it means this order's payout didn't fire.
       try {
-        await inngest.send({
-          name: 'order/delivered',
-          data: { orderId, disputeWindowHrs: 6 }
-        })
-      } catch (inngestErr) {
-        console.error('[PPOD] inngest.send(order/delivered) failed — automated payout will not fire for order', orderId, inngestErr)
+        await processOrderPayouts(orderId)
+      } catch (payoutErr) {
+        console.error('[PPOD] processOrderPayouts failed for order', orderId, payoutErr)
       }
 
       try {
