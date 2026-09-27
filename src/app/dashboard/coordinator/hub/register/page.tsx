@@ -5,6 +5,7 @@ import { Elements } from '@stripe/react-stripe-js'
 import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
+import SingleImageUpload from '@/components/SingleImageUpload'
 
 const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }> = {
   pending:  { label: '⏳ Awaiting admin approval', bg: '#FEF3C7', color: '#92400E' },
@@ -15,6 +16,7 @@ const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }>
 type Hub = {
   id: string; name: string; region: string | null; status: string
   stripe_account_id?: string | null; stripe_onboarding_complete?: boolean
+  logo_url?: string | null; banner_url?: string | null
 }
 type Sub = { status: string; amount_cents: number } | null
 type Member = {
@@ -57,6 +59,15 @@ export default function CoordinatorHubRegisterPage() {
     return fetch('/api/coordinator/hub').then(r => r.json()).then(data => {
       setHubs(data.hubs || [])
       setSub(data.subscription || null)
+    }).catch(() => {})
+  }
+
+  async function updateHubImage(hubId: string, field: 'logo_url' | 'banner_url', url: string | null) {
+    setHubs(hs => hs.map(h => h.id === hubId ? { ...h, [field]: url } : h))
+    await fetch('/api/coordinator/hub', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hub_id: hubId, [field]: url }),
     }).catch(() => {})
   }
 
@@ -178,6 +189,27 @@ export default function CoordinatorHubRegisterPage() {
           )}
 
           {msg && <Banner type={msg.type} text={msg.text} />}
+
+          {hasActiveHub && (() => {
+            const activeHub = hubs.find(h => h.status === 'active')!
+            return (
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)' }}>Hub Photo</h2>
+                <SingleImageUpload
+                  label="Logo"
+                  shape="square"
+                  url={activeHub.logo_url ?? null}
+                  onChange={url => updateHubImage(activeHub.id, 'logo_url', url)}
+                />
+                <SingleImageUpload
+                  label="Hub Photo"
+                  shape="wide"
+                  url={activeHub.banner_url ?? null}
+                  onChange={url => updateHubImage(activeHub.id, 'banner_url', url)}
+                />
+              </div>
+            )
+          })()}
 
           {hasActiveHub && (() => {
             const activeHub = hubs.find(h => h.status === 'active')!

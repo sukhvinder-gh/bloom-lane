@@ -12,7 +12,15 @@ export async function POST(request: NextRequest) {
 
   if (!admin) {
     const { data: farmer } = await supabase.from('farmers').select('id, status').eq('user_id', user.id).single()
-    if (!farmer || farmer.status !== 'approved') {
+    const isApprovedFarmer = !!farmer && farmer.status === 'approved'
+
+    let isActiveHubCoordinator = false
+    if (!isApprovedFarmer) {
+      const { data: hub } = await supabase.from('hubs').select('id').eq('coordinator_id', user.id).eq('status', 'active').maybeSingle()
+      isActiveHubCoordinator = !!hub
+    }
+
+    if (!isApprovedFarmer && !isActiveHubCoordinator) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

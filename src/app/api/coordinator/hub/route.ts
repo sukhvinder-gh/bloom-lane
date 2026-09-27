@@ -141,3 +141,33 @@ export async function POST(request: NextRequest) {
     pendingApproval: hub.status === 'pending',
   })
 }
+
+// PATCH — update logo/banner on a hub this coordinator owns. Separate from
+// POST (which only ever creates a new hub) since a coordinator editing their
+// existing hub's photo shouldn't go through registration/payment again.
+export async function PATCH(request: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { hub_id, logo_url, banner_url } = await request.json()
+  if (!hub_id) return NextResponse.json({ error: 'hub_id is required' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const update: Record<string, string | null> = {}
+  if (logo_url !== undefined) update.logo_url = logo_url
+  if (banner_url !== undefined) update.banner_url = banner_url
+
+  const { data, error } = await admin
+    .from('hubs')
+    .update(update)
+    .eq('id', hub_id)
+    .eq('coordinator_id', user.id)
+    .select()
+    .maybeSingle()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'Hub not found' }, { status: 404 })
+
+  return NextResponse.json({ ok: true, hub: data })
+}
