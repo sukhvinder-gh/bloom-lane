@@ -9,6 +9,7 @@ import { createFarmerPayout } from '@/lib/stripe'
 import { calculateFarmerPayout } from '@/lib/utils/pricing'
 import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
 import { resolvePayoutDestination } from '@/lib/utils/payoutDestination'
+import { sendPayoutReadyEmail } from '@/lib/email/sendPayoutReadyEmail'
 import { getThisWeekMarketWindow } from '@/lib/utils/timezone'
 import { sendWeeklyAvailabilityDigest, sendMarketOpenNotification } from '@/lib/email/sendSubscriptionEmail'
 
@@ -155,8 +156,8 @@ export const processPayoutAfterDispute = inngest.createFunction(
 
     // Check order status — skip if disputed or already refunded (can only
     // realistically happen if this retried after a very fast reversal)
-    const FARMER_SELECT_WITH_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, hub_id, hubs(id, stripe_account_id, stripe_onboarding_complete)'
-    const FARMER_SELECT_NO_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id'
+    const FARMER_SELECT_WITH_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, email, business_name, hub_id, hubs(id, stripe_account_id, stripe_onboarding_complete)'
+    const FARMER_SELECT_NO_HUB = 'stripe_account_id, stripe_onboarding_complete, commission_rate, subscription_type, id, email, business_name'
 
     let { data: order, error: orderErr } = await supabase
       .from('orders')
@@ -196,23 +197,19 @@ export const processPayoutAfterDispute = inngest.createFunction(
       const rates = await getCommissionRates(supabase)
 
       for (const [farmerId, data] of Object.entries(farmerItems) as any) {
-        const destination = resolvePayoutDestination(data.farmer || {})
-        if (!destination) {
-          results.push({ farmerId, status: 'skipped_no_stripe' })
-          continue
-        }
-
-        // BUG-05 FIX: Idempotency check — never pay twice for same order + farmer
+        // BUG-05 FIX: Idempotency check — never pay (or re-flag) twice for the same order + farmer.
+        // 'pending' is included so a retried event doesn't re-insert or re-email a
+        // grower who's already been told this payout is waiting on their Stripe setup.
         const { data: existingPayout } = await supabase
           .from('payouts')
           .select('id, status')
           .eq('farmer_id', farmerId)
           .contains('order_item_ids', data.items.map((i: any) => i.id))
-          .in('status', ['processing', 'paid'])
+          .in('status', ['pending', 'processing', 'paid'])
           .maybeSingle()
 
         if (existingPayout) {
-          results.push({ farmerId, status: 'already_paid', payoutId: existingPayout.id })
+          results.push({ farmerId, status: 'already_handled', payoutId: existingPayout.id })
           continue
         }
 
@@ -221,10 +218,39 @@ export const processPayoutAfterDispute = inngest.createFunction(
           effectiveCommissionRate(data.farmer, rates)
         )
 
+        const destination = resolvePayoutDestination(data.farmer || {})
+
+        if (!destination) {
+          // Onboarding isn't a gate on selling, so this is an expected, common
+          // case, not an error — held as 'pending' (not just skipped) so the
+          // money owed is tracked, and paid automatically the moment the
+          // grower connects Stripe (see retryPendingPayoutsForFarmer, called
+          // from the Stripe onboarding "complete" page).
+          await supabase.from('payouts').insert({
+            farmer_id: farmerId,
+            order_id: orderId,
+            order_item_ids: data.items.map((i: any) => i.id),
+            gross_amount_cents: gross,
+            commission_cents: commission,
+            net_amount_cents: net,
+            status: 'pending',
+          })
+
+          const email = data.farmer?.email
+          const name = data.farmer?.business_name
+          if (email) {
+            sendPayoutReadyEmail({ to: email, name: name || 'there', netAmountCents: net }).catch(() => {})
+          }
+
+          results.push({ farmerId, status: 'pending_no_stripe' })
+          continue
+        }
+
         // Insert payout record as 'processing' BEFORE calling Stripe
         // This acts as a distributed lock — if Inngest retries, idempotency check above catches it
         const payoutRow: Record<string, unknown> = {
           farmer_id: farmerId,
+          order_id: orderId,
           order_item_ids: data.items.map((i: any) => i.id),
           gross_amount_cents: gross,
           commission_cents: commission,

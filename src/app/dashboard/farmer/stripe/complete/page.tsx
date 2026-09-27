@@ -5,6 +5,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
+import { retryPendingPayoutsForFarmer } from '@/lib/payouts/retryPendingPayouts'
 
 export default async function StripeOnboardingCompletePage() {
   const sessionUser = await getSessionUserFromCookie()
@@ -23,6 +24,16 @@ export default async function StripeOnboardingCompletePage() {
     const account = await stripe.accounts.retrieve(farmer.stripe_account_id)
     const complete = !!account.details_submitted && !!account.charges_enabled && !!account.payouts_enabled
     await admin.from('farmers').update({ stripe_onboarding_complete: complete }).eq('id', farmer.id)
+
+    // Any sale that was ready to pay out before this farmer connected Stripe
+    // was held as a 'pending' payout rather than dropped — send it now,
+    // right at the moment they've just finished setting up, instead of
+    // waiting for their next unrelated sale to retrigger it.
+    if (complete) {
+      await retryPendingPayoutsForFarmer(admin, farmer.id).catch(err =>
+        console.error('[Stripe onboarding complete] retryPendingPayouts failed for farmer', farmer.id, err)
+      )
+    }
   } catch (err) {
     console.error('[Stripe onboarding complete] account retrieve failed for farmer', farmer.id, err)
   }
