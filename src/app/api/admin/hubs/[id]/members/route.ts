@@ -18,12 +18,26 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params
 
-  const { data, error } = await check.admin
+  const { data: farmers, error } = await check.admin
     .from('farmers')
-    .select('id, business_name, user_id, profiles!farmers_user_id_fkey(full_name, email), subscriptions(status, plan, expires_at)')
+    .select('id, business_name, user_id, profiles!farmers_user_id_fkey(full_name, email)')
     .eq('hub_id', id)
     .order('business_name', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data: data || [] })
+
+  // subscriptions.user_id has no foreign key to farmers (it points at
+  // profiles), so PostgREST can't auto-embed it under the query above —
+  // fetch and merge separately instead.
+  const userIds = (farmers || []).map(f => f.user_id)
+  const { data: subs } = userIds.length
+    ? await check.admin.from('subscriptions').select('user_id, status, plan, expires_at').in('user_id', userIds).eq('subscriber_type', 'grower')
+    : { data: [] }
+
+  const data = (farmers || []).map(f => ({
+    ...f,
+    subscriptions: (subs || []).filter(s => s.user_id === f.user_id),
+  }))
+
+  return NextResponse.json({ data })
 }
