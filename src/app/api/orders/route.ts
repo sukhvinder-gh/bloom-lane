@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent, cancelPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
-import { isMarketOpenForFarmer } from '@/lib/utils/marketWindow'
+import { marketStatusForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
 import { z } from 'zod'
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents))')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -112,12 +112,25 @@ export async function POST(request: NextRequest) {
 
   // Each grower can have their own open window (or the hub's) — if any
   // grower in this cart is currently closed, the whole checkout is blocked
-  // rather than allowing a partial order through.
+  // rather than allowing a partial order through. Naming exactly who's
+  // closed and when they reopen saves the buyer a guessing game — the
+  // generic version of this message gave no way to tell which item to
+  // remove or when to just try again.
   const distinctFarmerIds = [...new Set(products.map(p => p.farmer_id))]
-  const marketOpenChecks = await Promise.all(distinctFarmerIds.map(fid => isMarketOpenForFarmer(fid)))
-  if (marketOpenChecks.some(open => !open)) {
+  const marketStatuses = await Promise.all(distinctFarmerIds.map(fid => marketStatusForFarmer(fid)))
+  const closed = distinctFarmerIds
+    .map((fid, i) => ({ fid, status: marketStatuses[i] }))
+    .filter(f => !f.status.open)
+
+  if (closed.length > 0) {
+    const dayLabel = (d: string) => d.charAt(0).toUpperCase() + d.slice(1)
+    const farmerName = (fid: string) => (products.find(p => p.farmer_id === fid) as any)?.farmers?.business_name || 'This grower'
+    const details = closed.map(({ fid, status }) => {
+      const hours = status.windows.map(w => `${dayLabel(w.day)} ${w.open}–${w.close}`).join(', ')
+      return hours ? `${farmerName(fid)} (open ${hours})` : farmerName(fid)
+    })
     return NextResponse.json(
-      { error: 'One or more growers in your cart are currently closed for ordering. Please check back during their listed hours.' },
+      { error: `Currently closed for ordering: ${details.join('; ')}. Remove their items from your cart or check back during their listed hours.` },
       { status: 400 }
     )
   }

@@ -49,7 +49,13 @@ export function hubMarketWindows(hub: any): MarketWindow[] {
   return []
 }
 
-export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> {
+/**
+ * Same resolution as isMarketOpenForFarmer (farm override -> hub schedule ->
+ * unconfigured/always-open), but also returns the actual windows so a caller
+ * can tell a buyer *when* a closed grower reopens instead of just that
+ * they're closed.
+ */
+export async function marketStatusForFarmer(farmerId: string): Promise<{ open: boolean; windows: MarketWindow[] }> {
   const admin = createAdminClient()
 
   const { data: farmer } = await admin
@@ -59,11 +65,8 @@ export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> 
     .single()
 
   if (farmer?.market_open_day_override && farmer?.market_open_time_override && farmer?.market_close_time_override) {
-    return isWithinWeeklyWindow(
-      farmer.market_open_day_override,
-      farmer.market_open_time_override,
-      farmer.market_close_time_override
-    )
+    const windows = [{ day: farmer.market_open_day_override, open: farmer.market_open_time_override, close: farmer.market_close_time_override }]
+    return { open: isWithinWeeklyWindow(windows[0].day, windows[0].open, windows[0].close), windows }
   }
 
   if (farmer?.hub_id) {
@@ -78,11 +81,15 @@ export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> 
 
     const windows = hubMarketWindows(hub)
     if (windows.length > 0) {
-      return windows.some(w => isWithinWeeklyWindow(w.day, w.open, w.close))
+      return { open: windows.some(w => isWithinWeeklyWindow(w.day, w.open, w.close)), windows }
     }
   }
 
-  return true
+  return { open: true, windows: [] }
+}
+
+export async function isMarketOpenForFarmer(farmerId: string): Promise<boolean> {
+  return (await marketStatusForFarmer(farmerId)).open
 }
 
 /**
