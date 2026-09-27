@@ -185,7 +185,17 @@ export default function FarmerStorefrontPage() {
       .single()
 
     if (error) {
-      setError(error.message)
+      // A farmer row for this user already exists (code 23505 = unique
+      // violation on farmers_user_id_key) even though the initial load found
+      // none — most likely a stale page load racing an earlier successful
+      // create. Re-fetch and drop into edit mode instead of leaving the
+      // farmer stuck looking at a raw Postgres error with no way forward.
+      if (error.code === '23505') {
+        await load()
+        setError('Your farm profile already exists — showing it below.')
+      } else {
+        setError(error.message)
+      }
       setCreating(false)
     } else {
       // Hard navigation — forces Server Component to re-fetch farmer record
