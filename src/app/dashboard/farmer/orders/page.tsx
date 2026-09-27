@@ -32,6 +32,7 @@ export default function FarmerOrdersPage() {
   const [loading, setLoading]         = useState(true)
   const [expanded, setExpanded]       = useState<Set<string>>(new Set())
   const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const [ppodErrors, setPpodErrors] = useState<Record<string, string>>({})
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectLoading, setRejectLoading] = useState(false)
@@ -81,30 +82,42 @@ export default function FarmerOrdersPage() {
 
   async function handlePPOD(orderItemId: string, orderId: string, file: File) {
     setUploadingId(orderItemId)
-    let gpsLat = '', gpsLng = ''
-    if (navigator.geolocation) {
-      await new Promise<void>(res =>
-        navigator.geolocation.getCurrentPosition(
-          p => { gpsLat = String(p.coords.latitude); gpsLng = String(p.coords.longitude); res() },
-          () => res(),
-          { timeout: 5000 }
+    setPpodErrors(e => { const n = { ...e }; delete n[orderItemId]; return n })
+    // Without try/catch/finally here, a thrown error (bad JSON response,
+    // network failure, anything) left the button stuck on "Uploading…"
+    // forever with setUploadingId(null) never reached, and no way to tell
+    // what went wrong.
+    try {
+      let gpsLat = '', gpsLng = ''
+      if (navigator.geolocation) {
+        await new Promise<void>(res =>
+          navigator.geolocation.getCurrentPosition(
+            p => { gpsLat = String(p.coords.latitude); gpsLng = String(p.coords.longitude); res() },
+            () => res(),
+            { timeout: 5000 }
+          )
         )
-      )
+      }
+      const fd = new FormData()
+      fd.append('photo', file); fd.append('order_item_id', orderItemId)
+      fd.append('gps_lat', gpsLat); fd.append('gps_lng', gpsLng)
+      const res  = await fetch(`/api/orders/${orderId}/ppod`, { method: 'POST', body: fd })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setOrders(os => os.map(o => ({
+          ...o,
+          order_items: o.order_items?.map((i: any) =>
+            i.id === orderItemId ? { ...i, ppod_url: data.data.ppod_url } : i
+          ),
+        })))
+      } else {
+        setPpodErrors(e => ({ ...e, [orderItemId]: data.error || 'Upload failed. Please try again.' }))
+      }
+    } catch {
+      setPpodErrors(e => ({ ...e, [orderItemId]: 'Upload failed — check your connection and try again.' }))
+    } finally {
+      setUploadingId(null)
     }
-    const fd = new FormData()
-    fd.append('photo', file); fd.append('order_item_id', orderItemId)
-    fd.append('gps_lat', gpsLat); fd.append('gps_lng', gpsLng)
-    const res  = await fetch(`/api/orders/${orderId}/ppod`, { method: 'POST', body: fd })
-    const data = await res.json()
-    if (res.ok) {
-      setOrders(os => os.map(o => ({
-        ...o,
-        order_items: o.order_items?.map((i: any) =>
-          i.id === orderItemId ? { ...i, ppod_url: data.data.ppod_url } : i
-        ),
-      })))
-    }
-    setUploadingId(null)
   }
 
   async function submitReject(orderId: string) {
@@ -484,17 +497,24 @@ export default function FarmerOrdersPage() {
                                           )}
                                         </div>
                                       ) : canUpload ? (
-                                        <button
-                                          onClick={() => { activeRef.current = item.id; fileRef.current?.click() }}
-                                          disabled={uploadingId === item.id}
-                                          style={{
-                                            padding: '0.25rem 0.625rem', background: uploadingId === item.id ? 'var(--olive)' : 'var(--sage)',
-                                            border: 'none', borderRadius: '0.375rem', cursor: uploadingId === item.id ? 'default' : 'pointer',
-                                            fontSize: '0.7rem', fontWeight: 700, color: 'var(--forest)', fontFamily: 'var(--font-body)',
-                                          }}
-                                        >
-                                          {uploadingId === item.id ? '⏳ Uploading…' : '📷 Upload'}
-                                        </button>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                                          <button
+                                            onClick={() => { activeRef.current = item.id; fileRef.current?.click() }}
+                                            disabled={uploadingId === item.id}
+                                            style={{
+                                              padding: '0.25rem 0.625rem', background: uploadingId === item.id ? 'var(--olive)' : 'var(--sage)',
+                                              border: 'none', borderRadius: '0.375rem', cursor: uploadingId === item.id ? 'default' : 'pointer',
+                                              fontSize: '0.7rem', fontWeight: 700, color: 'var(--forest)', fontFamily: 'var(--font-body)',
+                                            }}
+                                          >
+                                            {uploadingId === item.id ? '⏳ Uploading…' : '📷 Upload'}
+                                          </button>
+                                          {ppodErrors[item.id] && (
+                                            <span style={{ fontSize: '0.65rem', color: '#B91C1C', maxWidth: '12rem', textAlign: 'right' as const }}>
+                                              {ppodErrors[item.id]}
+                                            </span>
+                                          )}
+                                        </div>
                                       ) : (
                                         <span style={{ fontSize: '0.7rem', color: 'var(--moss)', opacity: 0.4 }}>—</span>
                                       )}
