@@ -20,10 +20,29 @@
 
 import Stripe from 'stripe'
 
-// Server-side Stripe instance
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-08-26.dahlia',
-  typescript: true,
+// Server-side Stripe instance, constructed lazily. Next.js's build-time
+// "Collecting page data" step imports every API route module to inspect its
+// static config, which runs this file's top-level code with no environment
+// secrets available (STRIPE_SECRET_KEY is only injected at runtime on Azure,
+// not in the GitHub Actions build step). stripe@22's constructor throws
+// synchronously ("Neither apiKey nor config.authenticator provided") when the
+// key is missing/undefined — v16 didn't — so eagerly constructing here broke
+// the build. A Proxy defers construction to first actual use.
+let _stripe: Stripe | undefined
+function getStripeClient(): Stripe {
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2026-08-26.dahlia',
+      typescript: true,
+    })
+  }
+  return _stripe
+}
+
+export const stripe: Stripe = new Proxy({} as Stripe, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getStripeClient(), prop, receiver)
+  },
 })
 
 type RecipientAccount = Stripe.V2.Core.Account
