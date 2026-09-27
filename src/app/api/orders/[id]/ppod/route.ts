@@ -124,10 +124,20 @@ export async function POST(
       .single()
 
     if (updatedOrder) {
-      await inngest.send({
-        name: 'order/delivered',
-        data: { orderId, disputeWindowHrs: 6 }
-      })
+      // Best-effort, like the QR generation right below it — an Inngest
+      // outage or bad event key must not take down the PPOD upload itself
+      // (it did: an unguarded throw here failed the whole request with no
+      // useful error, which the frontend then showed as a stuck spinner).
+      // A failure here does mean the automated payout for this order never
+      // fires, so it's worth logging loudly, not silently swallowing.
+      try {
+        await inngest.send({
+          name: 'order/delivered',
+          data: { orderId, disputeWindowHrs: 6 }
+        })
+      } catch (inngestErr) {
+        console.error('[PPOD] inngest.send(order/delivered) failed — automated payout will not fire for order', orderId, inngestErr)
+      }
 
       try {
         const qrBuffer = await QRCode.toBuffer(

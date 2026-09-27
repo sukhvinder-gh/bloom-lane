@@ -90,18 +90,37 @@ export default function FarmerOrdersPage() {
     try {
       let gpsLat = '', gpsLng = ''
       if (navigator.geolocation) {
-        await new Promise<void>(res =>
-          navigator.geolocation.getCurrentPosition(
-            p => { gpsLat = String(p.coords.latitude); gpsLng = String(p.coords.longitude); res() },
-            () => res(),
-            { timeout: 5000 }
-          )
-        )
+        // The { timeout: 5000 } option is the browser's own geolocation
+        // timeout, which some browsers/OSes don't reliably honor — right
+        // after a system location-services toggle in particular,
+        // getCurrentPosition can just never call either callback, which no
+        // try/catch can rescue since nothing throws. Race it against a hard
+        // JS-level timer so the upload always proceeds either way.
+        await Promise.race([
+          new Promise<void>(res =>
+            navigator.geolocation.getCurrentPosition(
+              p => { gpsLat = String(p.coords.latitude); gpsLng = String(p.coords.longitude); res() },
+              () => res(),
+              { timeout: 5000 }
+            )
+          ),
+          new Promise<void>(res => setTimeout(res, 6000)),
+        ])
       }
       const fd = new FormData()
       fd.append('photo', file); fd.append('order_item_id', orderItemId)
       fd.append('gps_lat', gpsLat); fd.append('gps_lng', gpsLng)
-      const res  = await fetch(`/api/orders/${orderId}/ppod`, { method: 'POST', body: fd })
+      // fetch() has no built-in timeout — a genuinely stuck server request
+      // would otherwise leave this pending indefinitely with no way to
+      // recover except reloading the page.
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+      let res: Response
+      try {
+        res = await fetch(`/api/orders/${orderId}/ppod`, { method: 'POST', body: fd, signal: controller.signal })
+      } finally {
+        clearTimeout(timeoutId)
+      }
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
         setOrders(os => os.map(o => ({
@@ -113,8 +132,11 @@ export default function FarmerOrdersPage() {
       } else {
         setPpodErrors(e => ({ ...e, [orderItemId]: data.error || 'Upload failed. Please try again.' }))
       }
-    } catch {
-      setPpodErrors(e => ({ ...e, [orderItemId]: 'Upload failed — check your connection and try again.' }))
+    } catch (err: any) {
+      setPpodErrors(e => ({
+        ...e,
+        [orderItemId]: err?.name === 'AbortError' ? 'Upload timed out after 30s. Please try again.' : 'Upload failed — check your connection and try again.',
+      }))
     } finally {
       setUploadingId(null)
     }
