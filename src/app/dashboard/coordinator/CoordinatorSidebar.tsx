@@ -12,14 +12,10 @@ type Props = {
 
 const NAV = [
   { href: '/dashboard/coordinator/hub/register', label: 'My Hub',      icon: '🏛️' },
+  { href: '/dashboard/coordinator/hub/payouts',  label: 'Payouts',     icon: '💳' },
   { href: '/marketplace',                        label: 'Marketplace', icon: '🛍️' },
   { href: '/growers',                            label: 'Growers',     icon: '🌾' },
 ]
-
-// Deliberately minimal — a coordinator only has the one hub page today (see
-// /dashboard/coordinator/hub/register), so this sidebar exists mainly so
-// there's somewhere to sign out and navigate away from it, rather than that
-// page being a dead end with no chrome at all.
 export default function CoordinatorSidebar({ role, userName, userEmail }: Props) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
