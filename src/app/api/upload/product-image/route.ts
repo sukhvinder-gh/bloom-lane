@@ -16,8 +16,12 @@ export async function POST(request: NextRequest) {
 
     let isActiveHubCoordinator = false
     if (!isApprovedFarmer) {
-      const { data: hub } = await supabase.from('hubs').select('id').eq('coordinator_id', user.id).eq('status', 'active').maybeSingle()
-      isActiveHubCoordinator = !!hub
+      // limit(1) + length check, not maybeSingle() — a coordinator can run
+      // more than one active hub, and maybeSingle() errors out (returning no
+      // data) when a query matches more than one row, which silently turned
+      // into a false "Forbidden" for any coordinator with a second hub.
+      const { data: hubs } = await supabase.from('hubs').select('id').eq('coordinator_id', user.id).eq('status', 'active').limit(1)
+      isActiveHubCoordinator = !!hubs && hubs.length > 0
     }
 
     if (!isApprovedFarmer && !isActiveHubCoordinator) {
