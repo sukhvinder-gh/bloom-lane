@@ -6,6 +6,14 @@
 // even though the account-creation and onboarding-link helpers were already
 // written (src/lib/stripe/index.ts). A plain browser navigation, so this
 // responds with a redirect, not JSON.
+//
+// The "Update bank details" link on an already-connected account hits this
+// same route — Stripe rejects the v2 'account_update' link type outright for
+// this platform account ("Valid types for this account are
+// [account_onboarding]", confirmed by a live test call), so re-running
+// 'account_onboarding' is the only option; Stripe's hosted flow just shows
+// the account's existing details in an editable form when nothing is
+// outstanding, rather than erroring or re-collecting from scratch.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'

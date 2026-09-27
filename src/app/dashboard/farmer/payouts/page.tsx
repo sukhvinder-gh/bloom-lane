@@ -99,12 +99,18 @@ export default async function FarmerPayoutsPage({
           </div>
         </div>
       ) : (
-        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '1rem', padding: '1rem 1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '1.25rem' }}>✅</span>
-          <div>
-            <p style={{ fontWeight: 700, color: '#166534', fontSize: '0.875rem' }}>Stripe account connected</p>
-            <p style={{ color: '#166534', fontSize: '0.8rem', opacity: 0.8 }}>You're paid automatically as soon as an order is marked delivered.</p>
+        <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '1rem', padding: '1rem 1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>✅</span>
+            <div>
+              <p style={{ fontWeight: 700, color: '#166534', fontSize: '0.875rem' }}>Stripe account connected</p>
+              <p style={{ color: '#166534', fontSize: '0.8rem', opacity: 0.8 }}>You're paid automatically as soon as an order is marked delivered.</p>
+            </div>
           </div>
+          <a href="/api/stripe/onboarding"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #86efac', color: '#166534', padding: '0.5rem 1.1rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
+            Update bank details →
+          </a>
         </div>
       )}
 

@@ -182,8 +182,12 @@ export default function CoordinatorHubRegisterPage() {
           {hasActiveHub && (() => {
             const activeHub = hubs.find(h => h.status === 'active')!
             return activeHub.stripe_onboarding_complete ? (
-              <div style={{ padding: '0.875rem 1rem', background: '#D1FAE5', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#065F46', fontWeight: 600 }}>
-                ✓ Payout account connected — growers in this hub are paid out to your hub's account, not directly to them.
+              <div style={{ padding: '0.875rem 1rem', background: '#D1FAE5', borderRadius: '0.75rem', fontSize: '0.85rem', color: '#065F46', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <span>✓ Payout account connected — growers in this hub are paid out to your hub's account, not directly to them.</span>
+                <a href="/api/coordinator/stripe/onboarding"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #6EE7B7', color: '#065F46', padding: '0.4rem 1rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.78rem', fontWeight: 700, flexShrink: 0 }}>
+                  Update bank details →
+                </a>
               </div>
             ) : (
               <div className="card" style={{ padding: '1.5rem' }}>
