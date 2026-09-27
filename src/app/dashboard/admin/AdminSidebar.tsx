@@ -20,6 +20,7 @@ const NAV = [
   { href: '/dashboard/admin/invoices',  label: 'Invoices',  icon: '🧾' },
   { href: '/dashboard/admin/hubs',        label: 'Hubs & Collectives', icon: '🏛' },
   { href: '/dashboard/admin/memberships', label: 'Memberships', icon: '🎫' },
+  { href: '/dashboard/admin/interest', label: 'Register Interest', icon: '📨' },
   { href: '/dashboard/admin/disputes', label: 'Disputes',  icon: '⚖️' },
   { href: '/dashboard/admin/payouts',  label: 'Payouts',   icon: '💳' },
   { href: '/dashboard/admin/reports',  label: 'Reports',   icon: '📊' },
