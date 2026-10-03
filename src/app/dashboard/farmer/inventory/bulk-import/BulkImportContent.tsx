@@ -152,7 +152,7 @@ export default function BulkImportContent() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', alignItems: 'start' }}>
         {/* Left panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Step 1 */}
@@ -241,6 +241,7 @@ export default function BulkImportContent() {
                 )}
               </div>
               <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrap">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                   <thead>
                     <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
@@ -265,6 +266,7 @@ export default function BulkImportContent() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
               {rows.length > 50 && (
                 <p style={{ padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: 'var(--moss)' }}>+ {rows.length - 50} more rows</p>

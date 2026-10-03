@@ -98,7 +98,7 @@ export default function ReviewSend({ campaignId, subject, body, activeCount, adm
         {/* Recipients */}
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={fieldLabel}>Recipients</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <button
               onClick={() => setRecipientMode('all')}
               style={{ padding: '0.75rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', background: recipientMode === 'all' ? 'var(--navy)' : 'var(--bg)', color: recipientMode === 'all' ? 'white' : 'var(--text-2)', border: recipientMode === 'all' ? 'none' : '1px solid var(--border-light)' } as React.CSSProperties}

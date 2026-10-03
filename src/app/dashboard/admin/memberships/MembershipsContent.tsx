@@ -314,6 +314,7 @@ export default function MembershipsContent() {
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-light)', background: 'var(--bg)' }}>
@@ -362,6 +363,7 @@ export default function MembershipsContent() {
               })}
             </tbody>
           </table>
+          </div>
           <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-light)', background: 'var(--bg)' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
           </div>

@@ -34,6 +34,7 @@ function RowCheckbox({ row, busy, onToggle }: { row: Row; busy: boolean; onToggl
 
 function HarvestTable({ rows, busyKeys, onToggle }: { rows: Row[]; busyKeys: Set<string>; onToggle: (row: Row) => void }) {
   return (
+    <div className="table-wrap">
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
         <tr style={{ borderBottom: '2px solid var(--forest)' }}>
@@ -74,6 +75,7 @@ function HarvestTable({ rows, busyKeys, onToggle }: { rows: Row[]; busyKeys: Set
         ))}
       </tbody>
     </table>
+    </div>
   )
 }
 

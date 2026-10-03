@@ -406,6 +406,7 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
           {/* ── All Orders ── */}
           {view === 'orders' && (
             <div className="card reveal" style={{ overflow: 'visible' }}>
+              <div className="table-wrap">
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
@@ -463,6 +464,7 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 

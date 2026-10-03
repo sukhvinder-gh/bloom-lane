@@ -177,7 +177,7 @@ export default function AdminFarmerInventoryPage() {
           )}
 
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Product Name *</label>
                 <input className="input" value={form.name} onChange={e => up('name', e.target.value)} required style={{ width: '100%' }} />

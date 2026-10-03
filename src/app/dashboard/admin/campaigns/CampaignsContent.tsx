@@ -67,7 +67,7 @@ export default function CampaignsContent() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: 'Active Subscribers', value: activeCount },
           { label: 'Sent', value: sentCount },
@@ -96,6 +96,7 @@ export default function CampaignsContent() {
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border-light)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -156,6 +157,7 @@ export default function CampaignsContent() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

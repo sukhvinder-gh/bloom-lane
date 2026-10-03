@@ -86,7 +86,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
       {/* Profile details */}
       <div className="card reveal" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '1.25rem' }}>Profile Details</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
 
           <div>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Full Name</label>
@@ -109,7 +109,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
       {/* Buyer type & ABN */}
       <div className="card reveal" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '1.25rem' }}>Buyer Type & ABN</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
 
           {/* Role toggle */}
           <div style={{ gridColumn: '1 / -1' }}>

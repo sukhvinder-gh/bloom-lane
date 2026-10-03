@@ -92,10 +92,12 @@ function printInvoice(order: any, profile: any) {
     <div style="color:#4a7a65;font-size:12px;margin-top:2px">${profile?.email || ''}</div>
     <div style="color:#4a7a65;font-size:12px;margin-top:2px">${order.delivery_suburb ? `Delivery: ${order.delivery_suburb}, ${order.delivery_state || ''}` : 'Collection: Hub Pickup'}</div>
   </div>
+  <div className="table-wrap">
   <table>
     <thead><tr><th>Product</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Ex-GST</th><th class="r">GST</th><th class="r">Total</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
+  </div>
   <div style="display:flex;justify-content:flex-end;margin-top:20px">
     <div style="width:240px">
       ${isB2B ? `<div class="total-line"><span>Subtotal (ex-GST)</span><span>$${(exGstSub/100).toFixed(2)}</span></div>` : ''}
@@ -198,6 +200,7 @@ export default function BuyerOrdersPage() {
         </div>
       ) : (
         <div style={{ background: 'white', borderRadius: 'var(--r-card)', border: '1px solid var(--olive)', overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--olive)' }}>
@@ -326,6 +329,7 @@ export default function BuyerOrdersPage() {
                             </div>
 
                             {/* Line items */}
+                            <div className="table-wrap">
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid var(--sage)' }}>
@@ -351,6 +355,7 @@ export default function BuyerOrdersPage() {
                                 })}
                               </tbody>
                             </table>
+                            </div>
 
                             {/* Totals */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
@@ -385,6 +390,7 @@ export default function BuyerOrdersPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

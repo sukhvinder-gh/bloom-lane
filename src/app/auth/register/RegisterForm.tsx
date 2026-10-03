@@ -177,7 +177,7 @@ export default function RegisterForm() {
           </div>
         ) : (
         <form onSubmit={handleSubmit} className="card" style={{ padding: '1.25rem', display: 'grid', gap: '0.625rem', background: 'white' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             <div><label className="label">Full name *</label><input className="input" placeholder="Jane Smith" value={form.fullName} onChange={e => up('fullName', e.target.value)} required /></div>
             <div><label className="label">Phone</label><input className="input" type="tel" placeholder="04xx xxx xxx" value={form.phone} onChange={e => up('phone', e.target.value)} /></div>
           </div>
@@ -228,7 +228,7 @@ export default function RegisterForm() {
               After registering, you can set up your hub from the coordinator dashboard.
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
             <Link href="/" className="btn btn-outline" style={{ justifyContent: 'center' }}>Cancel</Link>
             <button type="submit" className="btn btn-forest" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
           </div>

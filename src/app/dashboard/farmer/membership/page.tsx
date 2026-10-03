@@ -322,7 +322,7 @@ function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, far
         </div>
         <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Change Plan</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', paddingTop: '1.5rem', borderTop: '1px solid var(--olive)' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', paddingTop: '1.5rem', borderTop: '1px solid var(--olive)' }}>
         {fields.map(f => (
           <div key={f.label}>
             <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.25rem' }}>{f.label}</p>
@@ -574,7 +574,7 @@ export default function GrowerSubscriptionPage() {
       ) : (
       <>
       {/* Plan selector */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
           {
             value: 'hub_membership' as const,
@@ -636,7 +636,7 @@ export default function GrowerSubscriptionPage() {
         {plan === 'hub_membership' && (
           <div className="card" style={{ padding: '1.5rem' }}>
             <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '1rem' }}>Billing Period</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
               {BILLING_OPTIONS.map(b => {
                 const price = priceMap[b.value]
                 return (
@@ -664,7 +664,7 @@ export default function GrowerSubscriptionPage() {
         {/* Business details */}
         <div className="card" style={{ padding: '1.5rem' }}>
           <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '1rem' }}>Business Details</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div>
               <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Business Name</label>
               <input className="input" value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Your farm or business name" style={{ width: '100%' }} />

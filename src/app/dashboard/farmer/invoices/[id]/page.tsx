@@ -84,6 +84,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
             <p style={{ fontWeight: 700, color: 'var(--forest)' }}>{buyerName}</p>
           </div>
 
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--forest)' }}>
@@ -109,6 +110,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
               ))}
             </tbody>
           </table>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
             <div style={{ width: '18rem' }}>

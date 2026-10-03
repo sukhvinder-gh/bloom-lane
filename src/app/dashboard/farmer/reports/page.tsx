@@ -122,6 +122,7 @@ export default function FarmerReportsPage() {
                 Bar length shows each week's gross revenue relative to your highest-earning week shown below — click a week to see your orders.
               </p>
               <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrap">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '32rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -153,6 +154,7 @@ export default function FarmerReportsPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}
@@ -162,6 +164,7 @@ export default function FarmerReportsPage() {
             <div className="card" style={{ padding: '1.5rem' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '1.25rem' }}>Product performance</h2>
               <div style={{ overflowX: 'auto' }}>
+                <div className="table-wrap">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '28rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -199,6 +202,7 @@ export default function FarmerReportsPage() {
                     </tr>
                   </tfoot>
                 </table>
+                </div>
               </div>
             </div>
           )}

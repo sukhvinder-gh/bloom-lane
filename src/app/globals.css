@@ -496,6 +496,14 @@ body {
   .po-grid        { grid-template-columns: 1fr !important; gap: 1.25rem !important; }
   .po-dates-row   { flex-direction: column !important; gap: 0.15rem !important; }
   .po-dates-label { width: auto !important; }
+
+  /* Shared collapse for the many hardcoded multi-column inline grids across
+     dashboard forms/stat rows (e.g. gridTemplateColumns: '1fr 1fr',
+     'repeat(3, 1fr)') — none of these had a mobile override at all, unlike
+     the auto-fit/auto-fill grids elsewhere which already collapse on their
+     own. One shared class instead of a one-off per page, matching how
+     cart-layout/checkout-layout/po-grid above already do this. */
+  .mg-stack { grid-template-columns: 1fr !important; }
 }
 
 /* PO document: with the dashboard sidebar open, a laptop-width window leaves

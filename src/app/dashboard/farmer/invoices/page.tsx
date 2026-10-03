@@ -91,7 +91,7 @@ export default async function FarmerInvoicesPage({
       </form>
 
       {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
         {[
           { label: 'Transactions', value: String(rows.length), color: 'var(--forest)' },
           { label: 'Revenue',      value: formatPrice(totalRevenue), color: 'var(--forest)' },
@@ -112,6 +112,7 @@ export default async function FarmerInvoicesPage({
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
+            <div className="table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '42rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -136,6 +137,7 @@ export default async function FarmerInvoicesPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

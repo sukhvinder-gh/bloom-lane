@@ -163,6 +163,7 @@ export default function AdminReportsPage() {
                   Bar length shows each week's GMV relative to the highest-earning week shown below — click a week to see its transactions.
                 </p>
                 <div style={{ overflowX: 'auto' }}>
+                  <div className="table-wrap">
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '36rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -192,6 +193,7 @@ export default function AdminReportsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -201,6 +203,7 @@ export default function AdminReportsPage() {
               <div className="card" style={{ padding: '1.5rem' }}>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', marginBottom: '1.25rem' }}>Grower performance</h2>
                 <div style={{ overflowX: 'auto' }}>
+                  <div className="table-wrap">
                   <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '30rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -230,6 +233,7 @@ export default function AdminReportsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -282,6 +286,7 @@ export default function AdminReportsPage() {
                     Bar length shows each week's GMV relative to the highest-earning week shown below — click a week to see its transactions.
                   </p>
                   <div style={{ overflowX: 'auto' }}>
+                    <div className="table-wrap">
                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '30rem' }}>
                       <thead>
                         <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -311,6 +316,7 @@ export default function AdminReportsPage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -319,6 +325,7 @@ export default function AdminReportsPage() {
                 <div className="card" style={{ padding: '1.5rem' }}>
                   <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--navy)', marginBottom: '1.25rem' }}>Hub grower performance</h2>
                   <div style={{ overflowX: 'auto' }}>
+                    <div className="table-wrap">
                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '28rem' }}>
                       <thead>
                         <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -345,6 +352,7 @@ export default function AdminReportsPage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}

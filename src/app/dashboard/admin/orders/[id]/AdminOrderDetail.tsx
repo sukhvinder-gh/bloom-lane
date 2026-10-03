@@ -157,7 +157,7 @@ export default function AdminOrderDetail({ order }: { order: any }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
 
         {/* Buyer info */}
         <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
@@ -181,7 +181,7 @@ export default function AdminOrderDetail({ order }: { order: any }) {
         {/* Dates */}
         <div className="card" style={{ padding: '1.25rem 1.5rem', gridColumn: '1 / -1' }}>
           <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.875rem' }}>Dates</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ fontSize: '0.75rem', color: 'var(--moss)', display: 'block', marginBottom: '0.3rem' }}>🌿 Grower fulfils by</label>
               <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}

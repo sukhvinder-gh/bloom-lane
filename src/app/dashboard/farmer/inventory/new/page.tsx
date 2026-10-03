@@ -58,7 +58,7 @@ export default function NewProductPage() {
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Product details</h2>
           <div><label className="label">Product name *</label><input className="input" placeholder="e.g. Sunflowers — Large Head" value={form.name} onChange={e => up('name', e.target.value)} required /></div>
           <div><label className="label">Description</label><textarea className="input" style={{ height: '5rem', resize: 'none' }} placeholder="Variety, colour, freshness notes…" value={form.description} onChange={e => up('description', e.target.value)} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div><label className="label">Category *</label><select className="input" value={form.category} onChange={e => up('category', e.target.value)}>{CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
             <div><label className="label">Unit *</label><select className="input" value={form.unit} onChange={e => up('unit', e.target.value)}>{UNITS.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
           </div>
@@ -135,12 +135,12 @@ export default function NewProductPage() {
         {/* Stock */}
         <div className="card reveal reveal-d2" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Stock</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div><label className="label">Total stock *</label><input className="input" type="number" min="1" placeholder="e.g. 50" value={form.stock_total} onChange={e => up('stock_total', e.target.value)} required /></div>
             <div><label className="label">Min B2B order</label><input className="input" type="number" min="1" value={form.min_order_b2b} onChange={e => up('min_order_b2b', e.target.value)} /></div>
           </div>
           {stockNum > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               {[
                 { label: 'B2B Wholesale', val: splits.b2b, bg: 'var(--forest)', clr: 'var(--cream)', sub: 'var(--moss)' },
                 { label: 'B2C Retail', val: splits.b2c, bg: 'var(--sage)', clr: 'var(--forest)', sub: 'rgba(1,71,46,0.5)' },
@@ -182,7 +182,7 @@ export default function NewProductPage() {
             style={!listingOpen ? { opacity: 0.4, cursor: 'not-allowed' } : {}} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
           <Link href="/dashboard/farmer/inventory" className="btn btn-outline" style={{ justifyContent: 'center' }}>Cancel</Link>
           <button type="submit" className="btn btn-forest" disabled={loading}>{loading ? 'Saving…' : 'Save product'}</button>
         </div>

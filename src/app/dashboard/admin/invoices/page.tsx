@@ -69,7 +69,7 @@ export default async function AdminInvoicesPage({
       </form>
 
       {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
         {[
           { label: 'Transactions', value: String((orders || []).length), color: 'var(--navy)' },
           { label: 'Total GMV',    value: formatPrice(totalGmv),        color: 'var(--navy)' },
@@ -91,6 +91,7 @@ export default async function AdminInvoicesPage({
       ) : (
         <div className="card" style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
+            <div className="table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '48rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--olive)' }}>
@@ -120,6 +121,7 @@ export default async function AdminInvoicesPage({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

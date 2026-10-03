@@ -136,6 +136,7 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
             </div>
 
             {/* Line items */}
+            <div className="table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--forest)' }}>
@@ -161,6 +162,7 @@ export default async function AdminInvoicePage({ params }: { params: Promise<{ i
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Totals */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>

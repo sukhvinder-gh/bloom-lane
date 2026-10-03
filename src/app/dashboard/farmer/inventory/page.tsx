@@ -303,6 +303,7 @@ export default function FarmerInventoryPage() {
         </div>
       ) : (
         <div className="card reveal" style={{ overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
@@ -394,6 +395,7 @@ export default function FarmerInventoryPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

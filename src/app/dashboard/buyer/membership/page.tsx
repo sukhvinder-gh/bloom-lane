@@ -354,7 +354,7 @@ export default function FloristSubscriptionPage() {
       ) : (
       <>
       {/* Plan cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
           {
             value: 'mailing_list' as const,
@@ -413,7 +413,7 @@ export default function FloristSubscriptionPage() {
         {plan === 'personal_shopper' && (
           <div className="card" style={{ padding: '1.5rem' }}>
             <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '1rem' }}>Billing Period</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
               {FLORIST_BILLING.map(b => {
                 const price = priceMap[b.value]
                 return (

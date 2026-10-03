@@ -81,6 +81,7 @@ export default async function BuyerInvoicesPage() {
 
               {/* Line items */}
               <div style={{ padding: '1rem 1.5rem' }}>
+                <div className="table-wrap">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <thead>
                     <tr>
@@ -110,6 +111,7 @@ export default async function BuyerInvoicesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
 
                 {/* Totals */}
                 <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end' }}>

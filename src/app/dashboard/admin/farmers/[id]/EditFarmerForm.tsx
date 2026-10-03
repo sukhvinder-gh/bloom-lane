@@ -151,7 +151,7 @@ export default function EditFarmerForm({ farmer: initial, requesterRole }: { far
       {/* Business Details */}
       <div className="card reveal" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 className="type-label-lg" style={{ color: 'var(--navy)', marginBottom: '1.25rem' }}>Business Details</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
 
           <div style={{ gridColumn: '1 / -1' }}>
             <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Business Name</label>

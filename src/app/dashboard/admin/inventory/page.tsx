@@ -154,7 +154,7 @@ export default function AdminInventoryPage() {
 
       {/* Summary stats */}
       {!loading && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem', marginBottom: '2rem' }}>
           {[
             { label: 'Total products',    value: products.length, color: 'var(--navy)' },
             { label: 'Listed this week',  value: listedCount,     color: '#065F46' },

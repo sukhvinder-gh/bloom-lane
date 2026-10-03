@@ -267,6 +267,7 @@ export default function FarmerOrdersPage() {
         </div>
       ) : (
         <div style={{ background: 'white', borderRadius: 'var(--r-card)', border: '1px solid var(--olive)', overflow: 'hidden' }}>
+          <div className="table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--olive)' }}>
@@ -482,6 +483,7 @@ export default function FarmerOrdersPage() {
                       <tr key={order.id + '-detail'}>
                         <td colSpan={8} style={{ padding: 0, background: '#fafaf7', borderBottom: '1px solid var(--olive)' }}>
                           <div style={{ padding: '1rem 1.25rem 1.25rem 2.75rem' }}>
+                            <div className="table-wrap">
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid var(--sage)' }}>
@@ -545,6 +547,7 @@ export default function FarmerOrdersPage() {
                                 ))}
                               </tbody>
                             </table>
+                            </div>
                             {poIds[order.id] && (
                               <div style={{ marginTop: '1.25rem', maxWidth: '32rem' }}>
                                 <MessageThread purchaseOrderId={poIds[order.id]} title={`Messages with ${order.profiles?.business_name || order.profiles?.full_name || 'buyer'}`} />
@@ -559,6 +562,7 @@ export default function FarmerOrdersPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

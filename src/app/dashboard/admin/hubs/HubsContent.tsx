@@ -227,7 +227,7 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {windows.map((w, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                <div key={i} className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
                   <select className="input" value={w.day} onChange={e => updateWindow(i, { day: e.target.value })} required>
                     <option value="">Day…</option>
                     {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
@@ -562,6 +562,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
 
       {/* Table */}
       <div className="card reveal" style={{ overflow: 'hidden' }}>
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
             <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
@@ -626,6 +627,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Create / Edit modal */}

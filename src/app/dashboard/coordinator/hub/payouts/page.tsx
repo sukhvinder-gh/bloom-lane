@@ -48,7 +48,7 @@ export default function CoordinatorHubPayoutsPage() {
         Payouts your hub has received on behalf of its growers — each still owes that grower their share, this only tracks what Stripe has sent to your hub's account.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
         <div style={{ background: 'var(--forest)', borderRadius: 'var(--r-card)', padding: '1.5rem' }}>
           <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--cream)', opacity: 0.7, marginBottom: '0.5rem' }}>Total Received</p>
           <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--cream)' }}>{formatPrice(totalReceived)}</p>
@@ -63,6 +63,7 @@ export default function CoordinatorHubPayoutsPage() {
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--olive)' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)' }}>Payout History</h2>
         </div>
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--cream)' }}>
@@ -102,6 +103,7 @@ export default function CoordinatorHubPayoutsPage() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

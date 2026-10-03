@@ -421,7 +421,7 @@ export default function CheckoutPage() {
             {pickupEligibleFarmers.length > 0 && (
               <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1rem' }}>For everything else in your cart.</p>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               {[
                 { id: 'hub_pickup',       icon: '🏭', label: 'Hub Pickup', sub: 'Collect from our central hub · Free' },
                 { id: 'direct_delivery',  icon: '🚚', label: 'Delivery',   sub: `To your door · ${formatPrice(realDeliveryFeeCents)}` },
@@ -535,7 +535,7 @@ export default function CheckoutPage() {
                   <label className="label">Street address</label>
                   <input className="input" placeholder="123 Collins St" value={address.line1} onChange={e => setAddress(a => ({ ...a, line1: e.target.value }))} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
                   <div><label className="label">Suburb</label><input className="input" placeholder="Melbourne" value={address.suburb} onChange={e => setAddress(a => ({ ...a, suburb: e.target.value }))} /></div>
                   <div><label className="label">State</label>
                     <select className="input" value={address.state} onChange={e => setAddress(a => ({ ...a, state: e.target.value }))}>

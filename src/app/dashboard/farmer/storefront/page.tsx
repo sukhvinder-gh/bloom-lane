@@ -427,7 +427,7 @@ export default function FarmerStorefrontPage() {
         </div>
 
         {/* Suburb / State / Postcode */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
           <div>
             <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>
               Suburb {!farmer && <span style={{ color: '#dc2626' }}>*</span>}
@@ -484,7 +484,7 @@ export default function FarmerStorefrontPage() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {form.market_windows.map((w, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
+                <div key={i} className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
                   <select
                     style={inputStyle}
                     value={w.day}
@@ -565,7 +565,7 @@ export default function FarmerStorefrontPage() {
                     Remove
                   </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
                   <select value={opt.day_of_week} onChange={e => updateFulfillmentOption(i, { day_of_week: e.target.value })} style={inputStyle}>
                     {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
                       <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>

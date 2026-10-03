@@ -83,7 +83,7 @@ export default async function FarmerPayoutsPage({
               </div>
             </div>
           </div>
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fbbf24', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+          <div className="mg-stack" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fbbf24', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
             {[
               { step: '1', label: 'Verify identity', done: !!farmer.stripe_account_id },
               { step: '2', label: 'Add bank account', done: false },
@@ -115,7 +115,7 @@ export default async function FarmerPayoutsPage({
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
+      <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
         {[
           { label: 'Total Earned (Net)',  value: formatPrice(totalEarned),   bg: 'var(--forest)', color: 'var(--cream)' },
           { label: 'Pending Payout',      value: formatPrice(pendingAmount),  bg: 'var(--sage)',   color: 'var(--forest)' },
@@ -133,6 +133,7 @@ export default async function FarmerPayoutsPage({
         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--olive)' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)' }}>Payout History</h2>
         </div>
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--cream)' }}>
@@ -171,6 +172,7 @@ export default async function FarmerPayoutsPage({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

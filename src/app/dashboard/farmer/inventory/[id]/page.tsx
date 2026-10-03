@@ -219,7 +219,7 @@ export default function EditProductPage() {
             <label className="label">Description</label>
             <textarea className="input" style={{ height: '5rem', resize: 'none' }} placeholder="Variety, colour, freshness notes…" value={form.description} onChange={e => up('description', e.target.value)} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label className="label">Category *</label>
               <select className="input" value={form.category} onChange={e => up('category', e.target.value)}>
@@ -308,7 +308,7 @@ export default function EditProductPage() {
         {/* Stock */}
         <div className="card reveal reveal-d2" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Stock</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label className="label">Total stock *</label>
               <input className="input" type="number" min="0" placeholder="e.g. 50"
@@ -321,7 +321,7 @@ export default function EditProductPage() {
             </div>
           </div>
           {stockNum > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               {[
                 { label: 'B2B Wholesale', val: splits.b2b, bg: 'var(--forest)', clr: 'var(--cream)', sub: 'var(--moss)' },
                 { label: 'B2C Retail',    val: splits.b2c, bg: 'var(--sage)',   clr: 'var(--forest)', sub: 'rgba(1,71,46,0.5)' },
@@ -368,7 +368,7 @@ export default function EditProductPage() {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+        <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
           <Link href="/dashboard/farmer/inventory" className="btn btn-outline" style={{ justifyContent: 'center' }}>Cancel</Link>
           <button type="submit" className="btn btn-forest" disabled={loading}>
             {loading ? 'Saving…' : 'Save changes'}
