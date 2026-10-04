@@ -11,10 +11,11 @@ export default function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const requestedRole = (searchParams.get('role') as Role) || 'buyer_b2b'
-  // Personal retail (buyer_b2c) isn't open for signup yet — only wholesale
-  // buyer accounts are active right now — so a deep link requesting it
-  // falls back to the wholesale option rather than landing on a disabled card.
-  const defaultRole = requestedRole === 'buyer_b2c' ? 'buyer_b2b' : requestedRole
+  // Personal retail (buyer_b2c) and Coordinator aren't open for signup —
+  // only wholesale buyer accounts are active right now — so a deep link
+  // requesting either falls back to the wholesale option rather than
+  // landing on a disabled card.
+  const defaultRole = (requestedRole === 'buyer_b2c' || requestedRole === 'coordinator') ? 'buyer_b2b' : requestedRole
   const [role, setRole] = useState<Role>(defaultRole)
   const [step, setStep] = useState<'form' | 'done'>('form')
   const [form, setForm] = useState({ email: '', password: '', fullName: '', businessName: '', phone: '', abn: '', postcode: '' })
@@ -118,19 +119,20 @@ export default function RegisterForm() {
 
   // Public sign-up for buyers and growers is paused for a few weeks while
   // we work through interest registrations first — set these back to true
-  // to reopen. Coordinator registration (hub setup) stays open throughout.
+  // to reopen. Coordinator registration is paused too, same as Individual —
+  // hidden outright rather than routed through register-interest.
   const PUBLIC_SIGNUP_OPEN: Record<Role, boolean> = {
     buyer_b2b: false,
     buyer_b2c: false,
     farmer: false,
-    coordinator: true,
+    coordinator: false,
   }
 
   const roles = [
     { id: 'buyer_b2b',   icon: '🏪', label: 'Business Buyer',  sub: PUBLIC_SIGNUP_OPEN.buyer_b2b ? 'Buyer pricing with ABN' : 'Register interest', interestHref: '/register-interest/buyer' },
     { id: 'buyer_b2c',   icon: '🛍️', label: 'Individual',       sub: 'Coming soon', disabled: true },
     { id: 'farmer',      icon: '🌿', label: 'Grower',           sub: PUBLIC_SIGNUP_OPEN.farmer ? 'List & sell produce' : 'Register interest', interestHref: '/register-interest/grower' },
-    { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Manage a hub or collective' },
+    { id: 'coordinator', icon: '🏛',  label: 'Coordinator',     sub: 'Coming soon', disabled: true },
   ]
 
   if (step === 'done') return (

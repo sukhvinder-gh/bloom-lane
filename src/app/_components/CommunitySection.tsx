@@ -29,24 +29,6 @@ export default function CommunitySection() {
 
             <div className={styles.cardDivider} aria-hidden="true" />
 
-            <Link href="/auth/register?role=coordinator" className={styles.card}>
-              <div className={styles.icon}>
-                <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 13 16 5l11 8" />
-                  <path d="M7 12v14h18V12" />
-                  <path d="M5 13h22" />
-                  <path d="M13 26v-7h6v7" />
-                  <path d="M16 19v7" />
-                </svg>
-              </div>
-              <div>
-                <h4>Register – Hub / Collective</h4>
-                <p>Become a hub or collective and connect your region.</p>
-              </div>
-            </Link>
-
-            <div className={styles.cardDivider} aria-hidden="true" />
-
             <Link href="/register-interest/buyer" className={styles.card}>
               <div className={styles.icon}>
                 <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
