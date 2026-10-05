@@ -62,7 +62,10 @@ export async function GET(request: NextRequest) {
 
     // Includes archived (is_active=false) products — a grower needs to see and
     // restore those from their own inventory list, not just active listings.
-    let query = supabase.from('products').select('*').eq('farmer_id', farmer.id)
+    // farmers(gst_registered) lets the inventory UI tell "GST-free" (this
+    // specific product's tax category) apart from "No GST" (this grower isn't
+    // registered, so GST never applies regardless of the product's category).
+    let query = supabase.from('products').select('*, farmers(gst_registered)').eq('farmer_id', farmer.id)
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ data })

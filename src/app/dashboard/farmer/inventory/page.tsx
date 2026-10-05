@@ -343,11 +343,18 @@ export default function FarmerInventoryPage() {
                         ? <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.15rem' }}>≈ {formatPrice(perStem)}/stem</p>
                         : null
                     })()}
-                    {p.is_gst_free && <span className="badge badge-sage" style={{ display: 'block', marginTop: '0.25rem' }}>GST free</span>}
+                    {/* "GST free" only means something for a registered grower's
+                        exempt product — an unregistered grower never charges GST
+                        at all, so labelling their items "GST free" implies a
+                        tax-exemption status that doesn't apply. Mirrors the same
+                        distinction already drawn on the marketplace listing. */}
+                    {p.farmers?.gst_registered
+                      ? (p.is_gst_free && <span className="badge badge-sage" style={{ display: 'block', marginTop: '0.25rem' }}>GST free</span>)
+                      : <span className="badge badge-olive" style={{ display: 'block', marginTop: '0.25rem' }}>No GST</span>}
                   </td>
                   <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--moss)', letterSpacing: '-0.02em' }}>
-                      {formatPrice(p.is_gst_free
+                      {formatPrice(p.is_gst_free || !p.farmers?.gst_registered
                         ? Math.round(p.wholesale_price * (1 + (p.b2c_markup_pct || 0.45)))
                         : Math.round(p.wholesale_price * (1 + (p.b2c_markup_pct || 0.45)) * 1.1)
                       )}

@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { hasActiveMembership } from '@/lib/utils/membership'
+import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
 import { z } from 'zod'
 
 const VALID_CATEGORIES = ['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']
+const VALID_COLORS: string[] = COLOR_PALETTE.map(c => c.id)
+const MAX_COLORS = 6
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -43,6 +46,21 @@ export async function POST(request: NextRequest) {
 
     const minOrder = Number(p.min_order_b2b ?? 1)
 
+    let stemsPerUnit: number | null = null
+    if (p.stems_per_unit !== undefined && p.stems_per_unit !== null && p.stems_per_unit !== '') {
+      const n = Number(p.stems_per_unit)
+      if (!Number.isInteger(n) || n <= 0) { errors.push({ row, message: 'stems_per_unit must be a whole number > 0' }); return }
+      stemsPerUnit = n
+    }
+
+    let colorTags: string[] = []
+    if (Array.isArray(p.color_tags) && p.color_tags.length) {
+      colorTags = p.color_tags.map((c: string) => String(c).trim().toLowerCase()).filter(Boolean)
+      const bad = colorTags.filter(c => !VALID_COLORS.includes(c))
+      if (bad.length) { errors.push({ row, message: `Unknown colour "${bad[0]}"` }); return }
+      if (colorTags.length > MAX_COLORS) { errors.push({ row, message: `Max ${MAX_COLORS} colours` }); return }
+    }
+
     rows.push({
       farmer_id: farmer.id,
       name: p.name.trim(),
@@ -52,6 +70,8 @@ export async function POST(request: NextRequest) {
       stock_total: stock,
       min_order_b2b: Number.isInteger(minOrder) && minOrder > 0 ? minOrder : 1,
       is_gst_free: ['yes', 'true', '1'].includes(String(p.is_gst_free).toLowerCase()),
+      stems_per_unit: stemsPerUnit,
+      color_tags: colorTags,
       description: p.description?.trim() || null,
       is_active: true,
       is_listed_this_week: false,

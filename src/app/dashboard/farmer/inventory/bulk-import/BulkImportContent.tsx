@@ -1,18 +1,21 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES: Record<string, string> = {
   flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
   vegetables: 'Vegetables', herbs: 'Herbs', fruit: 'Fruit', eggs: 'Eggs', honey: 'Honey', other: 'Other',
 }
 const VALID_CATEGORIES = Object.keys(CATEGORIES)
+const VALID_COLORS: string[] = COLOR_PALETTE.map(c => c.id)
+const MAX_COLORS = 6
 
-const TEMPLATE_CSV = `name,category,unit,wholesale_price,stock,min_order,gst_free,description
-Mixed Roses,flowers_cut,stem,4.50,100,10,no,Beautiful mixed roses from our garden
-Sunflowers,flowers_cut,stem,3.20,80,5,no,
-Baby's Breath,foliage,bunch,6.00,40,1,yes,
-Fresh Basil,herbs,bunch,4.00,60,3,no,Aromatic sweet basil
+const TEMPLATE_CSV = `name,category,unit,wholesale_price,stock,min_order,gst_free,stems_per_unit,colors,description
+Mixed Roses,flowers_cut,stem,4.50,100,10,no,,red; pink,Beautiful mixed roses from our garden
+Sunflowers,flowers_cut,stem,3.20,80,5,no,,yellow,
+Baby's Breath,foliage,bunch,6.00,40,1,yes,10,white,
+Fresh Basil,herbs,bunch,4.00,60,3,no,,green,Aromatic sweet basil
 `
 
 function parseCSV(text: string): string[][] {
@@ -33,14 +36,18 @@ function parseCSV(text: string): string[][] {
 
 type ParsedRow = {
   name: string; category: string; unit: string; wholesale_price: string
-  stock: string; min_order: string; gst_free: string; description: string
+  stock: string; min_order: string; gst_free: string; stems_per_unit: string; colors: string; description: string
   _errors: string[]
 }
 
 function validateRows(rows: string[][]): ParsedRow[] {
   const [header, ...data] = rows
   const col = (name: string) => header.findIndex(h => h.toLowerCase().trim() === name)
-  const ci = { name: col('name'), category: col('category'), unit: col('unit'), wholesale_price: col('wholesale_price'), stock: col('stock'), min_order: col('min_order'), gst_free: col('gst_free'), description: col('description') }
+  const ci = {
+    name: col('name'), category: col('category'), unit: col('unit'), wholesale_price: col('wholesale_price'),
+    stock: col('stock'), min_order: col('min_order'), gst_free: col('gst_free'),
+    stems_per_unit: col('stems_per_unit'), colors: col('colors'), description: col('description'),
+  }
 
   return data.filter(r => r.some(c => c.trim())).map(r => {
     const get = (idx: number) => idx >= 0 ? (r[idx] || '') : ''
@@ -52,6 +59,8 @@ function validateRows(rows: string[][]): ParsedRow[] {
     const stock = get(ci.stock) || '0'
     const min_order = get(ci.min_order) || '1'
     const gst_free = get(ci.gst_free)
+    const stems_per_unit = get(ci.stems_per_unit)
+    const colors = get(ci.colors)
     const description = get(ci.description)
 
     if (!name.trim()) errors.push('Name required')
@@ -59,8 +68,17 @@ function validateRows(rows: string[][]): ParsedRow[] {
     if (!unit.trim()) errors.push('Unit required')
     if (isNaN(Number(wholesale_price)) || Number(wholesale_price) <= 0) errors.push('Price must be > 0')
     if (isNaN(Number(stock)) || Number(stock) < 0) errors.push('Stock must be ≥ 0')
+    if (stems_per_unit.trim() && (!Number.isInteger(Number(stems_per_unit)) || Number(stems_per_unit) <= 0)) {
+      errors.push('Stems/unit must be a whole number > 0')
+    }
+    if (colors.trim()) {
+      const tags = colors.split(';').map(c => c.trim().toLowerCase()).filter(Boolean)
+      const bad = tags.filter(c => !VALID_COLORS.includes(c))
+      if (bad.length) errors.push(`Unknown colour "${bad[0]}" — see valid colours`)
+      else if (tags.length > MAX_COLORS) errors.push(`Max ${MAX_COLORS} colours`)
+    }
 
-    return { name, category, unit, wholesale_price, stock, min_order, gst_free, description, _errors: errors }
+    return { name, category, unit, wholesale_price, stock, min_order, gst_free, stems_per_unit, colors, description, _errors: errors }
   })
 }
 
@@ -115,6 +133,8 @@ export default function BulkImportContent() {
         stock_total: parseInt(r.stock) || 0,
         min_order_b2b: parseInt(r.min_order) || 1,
         is_gst_free: ['yes', 'true', '1'].includes(r.gst_free.toLowerCase()),
+        stems_per_unit: r.stems_per_unit.trim() ? parseInt(r.stems_per_unit) : undefined,
+        color_tags: r.colors.trim() ? r.colors.split(';').map(c => c.trim().toLowerCase()).filter(Boolean) : undefined,
         description: r.description || undefined,
       }))
       const res = await fetch('/api/products/bulk', {
@@ -178,11 +198,26 @@ export default function BulkImportContent() {
               ))}
             </ul>
             <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.875rem', lineHeight: 1.6 }}>
-              Optional: stock, min_order, gst_free (yes/no), description
+              Optional: stock, min_order, gst_free (yes/no), stems_per_unit, colors, description
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.5rem', lineHeight: 1.6 }}>
               Categories: {VALID_CATEGORIES.join(', ')}
             </p>
+          </div>
+
+          {/* Colours — spelled out separately since the CSV cell has to match
+              the platform's own colour filter exactly, not any free text. */}
+          <div className="card" style={{ padding: '1.5rem' }}>
+            <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--forest)', marginBottom: '0.5rem' }}>Colours (optional)</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', lineHeight: 1.6, marginBottom: '0.75rem' }}>
+              Separate multiple colours with a semicolon, e.g. <code style={{ fontFamily: 'monospace' }}>red; pink</code>.
+              Up to {MAX_COLORS}. Must match these exactly (lowercase, as shown) so they match the storefront's colour filter:
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+              {VALID_COLORS.map(c => (
+                <code key={c} style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'var(--olive)', color: 'var(--forest)', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>{c}</code>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -217,7 +252,14 @@ export default function BulkImportContent() {
                 type="file"
                 accept=".csv"
                 style={{ display: 'none' }}
-                onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f) }}
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) processFile(f)
+                  // Reset so picking the same filename again (e.g. after fixing
+                  // errors and re-saving over the same file) still fires onChange —
+                  // browsers don't re-fire it if the input's value didn't change.
+                  e.target.value = ''
+                }}
               />
             </div>
           </div>
@@ -227,7 +269,7 @@ export default function BulkImportContent() {
             <div className="card" style={{ overflow: 'hidden' }}>
               <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--forest)' }}>
-                  {rows.length} row{rows.length !== 1 ? 's' : ''} parsed
+                  {rows.length} row{rows.length !== 1 ? 's' : ''} found
                   {hasErrors && <span style={{ color: 'var(--terracotta)', marginLeft: '0.75rem' }}>⚠ {rows.length - validCount} with errors</span>}
                 </p>
                 {!hasErrors && (
@@ -245,7 +287,7 @@ export default function BulkImportContent() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                   <thead>
                     <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-                      {['Name', 'Category', 'Unit', 'Price', 'Stock', 'GST Free', 'Errors'].map(h => (
+                      {['Name', 'Category', 'Unit', 'Price', 'Stock', 'GST Free', 'Stems/Unit', 'Colours', 'Errors'].map(h => (
                         <th key={h} className="type-label-sm" style={{ padding: '0.625rem 0.875rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.1em' }}>{h}</th>
                       ))}
                     </tr>
@@ -259,6 +301,8 @@ export default function BulkImportContent() {
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--forest)' }}>${r.wholesale_price}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.stock}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.gst_free || 'no'}</td>
+                        <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.stems_per_unit || '—'}</td>
+                        <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.colors || '—'}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--terracotta)', fontSize: '0.75rem' }}>
                           {r._errors.length > 0 ? r._errors.join(', ') : <span style={{ color: 'var(--green)' }}>✓</span>}
                         </td>
