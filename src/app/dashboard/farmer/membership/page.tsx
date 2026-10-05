@@ -354,7 +354,10 @@ export default function GrowerSubscriptionPage() {
   const [viewMode, setViewMode] = useState<'details' | 'edit'>('edit')
 
   // Form state
-  const [plan, setPlan]               = useState<'hub_membership' | 'wholesale_collection'>('hub_membership')
+  // Hub Membership is paused for new picks, same as the other roles hidden
+  // on the public register form — default new growers onto the free tier
+  // instead of a card they can't actually select.
+  const [plan, setPlan]               = useState<'hub_membership' | 'wholesale_collection'>('wholesale_collection')
   const [billing, setBilling]         = useState('monthly')
   const [hubId, setHubId]             = useState('')
   const [abn, setAbn]                 = useState('')
@@ -380,7 +383,7 @@ export default function GrowerSubscriptionPage() {
       if (subData?.farmer) {
         const f = subData.farmer
         setCurrent(subData.subscription)
-        setPlan(f.subscription_type || 'hub_membership')
+        setPlan(f.subscription_type || 'wholesale_collection')
         setBilling(f.subscription_tier || 'monthly')
         setHubId(f.hub_id || '')
         setAbn(f.abn || '')
@@ -573,18 +576,26 @@ export default function GrowerSubscriptionPage() {
         />
       ) : (
       <>
-      {/* Plan selector */}
+      {/* Plan selector
+          Hub Membership is paused for new picks, same way Individual/Coordinator
+          are hidden on the public register form — but a grower already on it
+          (checked via `current`, not the in-progress `plan` state) keeps full
+          access to manage billing/cancel rather than getting locked out. */}
+      {(() => {
+        const hubMembershipOpen = hasExistingSub && current?.plan === 'hub_membership'
+        return (
       <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
           {
             value: 'hub_membership' as const,
             label: 'Hub Membership',
-            badge: 'Option 1',
+            badge: hubMembershipOpen ? 'Option 1' : 'Coming soon',
             badgeColor: '#92400E',
             badgeBg: '#FEF3C7',
             price: `$${(priceMap[billing] / 100).toFixed(0)}/mo`,
             features: ['Attend Hub Thursdays', 'Sell at your own prices', 'Featured in weekly comms', 'No minimum quantity'],
             best: 'Growers who enjoy direct selling',
+            disabled: !hubMembershipOpen,
           },
           {
             value: 'wholesale_collection' as const,
@@ -595,6 +606,7 @@ export default function GrowerSubscriptionPage() {
             price: 'No membership fee',
             features: ['Collection from farm Wed or Fri', 'Paid in full on collection', 'Farm credited in all promotion', 'No attendance required'],
             best: 'Growers who prefer to focus on growing',
+            disabled: false,
           },
         ].map(opt => {
           const active = plan === opt.value
@@ -602,12 +614,15 @@ export default function GrowerSubscriptionPage() {
             <button
               key={opt.value}
               type="button"
-              onClick={() => setPlan(opt.value)}
+              disabled={opt.disabled}
+              title={opt.disabled ? 'Hub Membership isn\'t open for new sign-ups yet' : undefined}
+              onClick={() => !opt.disabled && setPlan(opt.value)}
               style={{
                 background: active ? 'var(--olive)' : 'white',
                 border: `2px solid ${active ? 'var(--forest)' : 'var(--olive)'}`,
                 borderRadius: '1rem', padding: '1.5rem', textAlign: 'left',
-                cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-body)',
+                cursor: opt.disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-body)',
+                opacity: opt.disabled ? 0.45 : 1,
               }}
             >
               <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700, background: opt.badgeBg, color: opt.badgeColor, marginBottom: '0.625rem' }}>
@@ -629,6 +644,8 @@ export default function GrowerSubscriptionPage() {
           )
         })}
       </div>
+        )
+      })()}
 
       <form id="grower-membership-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
