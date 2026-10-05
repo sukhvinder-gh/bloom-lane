@@ -701,10 +701,13 @@ export default function GrowerSubscriptionPage() {
           </div>
         </div>
 
-        {/* Hub selection — only required for Hub Membership */}
+        {/* Hub selection only matters for Hub Membership — with that plan
+            paused for new picks (see the plan selector above), this card
+            is only ever shown to a grower already grandfathered onto it. */}
+        {plan === 'hub_membership' && (
         <div className="card" style={{ padding: '1.5rem' }}>
           <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>
-            Hub / Collective {plan === 'hub_membership' ? '*' : <span style={{ fontWeight: 400, color: 'var(--moss)' }}>(optional)</span>}
+            Hub / Collective *
           </p>
           <p style={{ fontSize: '0.775rem', color: 'var(--moss)', marginBottom: '0.875rem' }}>Select the hub or collective you belong to</p>
           {hubs.length === 0 ? (
@@ -716,7 +719,7 @@ export default function GrowerSubscriptionPage() {
               className="input"
               value={hubId}
               onChange={e => setHubId(e.target.value)}
-              required={plan === 'hub_membership'}
+              required
               style={{ width: '100%' }}
             >
               <option value="">— Select your hub / collective —</option>
@@ -729,6 +732,7 @@ export default function GrowerSubscriptionPage() {
             If your hub or collective is not listed, it may not be registered yet. Contact your coordinator.
           </p>
         </div>
+        )}
 
         {/* GST + RCTI */}
         <div className="card" style={{ padding: '1.5rem' }}>
