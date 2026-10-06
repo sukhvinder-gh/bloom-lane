@@ -3,6 +3,11 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { formatPrice, getPricePerStemCents } from '@/lib/utils/pricing'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
+import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
+
+const COLOR_MAP: Record<string, { label: string; swatch: string }> = Object.fromEntries(
+  COLOR_PALETTE.map(c => [c.id, { label: c.label, swatch: c.swatch }])
+)
 
 const CATEGORY_LABELS: Record<string, string> = {
   flowers_cut:   'Cut Flowers',
@@ -310,7 +315,7 @@ export default function FarmerInventoryPage() {
                 <th style={{ padding: '1rem 0 1rem 1.25rem', width: '2.25rem' }}>
                   <input type="checkbox" checked={selected.size === filtered.length} onChange={toggleSelectAll} />
                 </th>
-                {['Product', 'Category', 'Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Sold', status === 'archived' ? 'Archived' : 'Listed', ''].map(h => (
+                {['Product', 'Category', 'Stems/Unit', 'Colours', 'Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Sold', status === 'archived' ? 'Archived' : 'Listed', ''].map(h => (
                   <th key={h} className="type-label-sm" style={{ textAlign: ['Wholesale (ex-GST)', 'B2C Retail (inc-GST)', 'B2B / B2C left', 'Sold'].includes(h) ? 'right' : (h === 'Listed' || h === 'Archived') ? 'center' : 'left', padding: '1rem 1.25rem', color: 'var(--moss)', letterSpacing: '0.15em' }}>{h}</th>
                 ))}
               </tr>
@@ -334,6 +339,21 @@ export default function FarmerInventoryPage() {
                   </td>
                   <td style={{ padding: '1rem 1.25rem' }}>
                     <span className="badge badge-olive">{CATEGORY_EMOJI[p.category]} {CATEGORY_LABELS[p.category] || p.category}</span>
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem', color: 'var(--moss)' }}>
+                    {p.stems_per_unit || <span style={{ opacity: 0.4 }}>—</span>}
+                  </td>
+                  <td style={{ padding: '1rem 1.25rem' }}>
+                    {p.color_tags?.length ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {p.color_tags.map((c: string) => (
+                          <span key={c} title={COLOR_MAP[c]?.label || c} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
+                            <span style={{ width: '0.7rem', height: '0.7rem', borderRadius: '50%', background: COLOR_MAP[c]?.swatch || '#ccc', border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                            {COLOR_MAP[c]?.label || c}
+                          </span>
+                        ))}
+                      </div>
+                    ) : <span style={{ color: 'var(--moss)', opacity: 0.4 }}>—</span>}
                   </td>
                   <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', letterSpacing: '-0.02em' }}>{formatPrice(p.wholesale_price)}</span>
