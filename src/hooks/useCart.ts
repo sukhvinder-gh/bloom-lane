@@ -60,7 +60,7 @@ export const useCart = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      fulfillment_type: 'hub_pickup',
+      fulfillment_type: 'direct_delivery',
       hub_id: undefined,
       isB2B: false,
 

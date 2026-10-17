@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Elements } from '@stripe/react-stripe-js'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
-import { createClient } from '@/lib/supabase/client'
 import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
@@ -28,8 +27,6 @@ export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
 
-  const [hubs, setHubs]                 = useState<any[]>([])
-  const [selectedHubId, setSelectedHubId] = useState<string>('')
   const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
   // farmer_id -> chosen farmer_fulfillment_options.id, for growers who
   // configured more than one pickup or delivery slot (different day/time,
@@ -94,17 +91,13 @@ export default function CheckoutPage() {
     return sum + (opt?.cost_cents ?? DELIVERY_FEE)
   }, 0)
 
+  // No real hub exists today, so pooled items are always delivery — self-heal
+  // any cart persisted from before Hub Pickup was removed as an option.
   useEffect(() => {
-    const supabase = createClient()
-    supabase.from('delivery_zones')
-      .select('id, name, hub_address, hub_suburb, hub_collection_day, hub_collection_time_start, hub_collection_time_end')
-      .eq('is_active', true)
-      .then(({ data }) => {
-        if (data && data.length > 0) { setHubs(data); setSelectedHubId(data[0].id) }
-      })
-  }, [])
+    if (fulfillment_type !== 'direct_delivery') setFulfillmentType('direct_delivery')
+  }, [fulfillment_type, setFulfillmentType])
 
-  const deliveryFee = fulfillment_type === 'direct_delivery' && pooledItems.length > 0 ? realDeliveryFeeCents : 0
+  const deliveryFee = pooledItems.length > 0 ? realDeliveryFeeCents : 0
 
   // B2B totals — GST per line mirrors the same gstAppliesToItem() rule used
   // everywhere else (product not GST-free AND the grower is GST-registered),
@@ -144,7 +137,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.notes || undefined })),
           fulfillment_type,
-          hub_id: fulfillment_type === 'hub_pickup' ? selectedHubId : undefined,
           delivery_address: address.line1,
           delivery_suburb: address.suburb,
           delivery_state: address.state,
@@ -243,14 +235,12 @@ export default function CheckoutPage() {
                 let fulfillmentTag: string | null = null
                 if (isPickup) {
                   fulfillmentTag = '🚜 farm pickup'
-                } else if (fulfillment_type === 'direct_delivery') {
+                } else {
                   const deliveryEntry = pooledDeliveryInfo.find(f => f.farmer_id === item.product.farmer_id)
                   const chosen = deliveryEntry && deliveryEntry.options.length > 0 ? selectedOption(deliveryEntry.farmer_id, deliveryEntry.options) : null
                   const day = chosen?.day_of_week ? `${chosen.day_of_week.charAt(0).toUpperCase()}${chosen.day_of_week.slice(1)}` : ''
                   const time = chosen?.start_time && chosen?.end_time ? ` ${chosen.start_time}–${chosen.end_time}` : ''
                   fulfillmentTag = chosen ? `🚚 delivery${day ? ` · ${day}${time}` : ''}` : '🚚 delivery'
-                } else if (fulfillment_type === 'hub_pickup') {
-                  fulfillmentTag = '🏭 hub pickup'
                 }
 
                 return (
@@ -302,7 +292,7 @@ export default function CheckoutPage() {
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span className="type-label-sm" style={{ color: 'var(--moss)' }}>
-                  {fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery'}
+                  Delivery
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--cream)', fontWeight: 700 }}>
                   {deliveryFee === 0 ? 'Free' : formatPrice(deliveryFee)}
@@ -421,58 +411,13 @@ export default function CheckoutPage() {
             {pickupEligibleFarmers.length > 0 && (
               <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1rem' }}>For everything else in your cart.</p>
             )}
-            <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
-              {[
-                { id: 'hub_pickup',       icon: '🏭', label: 'Hub Pickup', sub: 'Collect from our central hub · Free' },
-                { id: 'direct_delivery',  icon: '🚚', label: 'Delivery',   sub: `To your door · ${formatPrice(realDeliveryFeeCents)}` },
-              ].map(opt => (
-                <button key={opt.id} type="button" onClick={() => setFulfillmentType(opt.id as any)}
-                  style={{
-                    padding: '1.25rem', borderRadius: '1.5rem', textAlign: 'left', cursor: 'pointer',
-                    transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)', border: 'none',
-                    background: fulfillment_type === opt.id ? 'var(--forest)' : 'var(--olive)',
-                    outline: fulfillment_type === opt.id ? '2px solid var(--forest)' : '2px solid transparent',
-                  }}>
-                  <div style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>{opt.icon}</div>
-                  <div className="type-label" style={{ color: fulfillment_type === opt.id ? 'var(--cream)' : 'var(--forest)', marginBottom: '0.3rem' }}>{opt.label}</div>
-                  <div style={{ fontSize: '0.7rem', color: fulfillment_type === opt.id ? 'var(--sage)' : 'var(--moss)', lineHeight: 1.5 }}>{opt.sub}</div>
-                </button>
-              ))}
+            {/* Delivery is the only pooled option — there's no real hub to
+                collect from yet, so Hub Pickup isn't offered here at all. */}
+            <div style={{ padding: '1.25rem', borderRadius: '1.5rem', background: 'var(--forest)' }}>
+              <div style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>🚚</div>
+              <div className="type-label" style={{ color: 'var(--cream)', marginBottom: '0.3rem' }}>Delivery</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--sage)', lineHeight: 1.5 }}>To your door · {formatPrice(realDeliveryFeeCents)}</div>
             </div>
-
-            {/* Hub selector */}
-            {fulfillment_type === 'hub_pickup' && (
-              <div style={{ marginTop: '1.25rem' }}>
-                {hubs.length === 0 ? (
-                  <div style={{ background: '#fef9c3', border: '1px solid #fbbf24', borderRadius: '0.75rem', padding: '0.875rem 1rem', fontSize: '0.85rem', color: '#92400e' }}>
-                    ⚠ No hubs configured yet. Contact admin to set up pickup locations.
-                  </div>
-                ) : hubs.length === 1 ? (
-                  <div style={{ background: 'var(--olive)', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', marginBottom: '0.2rem' }}>📍 {hubs[0].name}</p>
-                    {hubs[0].hub_address && <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>{hubs[0].hub_address}{hubs[0].hub_suburb ? `, ${hubs[0].hub_suburb}` : ''}</p>}
-                    <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.2rem', opacity: 0.8 }}>
-                      Collection: {hubs[0].hub_collection_day} {hubs[0].hub_collection_time_start}–{hubs[0].hub_collection_time_end}
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="label">Select pickup hub</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      {hubs.map(hub => (
-                        <button key={hub.id} type="button" onClick={() => setSelectedHubId(hub.id)}
-                          style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', textAlign: 'left', cursor: 'pointer', border: '2px solid', transition: 'all 0.15s',
-                            borderColor: selectedHubId === hub.id ? 'var(--forest)' : 'var(--olive)',
-                            background: selectedHubId === hub.id ? 'var(--olive)' : 'white' }}>
-                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>📍 {hub.name}</p>
-                          {hub.hub_address && <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.15rem' }}>{hub.hub_address}{hub.hub_suburb ? `, ${hub.hub_suburb}` : ''}</p>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Per-grower delivery cost breakdown — the total above is the sum of these.
                 A grower with more than one configured delivery slot gets a picker;
