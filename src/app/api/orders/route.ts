@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent, cancelPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
-import { marketStatusForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
 import { generateOrderNumber } from '@/lib/utils/orderNumber'
@@ -111,12 +110,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'One or more products not found' }, { status: 404 })
   }
 
-  // Each grower can have their own open window (or the hub's) — if any
-  // grower in this cart is currently closed, the whole checkout is blocked
-  // rather than allowing a partial order through. Naming exactly who's
-  // closed and when they reopen saves the buyer a guessing game — the
-  // generic version of this message gave no way to tell which item to
-  // remove or when to just try again.
+  // Per-farmer/hub ordering-window gate is disabled for now — buyers can
+  // order any time, same as the global weekly market window (see
+  // isMarketOpen() in timezone.ts). Left in place rather than deleted in
+  // case per-farmer/hub windows come back later.
+  /*
   const distinctFarmerIds = [...new Set(products.map(p => p.farmer_id))]
   const marketStatuses = await Promise.all(distinctFarmerIds.map(fid => marketStatusForFarmer(fid)))
   const closed = distinctFarmerIds
@@ -135,6 +133,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   }
+  */
 
   // Never trust the client's farm-pickup list — a grower must actually offer
   // it, and must actually have items in this order.
