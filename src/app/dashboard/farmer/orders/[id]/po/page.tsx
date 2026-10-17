@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
 import { RejectPOForm } from './RejectPOForm'
 import { POStatusActions } from './POStatusActions'
+import { FulfilmentDateEditor } from './FulfilmentDateEditor'
 
 export default async function FarmerPOPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params
@@ -80,10 +81,14 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch existing PO status (if any)
   const { data: poRecord } = await admin
     .from('purchase_orders')
-    .select('status, rejection_reason, rejected_at, pickup_method, fulfillment_option_id')
+    .select('status, rejection_reason, rejected_at, pickup_method, fulfillment_option_id, grower_fulfillment_date')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
     .maybeSingle()
+
+  // Each grower sets their own date now — falls back to the shared
+  // order-level value for any PO row created before that existed.
+  const effectiveFulfillmentDate: string | null = (poRecord as any)?.grower_fulfillment_date || order.grower_fulfillment_date
 
   const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
 
@@ -181,9 +186,11 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
                 <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Fulfil by:</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  {order.grower_fulfillment_date ? formatAEST(order.grower_fulfillment_date, 'dd MMM yyyy, h:mm a') : 'TBC — see admin'}
-                </span>
+                <FulfilmentDateEditor
+                  orderId={orderId}
+                  initialDate={effectiveFulfillmentDate}
+                  displayValue={effectiveFulfillmentDate ? formatAEST(effectiveFulfillmentDate, 'dd MMM yyyy, h:mm a') : 'Not set — click Edit to choose a date'}
+                />
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
                 <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Delivery method:</span>

@@ -187,7 +187,7 @@ export default function HarvestListPage() {
           <div style={{ borderBottom: '2px solid #92400e', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: '#92400e', letterSpacing: '-0.02em' }}>⚠ Awaiting a harvest date</div>
             <p style={{ fontSize: '0.85rem', color: '#92400e', marginTop: '0.25rem' }}>
-              {data?.unscheduled_order_count} order{data?.unscheduled_order_count === 1 ? '' : 's'} {data?.unscheduled_order_count === 1 ? "hasn't" : "haven't"} been given a harvest date yet by admin, so {data?.unscheduled_order_count === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — check with admin for a date.
+              {data?.unscheduled_order_count} order{data?.unscheduled_order_count === 1 ? '' : 's'} {data?.unscheduled_order_count === 1 ? "hasn't" : "haven't"} been given a fulfilment date yet, so {data?.unscheduled_order_count === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — open the order's Purchase Order page to set a date.
             </p>
           </div>
           <HarvestTable rows={unscheduledRows} busyKeys={busyKeys} onToggle={toggleRow} />

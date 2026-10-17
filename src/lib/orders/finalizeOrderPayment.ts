@@ -70,13 +70,24 @@ export async function finalizeOrderPayment(
     if (orderItems && orderItems.length > 0) {
       const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
 
-      // Auto-set the fulfilment date right here — this must never depend on
-      // an admin hand-editing every order after the fact. Only fills it in
-      // if nothing's set yet, so an admin override always wins.
+      // Auto-set the order-level fulfilment date too — admin override UI and
+      // the buyer-facing order view still read this shared column. Only
+      // fills it in if nothing's set yet, so an admin override always wins.
       if (!(orderRow as any)?.grower_fulfillment_date) {
         const defaultDate = await computeDefaultFulfillmentDate(supabase, farmerIds)
         await supabase.from('orders').update({ grower_fulfillment_date: defaultDate.toISOString() }).eq('id', orderId)
       }
+
+      // Each grower gets their own default date on their own PO row — a
+      // farmer with no configured market/hub schedule shouldn't inherit
+      // another farmer's later close date just because they share an order.
+      const perFarmerDates = await Promise.all(
+        farmerIds.map(async farmerId => ({
+          farmerId,
+          date: await computeDefaultFulfillmentDate(supabase, [farmerId]),
+        }))
+      )
+      const dateByFarmer = new Map(perFarmerDates.map(d => [d.farmerId, d.date]))
 
       await supabase
         .from('purchase_orders')
@@ -87,6 +98,7 @@ export async function finalizeOrderPayment(
             status: 'pending',
             pickup_method: farmPickupIds.has(farmerId) ? 'farm_pickup' : 'standard',
             fulfillment_option_id: optionSelections[farmerId] || null,
+            grower_fulfillment_date: dateByFarmer.get(farmerId)!.toISOString(),
           })),
           { onConflict: 'order_id,farmer_id', ignoreDuplicates: true }
         )
@@ -185,6 +197,15 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
   if (!farmers) { console.error('[EMAIL] Farmers fetch failed'); return }
   const rates = await getCommissionRates(supabase)
 
+  // Each grower's PO email should show their own fulfilment date, not the
+  // order-wide collapsed value — falls back to the order-level date for any
+  // PO row created before per-farmer dates existed.
+  const { data: poDates } = await supabase
+    .from('purchase_orders')
+    .select('farmer_id, grower_fulfillment_date')
+    .eq('order_id', orderId)
+  const dateByFarmer = new Map((poDates || []).map((p: any) => [p.farmer_id, p.grower_fulfillment_date]))
+
   await Promise.allSettled(
     farmers.map(async farmer => {
       if (!farmer.email) { console.warn('[EMAIL] No email for farmer', farmer.id); return }
@@ -193,7 +214,7 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
         await sendPOEmail(farmer.email, {
           order_number: order.order_number,
           created_at: order.created_at,
-          grower_fulfillment_date: order.grower_fulfillment_date,
+          grower_fulfillment_date: dateByFarmer.get(farmer.id) ?? order.grower_fulfillment_date,
           fulfillment_type: order.fulfillment_type,
           hub_address: hubAddress,
           farmer_business_name: farmer.business_name,

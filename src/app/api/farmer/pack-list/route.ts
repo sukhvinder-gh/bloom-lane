@@ -39,7 +39,8 @@ function sydneyDateRangeInstants(from: string, to: string): { fromMs: number; to
 
 // GET /api/farmer/pack-list?from=YYYY-MM-DD&to=YYYY-MM-DD
 // One row per order (not aggregated) — packing is done order by order —
-// scoped to orders whose admin-set harvest/fulfilment date falls in
+// scoped to orders whose fulfilment date (set by this farmer on their own
+// PO, or the shared order-level fallback for older rows) falls in
 // [from, to], defaulting to the current Mon–Sun week (Sydney time).
 export async function GET(request: NextRequest) {
   const check = await requireFarmer()
@@ -58,12 +59,15 @@ export async function GET(request: NextRequest) {
 
   const { data: pos } = await admin
     .from('purchase_orders')
-    .select('order_id, status, pickup_method')
+    .select('order_id, status, pickup_method, grower_fulfillment_date')
     .eq('farmer_id', farmer.id)
     .in('status', ACTIVE_PO_STATUSES)
 
   const activeOrderIds = [...new Set((pos || []).map((p: any) => p.order_id))]
   const pickupMethodByOrder = new Map((pos || []).map((p: any) => [p.order_id, p.pickup_method]))
+  // This farmer's own date on their own PO row — falls back to the shared
+  // order-level column for any PO row created before per-farmer dates existed.
+  const poDateByOrder = new Map((pos || []).map((p: any) => [p.order_id, p.grower_fulfillment_date]))
 
   if (activeOrderIds.length === 0) {
     return NextResponse.json({ data: { orders: [], order_count: 0, unscheduled_order_count: 0, from, to } })
@@ -82,15 +86,18 @@ export async function GET(request: NextRequest) {
     .neq('status', 'cancelled')
     .order('created_at', { ascending: true })
 
+  const effectiveDate = (o: any) => poDateByOrder.get(o.id) || o.grower_fulfillment_date
+
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {
-    if (!o.grower_fulfillment_date) return false
-    const t = new Date(o.grower_fulfillment_date).getTime()
+    const date = effectiveDate(o)
+    if (!date) return false
+    const t = new Date(date).getTime()
     return t >= fromMs && t <= toMs
   })
   // Orders with no fulfilment date at all can't fit any range — return them
   // as their own group instead of silently dropping them, so the farmer can
-  // still see and pack them (and know to chase admin for a date).
-  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date)
+  // still see and pack them (and can set their own date on the PO page).
+  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !effectiveDate(o))
 
   const buyerIds = [...new Set([...scopedOrders, ...unscheduledOrders].map((o: any) => o.buyer_id))]
   const { data: buyers } = buyerIds.length > 0
@@ -107,7 +114,7 @@ export async function GET(request: NextRequest) {
       id: o.id,
       order_number: o.order_number,
       created_at: o.created_at,
-      grower_fulfillment_date: o.grower_fulfillment_date,
+      grower_fulfillment_date: effectiveDate(o),
       fulfillment_type: o.fulfillment_type,
       pickup_method: pickupMethodByOrder.get(o.id) || null,
       buyer_name: buyer?.business_name || buyer?.full_name || 'Buyer',
@@ -118,8 +125,8 @@ export async function GET(request: NextRequest) {
   }
 
   const orders = scopedOrders
-    .sort((a: any, b: any) => new Date(a.grower_fulfillment_date).getTime() - new Date(b.grower_fulfillment_date).getTime())
-    .map((o: any) => toOrderRow(o, new Date(o.grower_fulfillment_date).getTime() < now))
+    .sort((a: any, b: any) => new Date(effectiveDate(a)).getTime() - new Date(effectiveDate(b)).getTime())
+    .map((o: any) => toOrderRow(o, new Date(effectiveDate(o)).getTime() < now))
 
   const unscheduledOrdersOut = unscheduledOrders
     .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
