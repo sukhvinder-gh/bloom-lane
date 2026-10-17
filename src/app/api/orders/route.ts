@@ -10,6 +10,7 @@ import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTot
 import { marketStatusForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
+import { generateOrderNumber } from '@/lib/utils/orderNumber'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, abn_verified')
+    .select('role, abn_verified, full_name, business_name')
     .eq('id', user.id)
     .single()
 
@@ -302,6 +303,7 @@ export async function POST(request: NextRequest) {
     .from('orders')
     .insert({
       buyer_id: user.id,
+      order_number: generateOrderNumber(profile?.business_name || profile?.full_name),
       status: 'pending_payment',
       fulfillment_type,
       delivery_address,
