@@ -408,8 +408,6 @@ export default function GrowerSubscriptionPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (plan === 'hub_membership' && !hubId) { setMsg({ type: 'err', text: 'Please select your Hub / Collective' }); return }
-    if (gstRegistered && !rctiAgreed) { setMsg({ type: 'err', text: 'Please agree to the RCTI terms to continue' }); return }
-    if (gstRegistered && !rctiFullName.trim()) { setMsg({ type: 'err', text: 'Please enter your full name to sign the RCTI agreement' }); return }
     setPendingConfirm(true)
   }
 
@@ -604,7 +602,7 @@ export default function GrowerSubscriptionPage() {
             badgeColor: '#065F46',
             badgeBg: '#D1FAE5',
             price: 'No membership fee',
-            features: ['Collection from farm Wed or Fri', 'Paid in full on collection', 'Farm credited in all promotion', 'No attendance required'],
+            features: ['Collection from farm', 'Paid in full on collection', 'Farm credited in all promotion', 'No attendance required'],
             best: 'Growers who prefer to focus on growing',
             disabled: false,
           },
@@ -746,37 +744,11 @@ export default function GrowerSubscriptionPage() {
             />
             <span style={{ fontSize: '0.875rem', color: 'var(--forest)' }}>I am registered for GST</span>
           </label>
-
-          {gstRegistered && (
-            <div style={{ padding: '1.25rem', background: 'var(--olive)', borderRadius: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              <div>
-                <p style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--forest)', marginBottom: '0.5rem' }}>RCTI Agreement</p>
-                <p style={{ fontSize: '0.775rem', color: 'var(--moss)', lineHeight: 1.6, marginBottom: '0.875rem' }}>
-                  I authorise The Green Guild to issue Recipient Created Tax Invoices (RCTIs) on my behalf for all sales made
-                  through the platform. I confirm I am registered for GST and will notify The Green Guild immediately if my
-                  GST registration status changes. This agreement remains in effect for the duration of my subscription.
-                </p>
-                <input
-                  className="input"
-                  placeholder="Your full legal name"
-                  value={rctiFullName}
-                  onChange={e => setRctiFullName(e.target.value)}
-                  style={{ width: '100%', marginBottom: '0.75rem' }}
-                />
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={rctiAgreed}
-                    onChange={e => setRctiAgreed(e.target.checked)}
-                    style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0, marginTop: '0.1rem' }}
-                  />
-                  <span style={{ fontSize: '0.775rem', color: 'var(--forest)', lineHeight: 1.5 }}>
-                    I agree to the RCTI arrangement and authorise The Green Guild to raise invoices on my behalf
-                  </span>
-                </label>
-              </div>
-            </div>
-          )}
+          {/* RCTI Agreement sub-section hidden for now — gst_registered is
+              still captured above and used for GST pricing; rcti_agreed /
+              rcti_full_name are left unset until this is reintroduced
+              (or captured another way). See src/app/api/farmer/subscription/route.ts
+              which no longer requires rcti_agreed before saving. */}
         </div>
 
         {msg && (

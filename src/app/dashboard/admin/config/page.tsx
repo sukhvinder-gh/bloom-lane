@@ -39,28 +39,12 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
       { key: 'coordinator_registration_cents', label: 'Hub Registration Fee', hint: 'In cents — 0 = free registration', type: 'number' },
     ],
   },
-  {
-    // Market open/close time is deliberately NOT here — it varies per hub and
-    // can be overridden per farm (see Hub management + grower storefront),
-    // so a single global open/close time no longer makes sense. Listing
-    // close time is still genuinely global: every grower submits stock for
-    // the same weekly cycle regardless of which hub they belong to.
-    title: 'Listing Schedule', icon: '🗓', tier: 'platform_admin',
-    items: [
-      { key: 'listing_window_close_time', label: 'Listing Close Time (AEST)', hint: 'e.g. 23:59 (Tuesday night)',   type: 'text' },
-    ],
-  },
-  {
-    // Fallback only — a hub or farm with its own market-close schedule set
-    // (Hub management / grower storefront) always takes priority over this.
-    // This exists so an order still gets an automatic date even before any
-    // schedule has been configured, rather than needing a per-order admin
-    // hand-edit.
-    title: 'Fulfilment Scheduling', icon: '🌾', tier: 'platform_admin',
-    items: [
-      { key: 'default_harvest_lead_days', label: 'Default Harvest Lead Time (days)', hint: 'Used only when a farm/hub has no market schedule set — days from order placement to auto-set "grower fulfils by"', type: 'number' },
-    ],
-  },
+  // Listing Schedule and Fulfilment Scheduling sections are hidden for now —
+  // listing window enforcement is disabled (isListingWindowOpen() always
+  // returns true) and growers now set their own PO fulfilment date directly,
+  // so neither setting has a visible effect today. The underlying config
+  // keys and permissions are untouched, so this is a UI hide, not a removal
+  // — easy to bring back if either feature is re-enabled later.
   {
     title: 'Platform', icon: '⚙', tier: 'super_admin',
     items: [
@@ -381,10 +365,9 @@ export default function AdminConfigPage() {
           <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>Super Admin</span>
           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Pricing, commissions, platform identity</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', background: 'var(--sage-soft)', color: 'var(--sage-new)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>Platform Admin</span>
-          <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Operations, schedule, buyer protection</span>
-        </div>
+        {/* Platform Admin legend entry removed — Listing Schedule and
+            Fulfilment Scheduling (the only platform_admin-tier sections)
+            are hidden for now, so no visible section uses that tier. */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{ fontSize: '0.75rem' }}>⏱</span>
           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>= schedule for a future date</span>
