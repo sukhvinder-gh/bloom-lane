@@ -13,10 +13,7 @@ export function isSuperAdminRole(role: string | null | undefined): boolean {
 
 // Config keys that only super_admin / admin can change (pricing, platform identity)
 export const SUPER_ADMIN_CONFIG_KEYS = new Set([
-  'markup_pct_b2c',
   'commission_rate_default',
-  'delivery_fee_cents',
-  'min_order_b2b_cents',
   'hub_membership_monthly_cents',
   'hub_membership_seasonal_cents',
   'hub_membership_annual_cents',
@@ -30,7 +27,6 @@ export const SUPER_ADMIN_CONFIG_KEYS = new Set([
 
 // Config keys platform_admin can edit (operations)
 export const PLATFORM_ADMIN_CONFIG_KEYS = new Set([
-  'b2b_stock_pct',
   'listing_window_close_time',
   'portal_background',
 ])

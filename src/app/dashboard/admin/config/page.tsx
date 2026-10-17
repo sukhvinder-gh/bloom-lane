@@ -13,10 +13,7 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
   {
     title: 'Pricing & Commission', icon: '💰', tier: 'super_admin',
     items: [
-      { key: 'markup_pct_b2c',         label: 'B2C Markup %',            hint: 'e.g. 0.45 = 45% over wholesale',       type: 'number' },
       { key: 'commission_rate_default', label: 'Default Commission Rate',  hint: 'Commission charged on every grower except those on the Free Grower Listing plan, e.g. 0.20 = 20%',         type: 'number' },
-      { key: 'delivery_fee_cents',      label: 'Delivery Fee',            hint: 'In cents — 2000 = $20.00',              type: 'number' },
-      { key: 'min_order_b2b_cents',     label: 'Min B2B Order',           hint: '0 = no minimum, 5000 = $50',            type: 'number' },
     ],
   },
   {
@@ -40,12 +37,6 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
     title: 'Coordinator', icon: '🏛', tier: 'super_admin',
     items: [
       { key: 'coordinator_registration_cents', label: 'Hub Registration Fee', hint: 'In cents — 0 = free registration', type: 'number' },
-    ],
-  },
-  {
-    title: 'Stock Allocation', icon: '📦', tier: 'platform_admin',
-    items: [
-      { key: 'b2b_stock_pct', label: 'B2B Stock Reserve %', hint: 'e.g. 0.80 = 80% reserved for wholesale', type: 'number' },
     ],
   },
   {
@@ -445,13 +436,6 @@ export default function AdminConfigPage() {
             </div>
           )
         })}
-      </div>
-
-      {/* Warning note */}
-      <div className="reveal" style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'var(--amber-soft)', border: '1px solid rgba(196,124,43,0.2)', borderRadius: '0.75rem' }}>
-        <p className="type-label" style={{ color: 'var(--amber-new)' }}>
-          ⚠ B2C Markup and Stock Split changes affect all new orders immediately. Use ⏱ to schedule off-peak.
-        </p>
       </div>
 
       {/* ── Portal Background ── */}

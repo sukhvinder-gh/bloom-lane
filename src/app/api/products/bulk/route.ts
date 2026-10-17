@@ -41,8 +41,22 @@ export async function POST(request: NextRequest) {
     const price = Number(p.wholesale_price)
     if (isNaN(price) || price <= 0) { errors.push({ row, message: 'wholesale_price must be a positive number' }); return }
 
+    let markupPct = 0.45
+    if (p.b2c_markup_pct !== undefined && p.b2c_markup_pct !== null && p.b2c_markup_pct !== '') {
+      const n = Number(p.b2c_markup_pct)
+      if (isNaN(n) || n < 0 || n > 5) { errors.push({ row, message: 'b2c_markup_pct must be between 0 and 5' }); return }
+      markupPct = n
+    }
+
     const stock = Number(p.stock_total ?? 0)
     if (!Number.isInteger(stock) || stock < 0) { errors.push({ row, message: 'stock must be a non-negative integer' }); return }
+
+    let stockReservePct = 0.5
+    if (p.b2b_stock_pct !== undefined && p.b2b_stock_pct !== null && p.b2b_stock_pct !== '') {
+      const n = Number(p.b2b_stock_pct)
+      if (isNaN(n) || n < 0 || n > 1) { errors.push({ row, message: 'b2b_stock_pct must be between 0 and 1' }); return }
+      stockReservePct = n
+    }
 
     const minOrder = Number(p.min_order_b2b ?? 1)
 
@@ -67,8 +81,10 @@ export async function POST(request: NextRequest) {
       category: p.category,
       unit: p.unit.trim(),
       wholesale_price: Math.round(price * 100),
+      b2c_markup_pct: markupPct,
       stock_total: stock,
       min_order_b2b: Number.isInteger(minOrder) && minOrder > 0 ? minOrder : 1,
+      b2b_stock_pct: stockReservePct,
       is_gst_free: ['yes', 'true', '1'].includes(String(p.is_gst_free).toLowerCase()),
       stems_per_unit: stemsPerUnit,
       color_tags: colorTags,
