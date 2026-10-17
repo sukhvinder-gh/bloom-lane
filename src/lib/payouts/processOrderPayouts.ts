@@ -3,7 +3,7 @@
 // Pays every grower on a delivered order, split by farmer, commission
 // deducted at each grower's effective rate. Called directly and
 // synchronously the moment an order is marked delivered (see
-// src/app/api/orders/[id]/ppod/route.ts) — this used to be dispatched as an
+// src/app/api/orders/[id]/mark-delivered/route.ts) — this used to be dispatched as an
 // Inngest event instead, but that added a whole external service (with its
 // own credentials to keep valid) for something that doesn't need
 // asynchronous retry: it's the same idempotent, already-fast logic the

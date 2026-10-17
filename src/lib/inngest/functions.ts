@@ -132,7 +132,7 @@ export const wednesdayMarketOpen = inngest.createFunction(
 // 3. AUTOMATED PAYOUTS — moved off Inngest.
 //
 // Used to be triggered here via an 'order/delivered' event. Now called
-// directly and synchronously from src/app/api/orders/[id]/ppod/route.ts the
+// directly and synchronously from src/app/api/orders/[id]/mark-delivered/route.ts the
 // moment an order is marked delivered (see processOrderPayouts()) — the same
 // idempotent, fast-enough logic the manual Admin > Orders > "Generate
 // Payouts" button has always called directly, so it doesn't need an

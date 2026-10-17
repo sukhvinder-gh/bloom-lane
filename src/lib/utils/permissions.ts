@@ -32,7 +32,6 @@ export const SUPER_ADMIN_CONFIG_KEYS = new Set([
 export const PLATFORM_ADMIN_CONFIG_KEYS = new Set([
   'b2b_stock_pct',
   'listing_window_close_time',
-  'dispute_window_hrs',
   'portal_background',
 ])
 

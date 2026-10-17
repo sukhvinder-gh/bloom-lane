@@ -88,7 +88,7 @@ export default function AdminDisputesPage() {
     <div className="page-pad" style={{ padding: '2.5rem' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h1 className="type-heading reveal" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>Disputes</h1>
-        <p className="type-label" style={{ color: 'var(--moss)' }}>Review and resolve buyer disputes within the 6-hour window</p>
+        <p className="type-label" style={{ color: 'var(--moss)' }}>Review and resolve buyer disputes</p>
       </div>
 
       {/* Alert banner */}
