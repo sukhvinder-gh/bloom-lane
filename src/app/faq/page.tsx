@@ -1,36 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import PublicShell, { PUBLIC_FG, PUBLIC_INK } from '../_components/PublicShell'
-import { createAdminClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'FAQ — The Green Guild',
   description: 'Answers to common questions about buying, selling, hubs, fees and payments on The Green Guild.',
-}
-
-// The dispute window below comes from the platform's own settings, so the FAQ
-// can't drift out of date when an admin changes it. Prices and fees are
-// deliberately not quoted here. Rendered per request
-// (not at build) because it reads the database.
-export const dynamic = 'force-dynamic'
-
-const DEFAULTS: Record<string, number> = {
-  dispute_window_hrs: 6,
-}
-
-async function loadSettings(): Promise<Record<string, number>> {
-  const out = { ...DEFAULTS }
-  try {
-    const { data } = await createAdminClient()
-      .from('config').select('key, value').in('key', Object.keys(DEFAULTS))
-    for (const row of data || []) {
-      const n = parseFloat(row.value)
-      if (Number.isFinite(n)) out[row.key] = n
-    }
-  } catch {
-    // Fall back to the defaults above rather than failing the page.
-  }
-  return out
 }
 
 type QA = { q: string; a: React.ReactNode }
@@ -40,8 +14,7 @@ function link(href: string, text: string) {
   return <Link href={href} style={{ color: PUBLIC_FG, fontWeight: 600 }}>{text}</Link>
 }
 
-export default async function FaqPage() {
-  const s = await loadSettings()
+export default function FaqPage() {
 
   const groups: Group[] = [
     {
@@ -95,7 +68,7 @@ export default async function FaqPage() {
         },
         {
           q: 'What if there is a problem with my order?',
-          a: `Report it from your order page within ${s.dispute_window_hrs} hours of it being marked delivered. Our team reviews every dispute; if a refund is approved it goes back to your original payment method. After that window closes, contact us and we’ll do what we can.`,
+          a: `Contact us and our team will review it. If a refund is approved it goes back to your original payment method.`,
         },
       ],
     },
@@ -120,7 +93,7 @@ export default async function FaqPage() {
         },
         {
           q: 'How and when do I get paid?',
-          a: `You connect a bank account through Stripe (about five minutes; Stripe verifies your identity). After an order is marked delivered and the ${s.dispute_window_hrs}-hour dispute window passes with no dispute, your payout — sale value less commission — is sent automatically to your bank account.`,
+          a: `You connect a bank account through Stripe (about five minutes; Stripe verifies your identity). Once an order is marked delivered, your payout — sale value less commission — is sent automatically to your bank account.`,
         },
         {
           q: 'Do I have to join a hub?',

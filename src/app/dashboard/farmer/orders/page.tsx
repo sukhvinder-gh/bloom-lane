@@ -31,8 +31,8 @@ export default function FarmerOrdersPage() {
   const [poPickupMethods, setPoPickupMethods] = useState<Record<string, string>>({})
   const [loading, setLoading]         = useState(true)
   const [expanded, setExpanded]       = useState<Set<string>>(new Set())
-  const [uploadingId, setUploadingId] = useState<string | null>(null)
-  const [ppodErrors, setPpodErrors] = useState<Record<string, string>>({})
+  const [markingId, setMarkingId] = useState<string | null>(null)
+  const [markErrors, setMarkErrors] = useState<Record<string, string>>({})
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectLoading, setRejectLoading] = useState(false)
@@ -45,9 +45,6 @@ export default function FarmerOrdersPage() {
   useEffect(() => {
     setOrderFilter(new URLSearchParams(window.location.search).get('order'))
   }, [])
-  const fileRef   = useRef<HTMLInputElement>(null)
-  const activeRef = useRef<string | null>(null)
-
   // Close dropdown when clicking outside
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
   useEffect(() => {
@@ -80,36 +77,13 @@ export default function FarmerOrdersPage() {
   const toggle = (id: string) =>
     setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
-  async function handlePPOD(orderItemId: string, orderId: string, file: File) {
-    setUploadingId(orderItemId)
-    setPpodErrors(e => { const n = { ...e }; delete n[orderItemId]; return n })
+  async function handleMarkDelivered(orderItemId: string, orderId: string) {
+    setMarkingId(orderItemId)
+    setMarkErrors(e => { const n = { ...e }; delete n[orderItemId]; return n })
     // Without try/catch/finally here, a thrown error (bad JSON response,
-    // network failure, anything) left the button stuck on "Uploading…"
-    // forever with setUploadingId(null) never reached, and no way to tell
-    // what went wrong.
+    // network failure, anything) left the button stuck on "Marking…" forever
+    // with setMarkingId(null) never reached, and no way to tell what went wrong.
     try {
-      let gpsLat = '', gpsLng = ''
-      if (navigator.geolocation) {
-        // The { timeout: 5000 } option is the browser's own geolocation
-        // timeout, which some browsers/OSes don't reliably honor — right
-        // after a system location-services toggle in particular,
-        // getCurrentPosition can just never call either callback, which no
-        // try/catch can rescue since nothing throws. Race it against a hard
-        // JS-level timer so the upload always proceeds either way.
-        await Promise.race([
-          new Promise<void>(res =>
-            navigator.geolocation.getCurrentPosition(
-              p => { gpsLat = String(p.coords.latitude); gpsLng = String(p.coords.longitude); res() },
-              () => res(),
-              { timeout: 5000 }
-            )
-          ),
-          new Promise<void>(res => setTimeout(res, 6000)),
-        ])
-      }
-      const fd = new FormData()
-      fd.append('photo', file); fd.append('order_item_id', orderItemId)
-      fd.append('gps_lat', gpsLat); fd.append('gps_lng', gpsLng)
       // fetch() has no built-in timeout — a genuinely stuck server request
       // would otherwise leave this pending indefinitely with no way to
       // recover except reloading the page.
@@ -117,7 +91,12 @@ export default function FarmerOrdersPage() {
       const timeoutId = setTimeout(() => controller.abort(), 30000)
       let res: Response
       try {
-        res = await fetch(`/api/orders/${orderId}/ppod`, { method: 'POST', body: fd, signal: controller.signal })
+        res = await fetch(`/api/orders/${orderId}/mark-delivered`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_item_id: orderItemId }),
+          signal: controller.signal,
+        })
       } finally {
         clearTimeout(timeoutId)
       }
@@ -126,19 +105,19 @@ export default function FarmerOrdersPage() {
         setOrders(os => os.map(o => ({
           ...o,
           order_items: o.order_items?.map((i: any) =>
-            i.id === orderItemId ? { ...i, ppod_url: data.data.ppod_url } : i
+            i.id === orderItemId ? { ...i, ppod_timestamp: data.data.delivered_at } : i
           ),
         })))
       } else {
-        setPpodErrors(e => ({ ...e, [orderItemId]: data.error || 'Upload failed. Please try again.' }))
+        setMarkErrors(e => ({ ...e, [orderItemId]: data.error || 'Could not mark delivered. Please try again.' }))
       }
     } catch (err: any) {
-      setPpodErrors(e => ({
+      setMarkErrors(e => ({
         ...e,
-        [orderItemId]: err?.name === 'AbortError' ? 'Upload timed out after 30s. Please try again.' : 'Upload failed — check your connection and try again.',
+        [orderItemId]: err?.name === 'AbortError' ? 'Timed out after 30s. Please try again.' : 'Failed — check your connection and try again.',
       }))
     } finally {
-      setUploadingId(null)
+      setMarkingId(null)
     }
   }
 
@@ -204,19 +183,6 @@ export default function FarmerOrdersPage() {
           {orders.length} order{orders.length !== 1 ? 's' : ''}
         </p>
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-        onChange={e => {
-          const file = e.target.files?.[0]
-          if (file && activeRef.current) {
-            const order = orders.find(o => o.order_items?.some((i: any) => i.id === activeRef.current))
-            if (order) handlePPOD(activeRef.current, order.id, file)
-          }
-          e.target.value = ''
-        }}
-      />
 
       {/* Confirmation modal for status changes */}
       {confirmAction && (
@@ -292,7 +258,7 @@ export default function FarmerOrdersPage() {
                 const summary    = (order.order_items?.slice(0, 2) || [])
                   .map((i: any) => `${i.quantity}× ${i.products?.name}`).join(', ')
                   + (itemCount > 2 ? ` +${itemCount - 2} more` : '')
-                const canUpload   = ['payment_confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup'].includes(order.status)
+                const canMarkDelivered = ['payment_confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup'].includes(order.status)
                 const canReject   = poS && ['pending', 'ready'].includes(poS)
                 const canMarkReady = poS === 'pending'
                 const canMarkHub   = poS === 'ready'
@@ -487,7 +453,7 @@ export default function FarmerOrdersPage() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid var(--sage)' }}>
-                                  {['Product', 'Qty', 'Unit', 'Unit price', 'Subtotal', 'Delivery photo'].map((h, i) => (
+                                  {['Product', 'Qty', 'Unit', 'Unit price', 'Subtotal', 'Delivered'].map((h, i) => (
                                     <th key={h} style={{
                                       padding: '6px 8px',
                                       textAlign: i >= 3 ? 'right' as const : 'left' as const,
@@ -511,31 +477,24 @@ export default function FarmerOrdersPage() {
                                     <td style={{ padding: '8px', textAlign: 'right' as const, color: 'var(--forest)' }}>{formatPrice(item.unit_price_cents)}</td>
                                     <td style={{ padding: '8px', textAlign: 'right' as const, fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(item.subtotal_cents)}</td>
                                     <td style={{ padding: '8px', textAlign: 'right' as const }}>
-                                      {item.ppod_url ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                          <img src={item.ppod_url} alt="Delivery photo" style={{ width: '2rem', height: '2rem', borderRadius: '0.375rem', objectFit: 'cover' }} />
-                                          <span style={{ fontSize: '0.7rem', color: '#065F46', fontWeight: 600 }}>✓ Uploaded</span>
-                                          {item.ppod_gps_lat && (
-                                            <a href={`https://maps.google.com/?q=${item.ppod_gps_lat},${item.ppod_gps_lng}`} target="_blank" rel="noopener noreferrer"
-                                              style={{ fontSize: '0.65rem', color: 'var(--moss)', textDecoration: 'underline' }}>📍</a>
-                                          )}
-                                        </div>
-                                      ) : canUpload ? (
+                                      {item.ppod_timestamp ? (
+                                        <span style={{ fontSize: '0.7rem', color: '#065F46', fontWeight: 600 }}>✓ Delivered</span>
+                                      ) : canMarkDelivered ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
                                           <button
-                                            onClick={() => { activeRef.current = item.id; fileRef.current?.click() }}
-                                            disabled={uploadingId === item.id}
+                                            onClick={() => handleMarkDelivered(item.id, order.id)}
+                                            disabled={markingId === item.id}
                                             style={{
-                                              padding: '0.25rem 0.625rem', background: uploadingId === item.id ? 'var(--olive)' : 'var(--sage)',
-                                              border: 'none', borderRadius: '0.375rem', cursor: uploadingId === item.id ? 'default' : 'pointer',
+                                              padding: '0.25rem 0.625rem', background: markingId === item.id ? 'var(--olive)' : 'var(--sage)',
+                                              border: 'none', borderRadius: '0.375rem', cursor: markingId === item.id ? 'default' : 'pointer',
                                               fontSize: '0.7rem', fontWeight: 700, color: 'var(--forest)', fontFamily: 'var(--font-body)',
                                             }}
                                           >
-                                            {uploadingId === item.id ? '⏳ Uploading…' : '📷 Upload'}
+                                            {markingId === item.id ? '⏳ Marking…' : '✓ Mark Delivered'}
                                           </button>
-                                          {ppodErrors[item.id] && (
+                                          {markErrors[item.id] && (
                                             <span style={{ fontSize: '0.65rem', color: '#B91C1C', maxWidth: '12rem', textAlign: 'right' as const }}>
-                                              {ppodErrors[item.id]}
+                                              {markErrors[item.id]}
                                             </span>
                                           )}
                                         </div>

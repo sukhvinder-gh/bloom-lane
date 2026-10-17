@@ -501,7 +501,7 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                         <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)', textDecoration: item.picked_at ? 'line-through' : 'none', opacity: item.picked_at ? 0.6 : 1 }}>{item.products?.name} × {item.quantity}</p>
                         <p className="type-label-sm" style={{ color: 'var(--moss)' }}>from {item.farmers?.business_name}</p>
                       </div>
-                      {item.ppod_url ? <span className="badge badge-sage">✓ PPOD</span> : <span className="badge badge-olive">No PPOD</span>}
+                      {item.ppod_timestamp ? <span className="badge badge-sage">✓ Delivered</span> : <span className="badge badge-olive">Not delivered</span>}
                     </div>
                   ))}
                 </div>

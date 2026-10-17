@@ -51,7 +51,7 @@ export default function LoginForm() {
             Fresh from<br />the farm,<br />fast.
           </h2>
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {['No middlemen markup', 'Automated GST invoicing', 'Photo proof of delivery', '6-hour dispute protection'].map((f, i) => (
+            {['No middlemen markup', 'Automated GST invoicing'].map((f, i) => (
               <div key={f} className={`reveal reveal-d${i + 1}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '50%', background: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', flexShrink: 0, color: 'var(--navy)', fontWeight: 700 }}>✓</div>
                 <span className="type-label" style={{ color: 'rgba(254,250,224,0.7)' }}>{f}</span>

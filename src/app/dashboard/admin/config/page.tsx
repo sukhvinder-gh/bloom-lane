@@ -60,12 +60,6 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
     ],
   },
   {
-    title: 'Buyer Protection', icon: '🛡', tier: 'platform_admin',
-    items: [
-      { key: 'dispute_window_hrs', label: 'Dispute Window (hours)', hint: 'Hours after delivery the buyer can raise a dispute', type: 'number' },
-    ],
-  },
-  {
     // Fallback only — a hub or farm with its own market-close schedule set
     // (Hub management / grower storefront) always takes priority over this.
     // This exists so an order still gets an automatic date even before any

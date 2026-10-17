@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
-import { formatAEST, canDispute, timeUntilDeadline } from '@/lib/utils/timezone'
+import { formatAEST } from '@/lib/utils/timezone'
 import MessageThread from '@/components/MessageThread'
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -41,21 +41,9 @@ export default function BuyerOrderDetailPage() {
   const isNew = useSearchParams().get('new') === 'true'
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [showDispute, setShowDispute] = useState(false)
-  const [disputeReason, setDisputeReason] = useState('')
-  const [disputing, setDisputing] = useState(false)
-
   useEffect(() => {
     fetch(`/api/orders/${params.id}`).then(r => r.json()).then(d => { setOrder(d.data); setLoading(false) })
   }, [params.id])
-
-  async function submitDispute() {
-    if (!disputeReason.trim()) return
-    setDisputing(true)
-    await fetch(`/api/orders/${params.id}/dispute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: disputeReason }) })
-    setOrder((o: any) => ({ ...o, status: 'disputed' }))
-    setShowDispute(false); setDisputing(false)
-  }
 
   if (loading) return <div className="page-pad" style={{ padding: '2.5rem' }}><div className="card" style={{ height: '20rem', background: 'var(--olive)' }} /></div>
   if (!order) return (
@@ -66,7 +54,6 @@ export default function BuyerOrderDetailPage() {
   )
 
   const currentIdx = TIMELINE_STEPS.findIndex(s => s.statuses.includes(order.status))
-  const disputeAllowed = canDispute(order.dispute_deadline) && order.status === 'delivered'
 
   // One message thread per grower — a multi-supplier order must never let a
   // buyer's question to one grower leak into another grower's conversation.
@@ -131,27 +118,6 @@ export default function BuyerOrderDetailPage() {
               })}
             </div>
 
-            {/* Dispute window */}
-            {order.status === 'delivered' && order.dispute_deadline && (
-              <div style={{ padding: '1rem 1.25rem', borderRadius: '1rem', background: disputeAllowed ? 'var(--olive)' : 'var(--cream)', border: `1px solid ${disputeAllowed ? 'var(--sage)' : 'var(--olive)'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className="type-label-sm" style={{ color: disputeAllowed ? 'var(--forest)' : 'var(--moss)' }}>
-                  🛡 Dispute window: {disputeAllowed ? timeUntilDeadline(order.dispute_deadline) : 'Expired'}
-                </span>
-                {disputeAllowed && !showDispute && <button onClick={() => setShowDispute(true)} className="btn btn-forest btn-sm">Raise dispute</button>}
-              </div>
-            )}
-
-            {/* Dispute form */}
-            {showDispute && (
-              <div style={{ marginTop: '1rem', padding: '1.25rem', borderRadius: '1rem', background: 'var(--olive)', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                <p className="type-label-sm" style={{ color: 'var(--forest)' }}>Describe the issue</p>
-                <textarea className="input" style={{ height: '5rem', resize: 'none' }} placeholder="e.g. Items were damaged, missing items, wrong product…" value={disputeReason} onChange={e => setDisputeReason(e.target.value)} />
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button onClick={() => setShowDispute(false)} className="btn btn-ghost btn-sm" style={{ flex: 1 }}>Cancel</button>
-                  <button onClick={submitDispute} disabled={disputing || !disputeReason.trim()} className="btn btn-forest btn-sm" style={{ flex: 1 }}>{disputing ? 'Submitting…' : 'Submit dispute'}</button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Partial rejection notice */}
@@ -187,8 +153,8 @@ export default function BuyerOrderDetailPage() {
                       <p className="type-label-sm" style={{ color: '#B91C1C' }}>Currently unavailable — pending resolution</p>
                     ) : (
                       <>
-                        <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_url ? '0.625rem' : 0 }}>{item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
-                        {item.ppod_url && (
+                        <p className="type-label-sm" style={{ color: 'var(--moss)', marginBottom: item.ppod_timestamp ? '0.625rem' : 0 }}>{item.quantity} × {formatPrice(item.unit_price_cents)} / {item.products?.unit}</p>
+                        {item.ppod_url ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                             <img src={item.ppod_url} alt="Proof of delivery" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', objectFit: 'cover' }} />
                             <div>
@@ -196,6 +162,8 @@ export default function BuyerOrderDetailPage() {
                               {item.ppod_gps_lat && <a href={`https://maps.google.com/?q=${item.ppod_gps_lat},${item.ppod_gps_lng}`} target="_blank" rel="noopener noreferrer" className="type-label-sm" style={{ color: 'var(--moss)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>📍 View on map</a>}
                             </div>
                           </div>
+                        ) : item.ppod_timestamp && (
+                          <p className="type-label-sm" style={{ color: 'var(--forest)' }}>✓ Delivered</p>
                         )}
                       </>
                     )}
