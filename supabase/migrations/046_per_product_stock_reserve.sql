@@ -22,7 +22,8 @@ UPDATE products
 SET b2b_stock_pct = COALESCE(
   (SELECT value::DECIMAL FROM config WHERE key = 'b2b_stock_pct'),
   0.5
-);
+)
+WHERE true;
 
 -- Re-point the split trigger at the product's own column instead of config,
 -- and watch b2b_stock_pct for changes too — previously only a stock_total
