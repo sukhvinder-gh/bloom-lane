@@ -11,11 +11,11 @@ const VALID_CATEGORIES = Object.keys(CATEGORIES)
 const VALID_COLORS: string[] = COLOR_PALETTE.map(c => c.id)
 const MAX_COLORS = 6
 
-const TEMPLATE_CSV = `name,category,unit,wholesale_price,stock,min_order,gst_free,stems_per_unit,colors,description
-Mixed Roses,flowers_cut,stem,4.50,100,10,no,,red; pink,Beautiful mixed roses from our garden
-Sunflowers,flowers_cut,stem,3.20,80,5,no,,yellow,
-Baby's Breath,foliage,bunch,6.00,40,1,yes,10,white,
-Fresh Basil,herbs,bunch,4.00,60,3,no,,green,Aromatic sweet basil
+const TEMPLATE_CSV = `name,category,unit,wholesale_price,markup_pct,stock,min_order,stock_reserve_pct,gst_free,stems_per_unit,colors,description
+Mixed Roses,flowers_cut,stem,4.50,45,100,10,50,no,,red; pink,Beautiful mixed roses from our garden
+Sunflowers,flowers_cut,stem,3.20,,80,5,,no,,yellow,
+Baby's Breath,foliage,bunch,6.00,50,40,1,70,yes,10,white,
+Fresh Basil,herbs,bunch,4.00,,60,3,,no,,green,Aromatic sweet basil
 `
 
 function parseCSV(text: string): string[][] {
@@ -35,8 +35,8 @@ function parseCSV(text: string): string[][] {
 }
 
 type ParsedRow = {
-  name: string; category: string; unit: string; wholesale_price: string
-  stock: string; min_order: string; gst_free: string; stems_per_unit: string; colors: string; description: string
+  name: string; category: string; unit: string; wholesale_price: string; markup_pct: string
+  stock: string; min_order: string; stock_reserve_pct: string; gst_free: string; stems_per_unit: string; colors: string; description: string
   _errors: string[]
 }
 
@@ -45,8 +45,8 @@ function validateRows(rows: string[][]): ParsedRow[] {
   const col = (name: string) => header.findIndex(h => h.toLowerCase().trim() === name)
   const ci = {
     name: col('name'), category: col('category'), unit: col('unit'), wholesale_price: col('wholesale_price'),
-    stock: col('stock'), min_order: col('min_order'), gst_free: col('gst_free'),
-    stems_per_unit: col('stems_per_unit'), colors: col('colors'), description: col('description'),
+    markup_pct: col('markup_pct'), stock: col('stock'), min_order: col('min_order'), stock_reserve_pct: col('stock_reserve_pct'),
+    gst_free: col('gst_free'), stems_per_unit: col('stems_per_unit'), colors: col('colors'), description: col('description'),
   }
 
   return data.filter(r => r.some(c => c.trim())).map(r => {
@@ -56,8 +56,10 @@ function validateRows(rows: string[][]): ParsedRow[] {
     const category = get(ci.category).toLowerCase()
     const unit = get(ci.unit)
     const wholesale_price = get(ci.wholesale_price)
+    const markup_pct = get(ci.markup_pct)
     const stock = get(ci.stock) || '0'
     const min_order = get(ci.min_order) || '1'
+    const stock_reserve_pct = get(ci.stock_reserve_pct)
     const gst_free = get(ci.gst_free)
     const stems_per_unit = get(ci.stems_per_unit)
     const colors = get(ci.colors)
@@ -67,7 +69,13 @@ function validateRows(rows: string[][]): ParsedRow[] {
     if (!VALID_CATEGORIES.includes(category)) errors.push(`Invalid category "${category}"`)
     if (!unit.trim()) errors.push('Unit required')
     if (isNaN(Number(wholesale_price)) || Number(wholesale_price) <= 0) errors.push('Price must be > 0')
+    if (markup_pct.trim() && (isNaN(Number(markup_pct)) || Number(markup_pct) < 0 || Number(markup_pct) > 500)) {
+      errors.push('Markup % must be between 0 and 500')
+    }
     if (isNaN(Number(stock)) || Number(stock) < 0) errors.push('Stock must be ≥ 0')
+    if (stock_reserve_pct.trim() && (isNaN(Number(stock_reserve_pct)) || Number(stock_reserve_pct) < 0 || Number(stock_reserve_pct) > 100)) {
+      errors.push('Stock reserve % must be between 0 and 100')
+    }
     if (stems_per_unit.trim() && (!Number.isInteger(Number(stems_per_unit)) || Number(stems_per_unit) <= 0)) {
       errors.push('Stems/unit must be a whole number > 0')
     }
@@ -78,7 +86,7 @@ function validateRows(rows: string[][]): ParsedRow[] {
       else if (tags.length > MAX_COLORS) errors.push(`Max ${MAX_COLORS} colours`)
     }
 
-    return { name, category, unit, wholesale_price, stock, min_order, gst_free, stems_per_unit, colors, description, _errors: errors }
+    return { name, category, unit, wholesale_price, markup_pct, stock, min_order, stock_reserve_pct, gst_free, stems_per_unit, colors, description, _errors: errors }
   })
 }
 
@@ -130,8 +138,10 @@ export default function BulkImportContent() {
         category: r.category,
         unit: r.unit,
         wholesale_price: parseFloat(r.wholesale_price),
+        b2c_markup_pct: r.markup_pct.trim() ? parseFloat(r.markup_pct) / 100 : undefined,
         stock_total: parseInt(r.stock) || 0,
         min_order_b2b: parseInt(r.min_order) || 1,
+        b2b_stock_pct: r.stock_reserve_pct.trim() ? parseFloat(r.stock_reserve_pct) / 100 : undefined,
         is_gst_free: ['yes', 'true', '1'].includes(r.gst_free.toLowerCase()),
         stems_per_unit: r.stems_per_unit.trim() ? parseInt(r.stems_per_unit) : undefined,
         color_tags: r.colors.trim() ? r.colors.split(';').map(c => c.trim().toLowerCase()).filter(Boolean) : undefined,
@@ -198,7 +208,7 @@ export default function BulkImportContent() {
               ))}
             </ul>
             <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.875rem', lineHeight: 1.6 }}>
-              Optional: stock, min_order, gst_free (yes/no), stems_per_unit, colors, description
+              Optional: markup_pct (defaults to 45), stock, min_order, stock_reserve_pct (% for wholesale, defaults to 50), gst_free (yes/no), stems_per_unit, colors, description
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.5rem', lineHeight: 1.6 }}>
               Categories: {VALID_CATEGORIES.join(', ')}
@@ -287,7 +297,7 @@ export default function BulkImportContent() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                   <thead>
                     <tr style={{ background: 'var(--olive)', borderBottom: '1px solid var(--sage)' }}>
-                      {['Name', 'Category', 'Unit', 'Price', 'Stock', 'GST Free', 'Stems/Unit', 'Colours', 'Errors'].map(h => (
+                      {['Name', 'Category', 'Unit', 'Price', 'Markup %', 'Stock', 'GST Free', 'Stems/Unit', 'Colours', 'Errors'].map(h => (
                         <th key={h} className="type-label-sm" style={{ padding: '0.625rem 0.875rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.1em' }}>{h}</th>
                       ))}
                     </tr>
@@ -299,6 +309,7 @@ export default function BulkImportContent() {
                         <td style={{ padding: '0.625rem 0.875rem', color: VALID_CATEGORIES.includes(r.category) ? 'var(--forest)' : 'var(--terracotta)' }}>{CATEGORIES[r.category] || r.category}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.unit}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--forest)' }}>${r.wholesale_price}</td>
+                        <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.markup_pct || '45 (default)'}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.stock}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.gst_free || 'no'}</td>
                         <td style={{ padding: '0.625rem 0.875rem', color: 'var(--moss)' }}>{r.stems_per_unit || '—'}</td>

@@ -13,10 +13,7 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
   {
     title: 'Pricing & Commission', icon: '💰', tier: 'super_admin',
     items: [
-      { key: 'markup_pct_b2c',         label: 'B2C Markup %',            hint: 'e.g. 0.45 = 45% over wholesale',       type: 'number' },
       { key: 'commission_rate_default', label: 'Default Commission Rate',  hint: 'Commission charged on every grower except those on the Free Grower Listing plan, e.g. 0.20 = 20%',         type: 'number' },
-      { key: 'delivery_fee_cents',      label: 'Delivery Fee',            hint: 'In cents — 2000 = $20.00',              type: 'number' },
-      { key: 'min_order_b2b_cents',     label: 'Min B2B Order',           hint: '0 = no minimum, 5000 = $50',            type: 'number' },
     ],
   },
   {
@@ -42,34 +39,12 @@ const SECTIONS: { title: string; icon: string; tier: SectionTier; items: ConfigI
       { key: 'coordinator_registration_cents', label: 'Hub Registration Fee', hint: 'In cents — 0 = free registration', type: 'number' },
     ],
   },
-  {
-    title: 'Stock Allocation', icon: '📦', tier: 'platform_admin',
-    items: [
-      { key: 'b2b_stock_pct', label: 'B2B Stock Reserve %', hint: 'e.g. 0.80 = 80% reserved for wholesale', type: 'number' },
-    ],
-  },
-  {
-    // Market open/close time is deliberately NOT here — it varies per hub and
-    // can be overridden per farm (see Hub management + grower storefront),
-    // so a single global open/close time no longer makes sense. Listing
-    // close time is still genuinely global: every grower submits stock for
-    // the same weekly cycle regardless of which hub they belong to.
-    title: 'Listing Schedule', icon: '🗓', tier: 'platform_admin',
-    items: [
-      { key: 'listing_window_close_time', label: 'Listing Close Time (AEST)', hint: 'e.g. 23:59 (Tuesday night)',   type: 'text' },
-    ],
-  },
-  {
-    // Fallback only — a hub or farm with its own market-close schedule set
-    // (Hub management / grower storefront) always takes priority over this.
-    // This exists so an order still gets an automatic date even before any
-    // schedule has been configured, rather than needing a per-order admin
-    // hand-edit.
-    title: 'Fulfilment Scheduling', icon: '🌾', tier: 'platform_admin',
-    items: [
-      { key: 'default_harvest_lead_days', label: 'Default Harvest Lead Time (days)', hint: 'Used only when a farm/hub has no market schedule set — days from order placement to auto-set "grower fulfils by"', type: 'number' },
-    ],
-  },
+  // Listing Schedule and Fulfilment Scheduling sections are hidden for now —
+  // listing window enforcement is disabled (isListingWindowOpen() always
+  // returns true) and growers now set their own PO fulfilment date directly,
+  // so neither setting has a visible effect today. The underlying config
+  // keys and permissions are untouched, so this is a UI hide, not a removal
+  // — easy to bring back if either feature is re-enabled later.
   {
     title: 'Platform', icon: '⚙', tier: 'super_admin',
     items: [
@@ -390,10 +365,9 @@ export default function AdminConfigPage() {
           <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', background: 'var(--amber-soft)', color: 'var(--amber-new)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>Super Admin</span>
           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Pricing, commissions, platform identity</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', background: 'var(--sage-soft)', color: 'var(--sage-new)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>Platform Admin</span>
-          <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Operations, schedule, buyer protection</span>
-        </div>
+        {/* Platform Admin legend entry removed — Listing Schedule and
+            Fulfilment Scheduling (the only platform_admin-tier sections)
+            are hidden for now, so no visible section uses that tier. */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <span style={{ fontSize: '0.75rem' }}>⏱</span>
           <span className="type-label-sm" style={{ color: 'var(--moss)' }}>= schedule for a future date</span>
@@ -445,13 +419,6 @@ export default function AdminConfigPage() {
             </div>
           )
         })}
-      </div>
-
-      {/* Warning note */}
-      <div className="reveal" style={{ marginTop: '1.5rem', padding: '1rem 1.25rem', background: 'var(--amber-soft)', border: '1px solid rgba(196,124,43,0.2)', borderRadius: '0.75rem' }}>
-        <p className="type-label" style={{ color: 'var(--amber-new)' }}>
-          ⚠ B2C Markup and Stock Split changes affect all new orders immediately. Use ⏱ to schedule off-peak.
-        </p>
       </div>
 
       {/* ── Portal Background ── */}

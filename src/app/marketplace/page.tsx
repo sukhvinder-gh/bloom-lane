@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, getPricePerStemCents } from '@/lib/utils/pricing'
-import { isMarketOpen } from '@/lib/utils/timezone'
 import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
 
 const CATEGORIES = [
@@ -108,11 +107,11 @@ function MultiSelectDropdown({
 
 // ── Product detail drawer ────────────────────────────────────────────────────
 function ProductDrawer({
-  product, isB2B, isAdminOrFarmer, authLoaded, marketOpen, cartQty,
+  product, isB2B, isAdminOrFarmer, authLoaded, cartQty,
   onAdd, onUpdateQty, onClose,
 }: {
   product: any; isB2B: boolean; isAdminOrFarmer: boolean; authLoaded: boolean;
-  marketOpen: boolean; cartQty: number;
+  cartQty: number;
   onAdd: () => void; onUpdateQty: (qty: number) => void; onClose: () => void;
 }) {
   const images = productImages(product)
@@ -321,11 +320,7 @@ function ProductDrawer({
 
           {/* Add to cart */}
           <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
-            {!marketOpen ? (
-              <div style={{ padding: '0.875rem', background: 'var(--olive)', borderRadius: '1rem', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--moss)', fontWeight: 600 }}>🕐 Market closed — opens Wednesday</p>
-              </div>
-            ) : available === 0 ? (
+            {available === 0 ? (
               <div style={{ padding: '0.875rem', background: 'var(--olive)', borderRadius: '1rem', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.82rem', color: 'var(--moss)', fontWeight: 600 }}>Sold out this week</p>
               </div>
@@ -369,7 +364,6 @@ export default function MarketplacePage() {
   const [isB2B, setIsB2B]         = useState(false)
   const [userRole, setUserRole]   = useState<string | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
-  const [marketOpen]              = useState(isMarketOpen())
   const [search, setSearch]       = useState('')
   const [selected, setSelected]   = useState<any>(null)
   const [farmerId, setFarmerId]   = useState('')
@@ -593,21 +587,6 @@ export default function MarketplacePage() {
         </div>
       </div>
 
-      {/* Market status banner */}
-      {marketOpen ? (
-        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--green)' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'white', letterSpacing: '0.02em' }}>
-            <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#a5f3c0', marginRight: '0.5rem', verticalAlign: 'middle', animation: 'pulse-dot 1.8s ease infinite' }} />
-            Market is OPEN · Order before Wednesday 8:00 PM AEST
-          </span>
-        </div>
-      ) : (
-        <div style={{ padding: '0.6rem', textAlign: 'center', background: 'var(--surface-2)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-2)' }}>
-            🕐 Market closed · Opens Wednesday 8:00 AM AEST · Browse now, order Wednesday
-          </span>
-        </div>
-      )}
 
       <div className="market-layout" style={{ display: 'flex' }}>
 
@@ -801,9 +780,7 @@ export default function MarketplacePage() {
                         </div>
                         {/* Intercept click so Add/qty buttons don't open drawer */}
                         <div onClick={e => e.stopPropagation()}>
-                          {!marketOpen ? (
-                            <span className="type-label-sm" style={{ color: 'var(--moss)' }}>Closed</span>
-                          ) : available === 0 ? (
+                          {available === 0 ? (
                             <span className="type-label-sm" style={{ color: '#b91c1c' }}>Sold out</span>
                           ) : cartQty === 0 ? (
                             <button onClick={() => handleAdd(product)} className="btn btn-forest btn-sm">Add</button>
@@ -838,7 +815,6 @@ export default function MarketplacePage() {
           isB2B={isB2B}
           isAdminOrFarmer={isAdminOrFarmer}
           authLoaded={authLoaded}
-          marketOpen={marketOpen}
           cartQty={getCartQty(selected.id)}
           onAdd={() => handleAdd(selected)}
           onUpdateQty={qty => handleUpdateQty(selected.id, qty)}

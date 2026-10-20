@@ -2,7 +2,7 @@ import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/serv
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils/pricing'
-import { formatAEST, isMarketOpen } from '@/lib/utils/timezone'
+import { formatAEST } from '@/lib/utils/timezone'
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = { payment_confirmed: 'badge-olive', preparing: 'badge-olive', delivered: 'badge-sage', disputed: 'badge-red', cancelled: 'badge-cream', refunded: 'badge-cream' }
@@ -15,7 +15,6 @@ export default async function BuyerDashboard() {
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('*').eq('id', sessionUser.id).single()
-  const marketOpen = isMarketOpen()
   const isB2B = profile?.role === 'buyer_b2b'
 
   const { data: orders } = await admin.from('orders').select('*, order_items(count)').eq('buyer_id', sessionUser.id).order('created_at', { ascending: false }).limit(6)
@@ -36,9 +35,9 @@ export default async function BuyerDashboard() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span className={`badge ${marketOpen ? 'badge-forest' : 'badge-olive'}`}>
-            {marketOpen && <span className="status-dot status-live" />}
-            {marketOpen ? 'Market live' : 'Market opens Wednesday 8am'}
+          <span className="badge badge-forest">
+            <span className="status-dot status-live" />
+            Market live
           </span>
           <Link href="/marketplace" className="btn btn-forest btn-sm">Browse market →</Link>
         </div>

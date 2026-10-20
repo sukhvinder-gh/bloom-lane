@@ -7,9 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createPaymentIntent, cancelPaymentIntent } from '@/lib/stripe'
 import { getBuyerUnitPrice, getUnitGstCents, gstAppliesToItem, calculateOrderTotals } from '@/lib/utils/pricing'
-import { marketStatusForFarmer } from '@/lib/utils/marketWindow'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { finalizeOrderPayment } from '@/lib/orders/finalizeOrderPayment'
+import { generateOrderNumber } from '@/lib/utils/orderNumber'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, abn_verified')
+    .select('role, abn_verified, full_name, business_name')
     .eq('id', user.id)
     .single()
 
@@ -110,12 +110,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'One or more products not found' }, { status: 404 })
   }
 
-  // Each grower can have their own open window (or the hub's) — if any
-  // grower in this cart is currently closed, the whole checkout is blocked
-  // rather than allowing a partial order through. Naming exactly who's
-  // closed and when they reopen saves the buyer a guessing game — the
-  // generic version of this message gave no way to tell which item to
-  // remove or when to just try again.
+  // Per-farmer/hub ordering-window gate is disabled for now — buyers can
+  // order any time, same as the global weekly market window (see
+  // isMarketOpen() in timezone.ts). Left in place rather than deleted in
+  // case per-farmer/hub windows come back later.
+  /*
   const distinctFarmerIds = [...new Set(products.map(p => p.farmer_id))]
   const marketStatuses = await Promise.all(distinctFarmerIds.map(fid => marketStatusForFarmer(fid)))
   const closed = distinctFarmerIds
@@ -134,6 +133,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     )
   }
+  */
 
   // Never trust the client's farm-pickup list — a grower must actually offer
   // it, and must actually have items in this order.
@@ -163,6 +163,28 @@ export async function POST(request: NextRequest) {
     }
     if (fulfillment_type === 'direct_delivery' && !delivery_address) {
       return NextResponse.json({ error: 'Delivery address required' }, { status: 400 })
+    }
+    // Delivery pricing is entirely grower-set (see farmer_fulfillment_options)
+    // — there's no platform-wide delivery fee to fall back on, so a pooled
+    // grower who hasn't configured a delivery option at all simply can't be
+    // delivered to. Block the whole checkout rather than silently charging
+    // an arbitrary fee on their behalf.
+    if (fulfillment_type === 'direct_delivery') {
+      const pooledFarmerIds = [...new Set(
+        products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
+      )]
+      const noDeliveryOption = pooledFarmerIds.filter(fid => {
+        const product = products.find(p => p.farmer_id === fid)
+        const deliveryOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'delivery')
+        return deliveryOptions.length === 0
+      })
+      if (noDeliveryOption.length > 0) {
+        const names = noDeliveryOption.map(fid => (products.find(p => p.farmer_id === fid) as any)?.farmers?.business_name || 'This grower')
+        return NextResponse.json(
+          { error: `${names.join(', ')} ${names.length > 1 ? "haven't" : "hasn't"} set up delivery. Try hub pickup, or remove their items from your cart.` },
+          { status: 400 }
+        )
+      }
     }
   }
 
@@ -254,15 +276,12 @@ export async function POST(request: NextRequest) {
   })
 
   // Get delivery fee — nothing to deliver if every item is going via farm pickup.
-  // Each pooled grower may have their own configured delivery cost (set on
-  // their storefront); sum those per-grower instead of one flat platform fee,
-  // falling back to the flat fee only for growers who haven't configured one.
+  // Fully grower-set: each pooled grower's own configured delivery cost (set
+  // on their storefront) is summed per-grower. No platform-wide fallback —
+  // the validation above already guarantees every pooled grower has at least
+  // one delivery option by this point.
   let deliveryFeeCents = 0
   if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
-    const { data: config } = await supabase
-      .from('config').select('value').eq('key', 'delivery_fee_cents').single()
-    const fallbackFeeCents = parseInt(config?.value || '2000')
-
     const pooledFarmerIds = [...new Set(
       products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
     )]
@@ -271,8 +290,8 @@ export async function POST(request: NextRequest) {
       const deliveryOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'delivery')
       const requestedId = requestedOptionSelections[fid]
       const chosen = (requestedId && deliveryOptions.find((o: any) => o.id === requestedId)) || deliveryOptions[0]
-      if (chosen) validatedOptionSelections[fid] = chosen.id
-      return sum + (chosen?.cost_cents ?? fallbackFeeCents)
+      validatedOptionSelections[fid] = chosen.id
+      return sum + chosen.cost_cents
     }, 0)
   }
 
@@ -283,6 +302,7 @@ export async function POST(request: NextRequest) {
     .from('orders')
     .insert({
       buyer_id: user.id,
+      order_number: generateOrderNumber(profile?.business_name || profile?.full_name),
       status: 'pending_payment',
       fulfillment_type,
       delivery_address,

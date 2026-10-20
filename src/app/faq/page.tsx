@@ -22,7 +22,7 @@ export default function FaqPage() {
       items: [
         {
           q: 'What is The Green Guild?',
-          a: 'An online marketplace that connects Australian growers directly with buyers. Growers list what they have each week, buyers order and pay online, and orders are collected from a local hub, delivered, or picked up from the farm.',
+          a: 'An online marketplace that connects Australian growers directly with buyers. Growers list what they have each week, buyers order and pay online any time, and orders are delivered or picked up directly from the farm.',
         },
         {
           q: 'What can I buy or sell today?',
@@ -47,7 +47,7 @@ export default function FaqPage() {
         },
         {
           q: 'When can I order?',
-          a: 'Each hub and grower sets its own ordering windows, so availability depends on who is in your cart. If any grower in your cart is currently closed, checkout is blocked until they reopen. The marketplace shows whether ordering is open.',
+          a: 'Any time. There’s no weekly ordering window — as long as a product shows stock, you can add it to your cart and check out straight away.',
         },
         {
           q: 'Does adding to my cart reserve the stock?',
@@ -59,10 +59,9 @@ export default function FaqPage() {
         },
         {
           q: 'How do I get my order?',
-          a: <>There are three ways, and a grower may offer more than one:
+          a: <>Two ways, and a grower may offer either or both:
             <ul style={{ margin: '0.6rem 0 0', paddingLeft: '1.25rem', lineHeight: 1.8 }}>
-              <li><strong>Hub pickup</strong> &mdash; collect from your regional hub on its collection day.</li>
-              <li><strong>Delivery</strong> &mdash; delivered to your address. Delivery costs vary by grower, and you&rsquo;ll see the cost before you pay.</li>
+              <li><strong>Delivery</strong> &mdash; delivered to your address. Delivery costs are set by each grower, and you&rsquo;ll see the cost before you pay.</li>
               <li><strong>Farm pickup</strong> &mdash; collect directly from a grower who offers it, usually free.</li>
             </ul></>,
         },
@@ -81,7 +80,7 @@ export default function FaqPage() {
         },
         {
           q: 'What does it cost?',
-          a: <>Growers choose between <strong>Hub Membership</strong> (hub trading days and weekly promotion) and a <strong>Free Grower Listing</strong>. {link('/auth/register', 'Register')} for more details on pricing.</>,
+          a: <>New growers sign up on a <strong>Free Grower Listing</strong> — no membership fee. <strong>Hub Membership</strong> (hub trading days and weekly promotion) is coming soon and isn&rsquo;t open for new sign-ups yet. {link('/auth/register', 'Register')} for more details on pricing.</>,
         },
         {
           q: 'How much commission do you take?',
@@ -89,7 +88,7 @@ export default function FaqPage() {
         },
         {
           q: 'How do I set my prices?',
-          a: 'You set one wholesale price (excluding GST) per product. Retail prices, once retail buying opens, are calculated automatically from your wholesale price — you never set a separate retail price.',
+          a: 'You set a wholesale price (excluding GST) per product, plus your own markup and B2B/B2C stock split for that product. Once retail buying opens, retail prices are calculated automatically from your wholesale price and markup — you never set a separate retail price.',
         },
         {
           q: 'How and when do I get paid?',
@@ -115,10 +114,6 @@ export default function FaqPage() {
         {
           q: 'How do I set up a hub?',
           a: <>{link('/auth/register', 'Register')} a coordinator account, then submit your hub&rsquo;s name and region. For details on any registration costs, register and we&rsquo;ll walk you through it. Every new hub is reviewed by an admin before it goes live, and you&rsquo;ll get an email as soon as it&rsquo;s approved. Growers can then join it.</>,
-        },
-        {
-          q: 'Can a hub have more than one ordering window?',
-          a: 'Yes. A hub can have several weekly ordering windows (for example Monday morning and Thursday afternoon). Ordering is open during any of them.',
         },
       ],
     },

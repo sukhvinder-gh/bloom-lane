@@ -1,10 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { calculateStockSplits, formatPrice, GST_FREE_EXPLANATION } from '@/lib/utils/pricing'
-import { createClient } from '@/lib/supabase/client'
 import ProductImageUpload from '@/components/ProductImageUpload'
 import ColorTagPicker from '@/components/ColorTagPicker'
 import { findSpeciesByCommonName } from '@/lib/data/flowerSpecies'
@@ -14,29 +13,23 @@ const UNITS = ['bunch', 'stem', 'kg', 'g', 'each', 'tray', 'box', 'punnet', 'doz
 
 export default function NewProductPage() {
   const router = useRouter()
-  const supabase = createClient()
   const listingOpen = isListingWindowOpen()
-  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', stock_total: '', min_order_b2b: '1', is_gst_free: false, is_listed_this_week: listingOpen, image_urls: [] as string[], color_tags: [] as string[], latin_name: '', stems_per_unit: '' })
+  const [form, setForm] = useState({ name: '', description: '', category: 'flowers_cut', unit: 'bunch', wholesale_price_dollars: '', markup_pct: '45', stock_total: '', min_order_b2b: '1', b2b_stock_pct: '50', is_gst_free: false, is_listed_this_week: listingOpen, image_urls: [] as string[], color_tags: [] as string[], latin_name: '', stems_per_unit: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [b2bPct, setB2bPct] = useState(0.8) // default, overridden by config
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
-  // Load actual split ratio from config table
-  useEffect(() => {
-    supabase.from('config').select('value').eq('key', 'b2b_stock_pct').single()
-      .then(({ data }) => { if (data?.value) setB2bPct(parseFloat(data.value)) })
-  }, [])
-
   const stockNum = parseInt(form.stock_total) || 0
+  const b2bPct = (parseFloat(form.b2b_stock_pct) || 0) / 100
   const splits = calculateStockSplits(stockNum, b2bPct)
   const wholesaleCents = Math.round(parseFloat(form.wholesale_price_dollars || '0') * 100)
-  const retailEx = Math.round(wholesaleCents * 1.45)
+  const markupPct = (parseFloat(form.markup_pct) || 0) / 100
+  const retailEx = Math.round(wholesaleCents * (1 + markupPct))
   const retailInc = Math.round(form.is_gst_free ? retailEx : retailEx * 1.1)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setError('')
-    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week, image_url: form.image_urls[0] || null, image_urls: form.image_urls, color_tags: form.color_tags, latin_name: form.latin_name || null, stems_per_unit: form.unit === 'bunch' && form.stems_per_unit ? parseInt(form.stems_per_unit) : null }) })
+    const res = await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.name, description: form.description, category: form.category, unit: form.unit, wholesale_price: wholesaleCents, b2c_markup_pct: markupPct, stock_total: stockNum, min_order_b2b: parseInt(form.min_order_b2b) || 1, b2b_stock_pct: b2bPct, is_gst_free: form.is_gst_free, is_listed_this_week: form.is_listed_this_week, image_url: form.image_urls[0] || null, image_urls: form.image_urls, color_tags: form.color_tags, latin_name: form.latin_name || null, stems_per_unit: form.unit === 'bunch' && form.stems_per_unit ? parseInt(form.stems_per_unit) : null }) })
     const data = await res.json()
     if (!res.ok) { setError(data.error || 'Failed to create product'); setLoading(false); return }
     router.push('/dashboard/farmer/inventory')
@@ -100,11 +93,21 @@ export default function NewProductPage() {
         {/* Pricing */}
         <div className="card reveal reveal-d1" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Pricing</h2>
-          <div>
-            <label className="label">Wholesale price (ex-GST) *</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>$</span>
-              <input className="input" style={{ paddingLeft: '2rem' }} type="number" step="0.01" min="0.01" placeholder="0.00" value={form.wholesale_price_dollars} onChange={e => up('wholesale_price_dollars', e.target.value)} required />
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label className="label">Wholesale price (ex-GST) *</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>$</span>
+                <input className="input" style={{ paddingLeft: '2rem' }} type="number" step="0.01" min="0.01" placeholder="0.00" value={form.wholesale_price_dollars} onChange={e => up('wholesale_price_dollars', e.target.value)} required />
+              </div>
+            </div>
+            <div>
+              <label className="label">B2C markup %</label>
+              <div style={{ position: 'relative' }}>
+                <input className="input" style={{ paddingRight: '2rem' }} type="number" step="1" min="0" max="500" placeholder="45" value={form.markup_pct} onChange={e => up('markup_pct', e.target.value)} />
+                <span style={{ position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>%</span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>Added on top of your wholesale price for retail buyers. Defaults to 45%.</p>
             </div>
           </div>
 
@@ -121,7 +124,7 @@ export default function NewProductPage() {
               {[
                 { label: 'B2B wholesale (ex-GST)', val: wholesaleCents },
                 { label: 'B2B wholesale (inc-GST)', val: form.is_gst_free ? wholesaleCents : Math.round(wholesaleCents * 1.1) },
-                { label: 'B2C retail (inc-GST, 45% markup)', val: retailInc },
+                { label: `B2C retail (inc-GST, ${form.markup_pct || 0}% markup)`, val: retailInc },
               ].map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(1,71,46,0.1)' }}>
                   <span className="type-label-sm" style={{ color: 'var(--forest)', opacity: 0.65 }}>{row.label}</span>
@@ -138,6 +141,14 @@ export default function NewProductPage() {
           <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div><label className="label">Total stock *</label><input className="input" type="number" min="1" placeholder="e.g. 50" value={form.stock_total} onChange={e => up('stock_total', e.target.value)} required /></div>
             <div><label className="label">Min B2B order</label><input className="input" type="number" min="1" value={form.min_order_b2b} onChange={e => up('min_order_b2b', e.target.value)} /></div>
+          </div>
+          <div>
+            <label className="label">B2B stock reserve %</label>
+            <div style={{ position: 'relative' }}>
+              <input className="input" style={{ paddingRight: '2rem' }} type="number" step="1" min="0" max="100" placeholder="50" value={form.b2b_stock_pct} onChange={e => up('b2b_stock_pct', e.target.value)} />
+              <span style={{ position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>%</span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>How much of your stock to hold for wholesale buyers vs retail. The rest goes to retail.</p>
           </div>
           {stockNum > 0 && (
             <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>

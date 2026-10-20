@@ -220,7 +220,7 @@ export default function PackListPage() {
             <div style={{ background: 'white', border: '1.5px solid #FCD34D', borderRadius: '1.5rem', padding: '1.5rem 2.5rem' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: '#92400e', letterSpacing: '-0.02em' }}>⚠ Awaiting a harvest date</div>
               <p style={{ fontSize: '0.85rem', color: '#92400e', marginTop: '0.25rem' }}>
-                {unscheduledOrders.length} order{unscheduledOrders.length === 1 ? '' : 's'} {unscheduledOrders.length === 1 ? "hasn't" : "haven't"} been given a harvest date yet by admin, so {unscheduledOrders.length === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — check with admin for a date.
+                {unscheduledOrders.length} order{unscheduledOrders.length === 1 ? '' : 's'} {unscheduledOrders.length === 1 ? "hasn't" : "haven't"} been given a fulfilment date yet, so {unscheduledOrders.length === 1 ? "it doesn't" : "they don't"} fall into any date range above. Still shown here so nothing gets missed — open the order's Purchase Order page to set a date.
               </p>
             </div>
             {unscheduledOrders.map(order => (

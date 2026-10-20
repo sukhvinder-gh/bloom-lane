@@ -34,7 +34,6 @@ export default function EditProductPage() {
   const [fetching, setFetching] = useState(true)
   const [error, setError]       = useState('')
   const [notFound, setNotFound] = useState(false)
-  const [b2bPct, setB2bPct]     = useState(0.8) // loaded from config
 
   const [form, setForm] = useState({
     name: '',
@@ -42,8 +41,10 @@ export default function EditProductPage() {
     category: 'flowers_cut',
     unit: 'bunch',
     wholesale_price_dollars: '',
+    markup_pct: '45',
     stock_total: '',
     min_order_b2b: '1',
+    b2b_stock_pct: '50',
     is_gst_free: false,
     is_listed_this_week: false,
     is_active: true,
@@ -54,12 +55,6 @@ export default function EditProductPage() {
   })
 
   const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
-
-  // Load b2b split ratio from config
-  useEffect(() => {
-    supabase.from('config').select('value').eq('key', 'b2b_stock_pct').single()
-      .then(({ data }) => { if (data?.value) setB2bPct(parseFloat(data.value)) })
-  }, [])
 
   // Load existing product data
   useEffect(() => {
@@ -82,8 +77,10 @@ export default function EditProductPage() {
         category:                data.category || 'flowers_cut',
         unit:                    data.unit || 'bunch',
         wholesale_price_dollars: ((data.wholesale_price || 0) / 100).toFixed(2),
+        markup_pct:              String(Math.round((data.b2c_markup_pct ?? 0.45) * 100)),
         stock_total:             String(data.stock_total || ''),
         min_order_b2b:           String(data.min_order_b2b || '1'),
+        b2b_stock_pct:           String(Math.round((data.b2b_stock_pct ?? 0.5) * 100)),
         is_gst_free:             data.is_gst_free || false,
         is_listed_this_week:     data.is_listed_this_week || false,
         is_active:               data.is_active !== false,
@@ -98,9 +95,11 @@ export default function EditProductPage() {
   }, [productId])
 
   const stockNum      = parseInt(form.stock_total) || 0
+  const b2bPct        = (parseFloat(form.b2b_stock_pct) || 0) / 100
   const splits        = calculateStockSplits(stockNum, b2bPct)
   const wholesaleCents = Math.round(parseFloat(form.wholesale_price_dollars || '0') * 100)
-  const retailEx      = Math.round(wholesaleCents * 1.45)
+  const markupPct      = (parseFloat(form.markup_pct) || 0) / 100
+  const retailEx      = Math.round(wholesaleCents * (1 + markupPct))
   const retailInc     = Math.round(form.is_gst_free ? retailEx : retailEx * 1.1)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -117,8 +116,10 @@ export default function EditProductPage() {
         category:           form.category,
         unit:               form.unit,
         wholesale_price:    wholesaleCents,
+        b2c_markup_pct:     markupPct,
         stock_total:        stockNum,
         min_order_b2b:      parseInt(form.min_order_b2b) || 1,
+        b2b_stock_pct:      b2bPct,
         is_gst_free:        form.is_gst_free,
         is_listed_this_week: form.is_listed_this_week,
         image_url:          form.image_urls[0] || null,
@@ -271,12 +272,23 @@ export default function EditProductPage() {
         {/* Pricing */}
         <div className="card reveal reveal-d1" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Pricing</h2>
-          <div>
-            <label className="label">Wholesale price (ex-GST) *</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>$</span>
-              <input className="input" style={{ paddingLeft: '2rem' }} type="number" step="0.01" min="0.01" placeholder="0.00"
-                value={form.wholesale_price_dollars} onChange={e => up('wholesale_price_dollars', e.target.value)} required />
+          <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label className="label">Wholesale price (ex-GST) *</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>$</span>
+                <input className="input" style={{ paddingLeft: '2rem' }} type="number" step="0.01" min="0.01" placeholder="0.00"
+                  value={form.wholesale_price_dollars} onChange={e => up('wholesale_price_dollars', e.target.value)} required />
+              </div>
+            </div>
+            <div>
+              <label className="label">B2C markup %</label>
+              <div style={{ position: 'relative' }}>
+                <input className="input" style={{ paddingRight: '2rem' }} type="number" step="1" min="0" max="500" placeholder="45"
+                  value={form.markup_pct} onChange={e => up('markup_pct', e.target.value)} />
+                <span style={{ position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>%</span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>Added on top of your wholesale price for retail buyers.</p>
             </div>
           </div>
 
@@ -294,7 +306,7 @@ export default function EditProductPage() {
               {[
                 { label: 'B2B wholesale (ex-GST)', val: wholesaleCents },
                 { label: 'B2B wholesale (inc-GST)', val: form.is_gst_free ? wholesaleCents : Math.round(wholesaleCents * 1.1) },
-                { label: 'B2C retail (inc-GST, 45% markup)', val: retailInc },
+                { label: `B2C retail (inc-GST, ${form.markup_pct || 0}% markup)`, val: retailInc },
               ].map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(1,71,46,0.1)' }}>
                   <span className="type-label-sm" style={{ color: 'var(--forest)', opacity: 0.65 }}>{row.label}</span>
@@ -319,6 +331,15 @@ export default function EditProductPage() {
               <input className="input" type="number" min="1"
                 value={form.min_order_b2b} onChange={e => up('min_order_b2b', e.target.value)} />
             </div>
+          </div>
+          <div>
+            <label className="label">B2B stock reserve %</label>
+            <div style={{ position: 'relative' }}>
+              <input className="input" style={{ paddingRight: '2rem' }} type="number" step="1" min="0" max="100" placeholder="50"
+                value={form.b2b_stock_pct} onChange={e => up('b2b_stock_pct', e.target.value)} />
+              <span style={{ position: 'absolute', right: '1.25rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: 'var(--moss)' }}>%</span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.375rem' }}>How much of your stock to hold for wholesale buyers vs retail. The rest goes to retail.</p>
           </div>
           {stockNum > 0 && (
             <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>

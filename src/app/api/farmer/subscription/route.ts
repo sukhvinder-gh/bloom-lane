@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
   if (subscription_type === 'hub_membership' && !billing_period) {
     return NextResponse.json({ error: 'Billing period required for Hub Membership' }, { status: 400 })
   }
-  if (gst_registered && !rcti_agreed) {
-    return NextResponse.json({ error: 'RCTI agreement required for GST-registered growers' }, { status: 400 })
-  }
+  // RCTI agreement capture is hidden on the membership form for now (the
+  // checkbox/name field were removed) — don't block saving on a field the
+  // grower no longer has a way to set. gst_registered is still saved as-is.
 
   const admin = createAdminClient()
 

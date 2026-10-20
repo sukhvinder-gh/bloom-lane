@@ -11,30 +11,50 @@ const CATEGORY_EMOJI: Record<string, string> = {
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 
-// Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal)
-const BUYER_STATUS: Record<string, [string, string]> = {
-  pending_payment:   ['badge-cream',   'Submitted'],
-  payment_confirmed: ['badge-olive',   'Processing'],
-  preparing:         ['badge-olive',   'Processing'],
-  ready_for_pickup:  ['badge-sage',    'Ready for delivery'],
-  out_for_delivery:  ['badge-sage',    'Ready for delivery'],
-  delivered:         ['badge-forest',  'Completed'],
-  disputed:          ['badge-red',     'Disputed'],
-  cancelled:         ['badge-cream',   'Cancelled'],
-  refunded:          ['badge-cream',   'Refunded'],
+// Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal).
+// The "ready" stage's wording depends on how this order is actually being
+// fulfilled (farm pickup vs delivery vs hub) — see readyStageLabel() below —
+// since a farm-pickup order is never "delivered" and shouldn't say so.
+function buildBuyerStatus(readyLabel: string): Record<string, [string, string]> {
+  return {
+    pending_payment:   ['badge-cream',   'Submitted'],
+    payment_confirmed: ['badge-olive',   'Processing'],
+    preparing:         ['badge-olive',   'Processing'],
+    ready_for_pickup:  ['badge-sage',    readyLabel],
+    out_for_delivery:  ['badge-sage',    readyLabel],
+    delivered:         ['badge-forest',  'Completed'],
+    disputed:          ['badge-red',     'Disputed'],
+    cancelled:         ['badge-cream',   'Cancelled'],
+    refunded:          ['badge-cream',   'Refunded'],
+  }
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const [cls, label] = BUYER_STATUS[status] || ['badge-cream', status.replace(/_/g, ' ')]
+function StatusBadge({ status, readyLabel }: { status: string; readyLabel: string }) {
+  const [cls, label] = buildBuyerStatus(readyLabel)[status] || ['badge-cream', status.replace(/_/g, ' ')]
   return <span className={`badge ${cls}`}>{label}</span>
 }
 
-const TIMELINE_STEPS = [
-  { statuses: ['pending_payment', 'payment_confirmed'], label: 'Submitted' },
-  { statuses: ['preparing'],                            label: 'Processing' },
-  { statuses: ['ready_for_pickup', 'out_for_delivery'], label: 'Ready for delivery' },
-  { statuses: ['delivered'],                            label: 'Completed' },
-]
+function buildTimelineSteps(readyLabel: string) {
+  return [
+    { statuses: ['pending_payment', 'payment_confirmed'], label: 'Submitted' },
+    { statuses: ['preparing'],                            label: 'Processing' },
+    { statuses: ['ready_for_pickup', 'out_for_delivery'], label: readyLabel },
+    { statuses: ['delivered'],                            label: 'Completed' },
+  ]
+}
+
+// Every purchase_orders row on this order has its own pickup_method — an
+// order is only truly "for delivery" if none of them are farm pickup.
+function readyStageLabel(order: any): string {
+  if (order.fulfillment_type === 'hub_pickup') return 'Ready for pickup'
+  const methods: string[] = (order.purchase_orders || []).map((po: any) => po.pickup_method)
+  if (methods.length === 0) return 'Ready for delivery'
+  const allPickup = methods.every(m => m === 'farm_pickup')
+  const anyPickup = methods.some(m => m === 'farm_pickup')
+  if (allPickup) return 'Ready for pickup'
+  if (anyPickup) return 'Ready for pickup/delivery'
+  return 'Ready for delivery'
+}
 
 export default function BuyerOrderDetailPage() {
   const params = useParams()
@@ -53,7 +73,12 @@ export default function BuyerOrderDetailPage() {
     </div>
   )
 
-  const currentIdx = TIMELINE_STEPS.findIndex(s => s.statuses.includes(order.status))
+  const readyLabel = readyStageLabel(order)
+  const timelineSteps = buildTimelineSteps(readyLabel)
+  const currentIdx = timelineSteps.findIndex(s => s.statuses.includes(order.status))
+  const poPickupMethods: string[] = (order.purchase_orders || []).map((po: any) => po.pickup_method)
+  const allFarmPickup = poPickupMethods.length > 0 && poPickupMethods.every(m => m === 'farm_pickup')
+  const anyFarmPickup = poPickupMethods.some(m => m === 'farm_pickup')
 
   // One message thread per grower — a multi-supplier order must never let a
   // buyer's question to one grower leak into another grower's conversation.
@@ -97,12 +122,12 @@ export default function BuyerOrderDetailPage() {
           <div className="card reveal" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
               <h2 className="type-label-lg" style={{ color: 'var(--forest)' }}>Order status</h2>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} readyLabel={readyLabel} />
             </div>
 
             {/* Timeline */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: '1.5rem' }}>
-              {TIMELINE_STEPS.map((step, i) => {
+              {timelineSteps.map((step, i) => {
                 const done = i <= currentIdx
                 return (
                   <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
@@ -110,7 +135,7 @@ export default function BuyerOrderDetailPage() {
                       <div style={{ width: '0.875rem', height: '0.875rem', borderRadius: '50%', background: done ? 'var(--forest)' : 'var(--olive)', marginBottom: '0.5rem', transition: 'background 0.3s ease' }} />
                       <span className="type-label-sm" style={{ color: done ? 'var(--forest)' : 'var(--moss)', whiteSpace: 'nowrap' }}>{step.label}</span>
                     </div>
-                    {i < TIMELINE_STEPS.length - 1 && (
+                    {i < timelineSteps.length - 1 && (
                       <div style={{ height: '2px', flex: 1, background: i < currentIdx ? 'var(--forest)' : 'var(--olive)', marginBottom: '1.25rem', transition: 'background 0.3s ease' }} />
                     )}
                   </div>
@@ -210,7 +235,7 @@ export default function BuyerOrderDetailPage() {
             <h3 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1.25rem' }}>Summary</h3>
             {[
               { label: 'Subtotal', val: formatPrice(order.subtotal_cents) },
-              { label: order.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery', val: order.delivery_fee_cents === 0 ? 'Free' : formatPrice(order.delivery_fee_cents) },
+              { label: order.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : allFarmPickup ? 'Farm pickup' : 'Delivery', val: order.delivery_fee_cents === 0 ? 'Free' : formatPrice(order.delivery_fee_cents) },
               ...(order.gst_cents > 0 ? [{ label: 'GST (incl)', val: formatPrice(order.gst_cents) }] : []),
             ].map(row => (
               <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--olive)' }}>
@@ -224,11 +249,35 @@ export default function BuyerOrderDetailPage() {
             </div>
           </div>
 
-          {/* Delivery */}
+          {/* Delivery / pickup — each grower on this order has their own
+              pickup_method, so an order can be farm pickup, delivery, or a
+              mix of both; the heading and detail lines reflect whichever it
+              actually is instead of assuming delivery. */}
           <div className="card reveal reveal-d3" style={{ padding: '2rem' }}>
-            <h3 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1rem' }}>Delivery</h3>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>{order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}</p>
-            {order.delivery_address && <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>{order.delivery_address}, {order.delivery_suburb} {order.delivery_state} {order.delivery_postcode}</p>}
+            <h3 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '1rem' }}>
+              {order.fulfillment_type === 'hub_pickup' ? 'Pickup' : allFarmPickup ? 'Pickup' : anyFarmPickup ? 'Delivery & pickup' : 'Delivery'}
+            </h3>
+            {order.fulfillment_type === 'hub_pickup' ? (
+              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>🏭 Hub pickup</p>
+            ) : anyFarmPickup ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {growerThreads.map((t: any) => (
+                  <p key={t.poId} style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+                    {t.pickupMethod === 'farm_pickup'
+                      ? `🚜 ${t.farmerName} — farm pickup${t.farmAddress ? `, ${t.farmAddress}` : ''}`
+                      : `🚚 ${t.farmerName} — delivery`}
+                  </p>
+                ))}
+                {!allFarmPickup && order.delivery_address && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>{order.delivery_address}, {order.delivery_suburb} {order.delivery_state} {order.delivery_postcode}</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--forest)', marginBottom: '0.375rem' }}>🚚 Direct delivery</p>
+                {order.delivery_address && <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>{order.delivery_address}, {order.delivery_suburb} {order.delivery_state} {order.delivery_postcode}</p>}
+              </>
+            )}
             <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.875rem' }}>Placed {formatAEST(order.created_at)}</p>
           </div>
         </div>

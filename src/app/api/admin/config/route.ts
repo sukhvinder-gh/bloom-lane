@@ -32,7 +32,6 @@ async function applyPendingScheduled(admin: ReturnType<typeof createAdminClient>
       .from('config_history')
       .update({ status: 'applied' })
       .eq('id', entry.id)
-    if (entry.key === 'b2b_stock_pct') await admin.rpc('recompute_all_product_stock_splits')
   }
 }
 
@@ -143,12 +142,6 @@ export async function PATCH(request: NextRequest) {
     set_by: userId,
     set_by_name: name,
   })
-
-  // b2b_stock_pct only gets re-applied to a product's stored split by the DB
-  // trigger on products (fires on INSERT OR UPDATE OF stock_total) — without
-  // this, every existing product keeps showing its *old* split on the
-  // inventory list until someone happens to re-save that product's stock.
-  if (key === 'b2b_stock_pct') await admin.rpc('recompute_all_product_stock_splits')
 
   return NextResponse.json({ ok: true, scheduled: false })
 }

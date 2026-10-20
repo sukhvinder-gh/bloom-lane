@@ -259,9 +259,13 @@ export default function FarmerOrdersPage() {
                   .map((i: any) => `${i.quantity}× ${i.products?.name}`).join(', ')
                   + (itemCount > 2 ? ` +${itemCount - 2} more` : '')
                 const canMarkDelivered = ['payment_confirmed', 'preparing', 'out_for_delivery', 'ready_for_pickup'].includes(order.status)
+                const isFarmPickup = poPickupMethods[order.id] === 'farm_pickup'
                 const canReject   = poS && ['pending', 'ready'].includes(poS)
                 const canMarkReady = poS === 'pending'
-                const canMarkHub   = poS === 'ready'
+                // Farm pickup has no hub leg — 'ready' is its terminal state,
+                // same as POStatusActions.tsx on the PO detail page. Offering
+                // this for a farm-pickup order would 422 (see po-status/route.ts).
+                const canMarkHub   = poS === 'ready' && !isFarmPickup
                 const isMenuOpen   = openMenuId === order.id
                 const isUpdating   = statusUpdating === order.id
 

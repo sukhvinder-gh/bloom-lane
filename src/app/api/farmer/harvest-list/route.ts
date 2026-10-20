@@ -75,7 +75,8 @@ function aggregateByProduct(items: any[], dateByOrder: Map<string, string | null
 
 // GET /api/farmer/harvest-list?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Aggregates this farmer's still-active order lines by product, scoped to
-// orders whose admin-set harvest/fulfilment date falls in [from, to] —
+// orders whose fulfilment date (set by this farmer on their own PO, or the
+// shared order-level fallback for older rows) falls in [from, to] —
 // defaults to the current Mon–Sun week (Sydney time) when no range is given.
 // Orders with no fulfilment date at all can't fit any range, so they're
 // never silently dropped — they come back as a separate `unscheduled_rows`
@@ -97,11 +98,14 @@ export async function GET(request: NextRequest) {
 
   const { data: pos } = await admin
     .from('purchase_orders')
-    .select('order_id')
+    .select('order_id, grower_fulfillment_date')
     .eq('farmer_id', farmer.id)
     .in('status', ACTIVE_PO_STATUSES)
 
   const activeOrderIds = [...new Set((pos || []).map((p: any) => p.order_id))]
+  // This farmer's own date on their own PO row — falls back to the shared
+  // order-level column for any PO row created before per-farmer dates existed.
+  const poDateByOrder = new Map((pos || []).map((p: any) => [p.order_id, p.grower_fulfillment_date]))
   if (activeOrderIds.length === 0) {
     return NextResponse.json({ data: { rows: [], unscheduled_rows: [], order_count: 0, unscheduled_order_count: 0, from, to } })
   }
@@ -117,16 +121,20 @@ export async function GET(request: NextRequest) {
     .in('id', activeOrderIds)
     .neq('status', 'cancelled')
 
+  const dateByOrder = new Map(
+    (allActiveOrders || []).map((o: any) => [o.id, poDateByOrder.get(o.id) || o.grower_fulfillment_date])
+  )
+
   const scopedOrders = (allActiveOrders || []).filter((o: any) => {
-    if (!o.grower_fulfillment_date) return false
-    const t = new Date(o.grower_fulfillment_date).getTime()
+    const date = dateByOrder.get(o.id)
+    if (!date) return false
+    const t = new Date(date).getTime()
     return t >= fromMs && t <= toMs
   })
-  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !o.grower_fulfillment_date)
+  const unscheduledOrders = (allActiveOrders || []).filter((o: any) => !dateByOrder.get(o.id))
 
   const scopedOrderIds = scopedOrders.map((o: any) => o.id)
   const unscheduledOrderIds = unscheduledOrders.map((o: any) => o.id)
-  const dateByOrder = new Map((allActiveOrders || []).map((o: any) => [o.id, o.grower_fulfillment_date]))
 
   const allRelevantIds = [...scopedOrderIds, ...unscheduledOrderIds]
   if (allRelevantIds.length === 0) {

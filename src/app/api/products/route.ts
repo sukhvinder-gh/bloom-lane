@@ -12,6 +12,8 @@ const createProductSchema = z.object({
   category: z.enum(['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']),
   unit: z.string().min(1).max(20),
   wholesale_price: z.number().int().positive(),
+  b2c_markup_pct: z.number().min(0).max(5).default(0.45),
+  b2b_stock_pct: z.number().min(0).max(1).default(0.5),
   stock_total: z.number().int().nonnegative(),
   min_order_b2b: z.number().int().positive().default(1),
   is_gst_free: z.boolean().default(false),
