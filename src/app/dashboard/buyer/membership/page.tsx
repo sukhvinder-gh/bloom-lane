@@ -362,7 +362,7 @@ export default function FloristSubscriptionPage() {
             badge: 'Option 1',
             price: 'Free, always',
             priceColor: '#065F46',
-            features: ['Weekly availability email every Tuesday', 'Collect at Hub Thursday 9am–12pm', 'No minimum order, no commitment'],
+            features: ['Weekly availability email', 'Collect at Hub', 'No minimum order, no commitment'],
             best: 'Florists who enjoy building direct relationships',
           },
           {
@@ -371,7 +371,7 @@ export default function FloristSubscriptionPage() {
             badge: 'Option 2',
             price: priceMap[billing] ? `$${(priceMap[billing] / 100).toFixed(0)}/${billing === 'weekly' ? 'wk' : billing === 'monthly' ? 'mo' : 'yr'}` : 'Price TBC',
             priceColor: '#1E40AF',
-            features: ['Weekly brief & wishlist service', 'Refrigerated delivery Wed & Fri', 'Same-day collection and delivery', 'One consolidated invoice per delivery'],
+            features: ['Weekly brief & wishlist service', 'Refrigerated delivery', 'Same-day collection and delivery', 'One consolidated invoice per delivery'],
             best: 'Busy florists and wedding specialists',
           },
         ].map(opt => {
