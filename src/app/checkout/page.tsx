@@ -9,8 +9,6 @@ import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
 
-const DELIVERY_FEE = 2000
-
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, fulfillment_type, setFulfillmentType, clearCart, subtotalCents, isB2B } = useCart()
@@ -86,10 +84,18 @@ export default function CheckoutPage() {
     return (chosenId && options.find(o => o.id === chosenId)) || options[0] || null
   }
 
+  // Delivery pricing is entirely grower-set — a grower with zero configured
+  // delivery options can't be charged a made-up fee (api/orders/route.ts
+  // blocks the order outright in that case), so they contribute $0 here and
+  // are surfaced separately as undeliverableFarmers instead.
   const realDeliveryFeeCents = pooledDeliveryInfo.reduce((sum, f) => {
     const opt = f.options.length > 0 ? selectedOption(f.farmer_id, f.options) : null
-    return sum + (opt?.cost_cents ?? DELIVERY_FEE)
+    return sum + (opt?.cost_cents ?? 0)
   }, 0)
+
+  const undeliverableFarmers = fulfillment_type === 'direct_delivery'
+    ? pooledDeliveryInfo.filter(f => f.options.length === 0)
+    : []
 
   // No real hub exists today, so pooled items are always delivery — self-heal
   // any cart persisted from before Hub Pickup was removed as an option.
@@ -310,6 +316,12 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {!error && undeliverableFarmers.length > 0 && (
+              <div className="badge badge-red" style={{ width: '100%', padding: '0.875rem', borderRadius: '0.75rem', justifyContent: 'flex-start', fontSize: '0.7rem', marginTop: '1.25rem' }}>
+                ⚠ {undeliverableFarmers.map(f => f.business_name).join(', ')} {undeliverableFarmers.length > 1 ? "haven't" : "hasn't"} set up delivery yet. Please remove their items from your cart to continue.
+              </div>
+            )}
+
             {clientSecret && pendingOrderId ? (
               <div style={{ marginTop: '1.5rem' }}>
                 <Elements
@@ -326,7 +338,7 @@ export default function CheckoutPage() {
             ) : (
               <button
                 onClick={placeOrder}
-                disabled={loading}
+                disabled={loading || undeliverableFarmers.length > 0}
                 className="btn btn-cream"
                 style={{ width: '100%', marginTop: '1.5rem' }}
               >
@@ -455,13 +467,23 @@ export default function CheckoutPage() {
                   }
 
                   const only = f.options[0]
+                  if (!only) {
+                    return (
+                      <div key={f.farmer_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#fbe4e4', borderRadius: '0.75rem' }}>
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)' }}>{f.business_name}</p>
+                          <p style={{ fontSize: '0.75rem', color: '#8a2d2d', marginTop: '0.15rem' }}>No delivery option set up yet — remove this item to continue</p>
+                        </div>
+                      </div>
+                    )
+                  }
                   return (
                     <div key={f.farmer_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
                       <div>
                         <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--forest)' }}>{f.business_name}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>{only ? (optionLabel(only) || 'Delivery') : 'Standard delivery'}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--moss)', marginTop: '0.15rem' }}>{optionLabel(only) || 'Delivery'}</p>
                       </div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(only?.cost_cents ?? DELIVERY_FEE)}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(only.cost_cents)}</span>
                     </div>
                   )
                 })}
