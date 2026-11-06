@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       if (noDeliveryOption.length > 0) {
         const names = noDeliveryOption.map(fid => (products.find(p => p.farmer_id === fid) as any)?.farmers?.business_name || 'This grower')
         return NextResponse.json(
-          { error: `${names.join(', ')} ${names.length > 1 ? "haven't" : "hasn't"} set up delivery. Try hub pickup, or remove their items from your cart.` },
+          { error: `${names.join(', ')} ${names.length > 1 ? "haven't" : "hasn't"} set up delivery yet. Please remove their items from your cart to continue.` },
           { status: 400 }
         )
       }
