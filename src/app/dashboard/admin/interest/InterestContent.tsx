@@ -13,6 +13,8 @@ type Row = {
   notes: string | null
   contacted: boolean
   created_at: string
+  converted_user_id: string | null
+  converted_at: string | null
 }
 
 type Tab = 'all' | 'grower' | 'buyer'
@@ -36,6 +38,39 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
+  const [approveTarget, setApproveTarget] = useState<Row | null>(null)
+  const [approveForm, setApproveForm] = useState({ business_name: '', abn: '', address: '', suburb: '', state: 'VIC', postcode: '' })
+  const [approving, setApproving] = useState(false)
+  const [approveError, setApproveError] = useState('')
+  const [lastApproved, setLastApproved] = useState<{ email: string; tempPassword: string; emailSent: boolean } | null>(null)
+
+  function openApprove(row: Row) {
+    setApproveError('')
+    setLastApproved(null)
+    setApproveForm({ business_name: row.business_name || '', abn: '', address: '', suburb: row.region || '', state: 'VIC', postcode: '' })
+    setApproveTarget(row)
+  }
+
+  async function submitApprove() {
+    if (!approveTarget) return
+    setApproving(true)
+    setApproveError('')
+    const res = await fetch(`/api/admin/interest/${approveTarget.id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(approveTarget.role === 'grower' ? approveForm : {}),
+    })
+    const json = await res.json()
+    setApproving(false)
+    if (!res.ok) {
+      setApproveError(json.error || 'Approval failed')
+      return
+    }
+    setRows(rs => rs.map(r => r.id === approveTarget.id
+      ? { ...r, converted_user_id: json.data.userId, converted_at: new Date().toISOString(), contacted: true }
+      : r))
+    setLastApproved({ email: approveTarget.email, tempPassword: json.data.tempPassword, emailSent: json.data.emailSent })
+  }
 
   const growerCount = rows.filter(r => r.role === 'grower').length
   const buyerCount = rows.filter(r => r.role === 'buyer').length
@@ -108,14 +143,14 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'var(--offwhite)', borderBottom: '1px solid var(--border-light)' }}>
-                {['Role', 'Name', 'Contact', 'Business / Region', 'Notes', 'Submitted', 'Contacted'].map(h => (
+                {['Role', 'Name', 'Contact', 'Business / Region', 'Notes', 'Submitted', 'Contacted', 'Account'].map(h => (
                   <th key={h} className="type-label-sm" style={{ padding: '0.875rem 1.25rem', textAlign: 'left', color: 'var(--moss)', letterSpacing: '0.15em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
+                <tr><td colSpan={8} style={{ padding: '4rem', textAlign: 'center' }}>
                   <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</p>
                   <p className="type-label" style={{ color: 'var(--moss)' }}>No interest registrations{tab !== 'all' ? ` from ${tab}s` : ''} yet</p>
                 </td></tr>
@@ -141,12 +176,92 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                       <span className="type-label-sm" style={{ color: 'var(--moss)' }}>{row.contacted ? 'Yes' : 'No'}</span>
                     </label>
                   </td>
+                  <td style={{ padding: '0.875rem 1.25rem' }}>
+                    {row.converted_user_id ? (
+                      <span className="badge badge-sage">✓ Approved</span>
+                    ) : (
+                      <button onClick={() => openApprove(row)}
+                        style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Approve
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {approveTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(16,24,20,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', zIndex: 100 }}
+          onClick={() => !approving && setApproveTarget(null)}>
+          <div className="card" style={{ maxWidth: '28rem', width: '100%', padding: '1.75rem', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            {lastApproved ? (
+              <>
+                <h2 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Account created</h2>
+                <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>
+                  {lastApproved.emailSent
+                    ? `A welcome email with sign-in details was sent to ${lastApproved.email}.`
+                    : `The account was created, but the welcome email failed to send. Share these details with ${lastApproved.email} directly:`}
+                </p>
+                {!lastApproved.emailSent && (
+                  <div style={{ background: 'var(--offwhite)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                    <p><strong>Email:</strong> {lastApproved.email}</p>
+                    <p><strong>Temporary password:</strong> <code>{lastApproved.tempPassword}</code></p>
+                  </div>
+                )}
+                <button onClick={() => setApproveTarget(null)} className="btn" style={{ width: '100%', background: 'var(--navy)', color: 'white' }}>Done</button>
+              </>
+            ) : (
+              <>
+                <h2 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.25rem' }}>
+                  Approve {approveTarget.full_name}
+                </h2>
+                <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '1.25rem' }}>
+                  {approveTarget.role === 'grower'
+                    ? 'Creates a grower account, sends a temporary password, and welcomes them by email.'
+                    : `Creates a business buyer account for ${approveTarget.email} and emails them a temporary password. ABN verification happens separately on the Buyers page.`}
+                </p>
+
+                {approveTarget.role === 'grower' && (
+                  <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                    <input className="input" placeholder="Business / farm name" value={approveForm.business_name}
+                      onChange={e => setApproveForm(f => ({ ...f, business_name: e.target.value }))} />
+                    <input className="input" placeholder="ABN (11 digits)" value={approveForm.abn}
+                      onChange={e => setApproveForm(f => ({ ...f, abn: e.target.value.replace(/\D/g, '').slice(0, 11) }))} />
+                    <input className="input" placeholder="Street address" value={approveForm.address}
+                      onChange={e => setApproveForm(f => ({ ...f, address: e.target.value }))} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.5rem' }}>
+                      <input className="input" placeholder="Suburb" value={approveForm.suburb}
+                        onChange={e => setApproveForm(f => ({ ...f, suburb: e.target.value }))} />
+                      <input className="input" placeholder="State" value={approveForm.state}
+                        onChange={e => setApproveForm(f => ({ ...f, state: e.target.value }))} />
+                      <input className="input" placeholder="Postcode" value={approveForm.postcode}
+                        onChange={e => setApproveForm(f => ({ ...f, postcode: e.target.value.replace(/\D/g, '').slice(0, 4) }))} />
+                    </div>
+                  </div>
+                )}
+
+                {approveError && (
+                  <p style={{ color: '#8a2d2d', fontSize: '0.8rem', marginBottom: '1rem' }}>{approveError}</p>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button onClick={() => setApproveTarget(null)} disabled={approving}
+                    style={{ flex: 1, background: 'var(--offwhite)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                    Cancel
+                  </button>
+                  <button onClick={submitApprove} disabled={approving}
+                    style={{ flex: 1, background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.75rem', fontWeight: 700, cursor: approving ? 'default' : 'pointer', opacity: approving ? 0.7 : 1 }}>
+                    {approving ? 'Creating…' : 'Create account & send email'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
