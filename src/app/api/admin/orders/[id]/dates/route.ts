@@ -44,6 +44,20 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // purchase_orders.grower_fulfillment_date (per-farmer) is what the harvest
+  // list and grower PO page actually read — orders.grower_fulfillment_date
+  // is only a fallback for rows that predate migration 047. Without this,
+  // this admin edit has no visible effect on any order whose PO rows already
+  // carry their own date (the normal case).
+  if ('grower_fulfillment_date' in updates) {
+    const { error: poError } = await admin
+      .from('purchase_orders')
+      .update({ grower_fulfillment_date: updates.grower_fulfillment_date })
+      .eq('order_id', orderId)
+    if (poError) return NextResponse.json({ error: `Order dates saved, but purchase orders failed to update: ${poError.message}` }, { status: 500 })
+  }
+
   return NextResponse.json({ data })
 }
 

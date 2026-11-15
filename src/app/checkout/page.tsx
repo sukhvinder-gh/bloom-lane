@@ -8,6 +8,19 @@ import { formatPrice, getUnitGstCents } from '@/lib/utils/pricing'
 import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
+import { AUDateTimeInput } from '@/components/AUDateInput'
+import { nextWeeklyOccurrence } from '@/lib/utils/timezone'
+
+// The next few concrete calendar dates for a weekly recurring slot (e.g.
+// "every Wednesday 9am") — lets the buyer pick a real date without being
+// able to land on an invalid weekday, since each option is computed from
+// the grower's own configured slot, not freely typed.
+function nextOccurrences(day: string | null | undefined, time: string | null | undefined, count: number): Date[] {
+  if (!day || !time) return []
+  const first = nextWeeklyOccurrence(day, time)
+  if (!first) return []
+  return Array.from({ length: count }, (_, i) => new Date(first.getTime() + i * 7 * 24 * 60 * 60 * 1000))
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -26,6 +39,12 @@ export default function CheckoutPage() {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
 
   const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
+  // farmer_id -> the concrete pickup date the buyer chose, and the one
+  // shared delivery date/time for pooled items — the buyer sets the real
+  // fulfilment deadline here now, instead of admin setting it after the
+  // fact once the order already exists.
+  const [pickupDates, setPickupDates]   = useState<Record<string, string>>({})
+  const [deliveryDate, setDeliveryDate] = useState('')
   // farmer_id -> chosen farmer_fulfillment_options.id, for growers who
   // configured more than one pickup or delivery slot (different day/time,
   // and for delivery, cost). A farmer only ever appears as either a pickup
@@ -118,7 +137,18 @@ export default function CheckoutPage() {
   const total = subtotalCents() + deliveryFee
 
   async function placeOrder() {
-    setLoading(true); setError('')
+    setError('')
+
+    // Every farm-pickup farmer needs a concrete pickup date, and pooled
+    // delivery needs one too — required, not optional, so the order never
+    // reaches admin with no real deadline on it.
+    const missingPickupDate = [...farmPickupIds].some(fid => !pickupDates[fid])
+    if (missingPickupDate) { setError('Please choose a pickup date for each farm you\'re collecting from.'); return }
+    if (fulfillment_type === 'direct_delivery' && pooledItems.length > 0 && !deliveryDate) {
+      setError('Please choose a delivery date and time.'); return
+    }
+
+    setLoading(true)
 
     // Final stock re-validation before placing
     const ids = items.map(i => i.product_id).join(',')
@@ -149,6 +179,8 @@ export default function CheckoutPage() {
           delivery_postcode: address.postcode,
           notes,
           farm_pickup_farmer_ids: [...farmPickupIds],
+          florist_delivery_date: fulfillment_type === 'direct_delivery' && pooledItems.length > 0 && deliveryDate ? new Date(deliveryDate).toISOString() : undefined,
+          pickup_dates: Object.fromEntries([...farmPickupIds].filter(fid => pickupDates[fid]).map(fid => [fid, pickupDates[fid]])),
           fulfillment_option_selections: {
             // Which specific pickup slot, for growers opted into farm pickup
             // who configured more than one.
@@ -406,6 +438,34 @@ export default function CheckoutPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Concrete pickup date — computed from the grower's own
+                          configured slot, so the buyer can't land on an invalid
+                          weekday. No configured slot at all (edge case) falls
+                          back to a free date/time picker instead of blocking. */}
+                      {checked && (
+                        <div style={{ marginTop: '0.5rem', marginLeft: '1rem', padding: '0.875rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>Choose a pickup date *</p>
+                          {chosen ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {nextOccurrences(chosen.day_of_week, chosen.start_time, 4).map(d => {
+                                const iso = d.toISOString()
+                                const isChosen = pickupDates[f.farmer_id] === iso
+                                return (
+                                  <button key={iso} type="button" onClick={() => setPickupDates(s => ({ ...s, [f.farmer_id]: iso }))}
+                                    style={{ padding: '0.4rem 0.75rem', borderRadius: '99px', border: `1.5px solid ${isChosen ? 'var(--forest)' : 'var(--sage)'}`, background: isChosen ? 'var(--forest)' : 'white', color: isChosen ? 'white' : 'var(--forest)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                                    {d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <AUDateTimeInput className="input" value={pickupDates[f.farmer_id] || ''}
+                              onChange={v => setPickupDates(s => ({ ...s, [f.farmer_id]: v ? new Date(v).toISOString() : '' }))}
+                              ariaLabel="Pickup date and time" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -489,6 +549,10 @@ export default function CheckoutPage() {
                 })}
               </div>
             )}
+            <div style={{ marginTop: '1.25rem' }}>
+              <label className="label">Delivery date & time *</label>
+              <AUDateTimeInput className="input" value={deliveryDate} onChange={setDeliveryDate} ariaLabel="Delivery date and time" />
+            </div>
             </>
             )}
           </div>

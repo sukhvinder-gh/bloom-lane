@@ -31,10 +31,17 @@ export function FulfilmentDateEditor({
   orderId,
   initialDate,
   displayValue,
+  apiPath,
+  bodyField,
 }: {
   orderId: string
   initialDate: string | null
   displayValue: string
+  // Which date this editor writes — kept generic so the same component
+  // serves both the (now buyer-set, admin-overridable) fulfilment date on
+  // other screens and the grower's own harvest date here.
+  apiPath: string
+  bodyField: string
 }) {
   const [editing, setEditing] = useState(false)
   const [parts, setParts] = useState(() => toDateParts(initialDate))
@@ -47,10 +54,10 @@ export function FulfilmentDateEditor({
     if (!parsed) { setError('Enter a valid date (DD/MM/YYYY) and time (HH:MM)'); return }
     setSaving(true)
     setError(null)
-    const res = await fetch(`/api/farmer/orders/${orderId}/fulfillment-date`, {
+    const res = await fetch(`/api/farmer/orders/${orderId}/${apiPath}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ grower_fulfillment_date: parsed.toISOString() }),
+      body: JSON.stringify({ [bodyField]: parsed.toISOString() }),
     })
     setSaving(false)
     if (res.ok) {

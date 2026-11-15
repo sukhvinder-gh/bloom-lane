@@ -254,6 +254,7 @@ function DateManager({ order, onUpdate }: { order: any; onUpdate: (id: string, f
   const [fulfillDate, setFulfillDate] = useState(order.grower_fulfillment_date ? order.grower_fulfillment_date.slice(0, 16) : '')
   const [deliveryDate, setDeliveryDate] = useState(order.florist_delivery_date ? order.florist_delivery_date.slice(0, 16) : '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -264,14 +265,20 @@ function DateManager({ order, onUpdate }: { order: any; onUpdate: (id: string, f
 
   async function save() {
     setSaving(true)
-    await fetch(`/api/admin/orders/${order.id}/dates`, {
+    setError('')
+    const res = await fetch(`/api/admin/orders/${order.id}/dates`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grower_fulfillment_date: fulfillDate || null, florist_delivery_date: deliveryDate || null }),
     })
+    setSaving(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error || 'Save failed')
+      return
+    }
     onUpdate(order.id, 'grower_fulfillment_date', fulfillDate)
     onUpdate(order.id, 'florist_delivery_date', deliveryDate)
-    setSaving(false)
     setOpen(false)
   }
 
@@ -296,6 +303,7 @@ function DateManager({ order, onUpdate }: { order: any; onUpdate: (id: string, f
             <AUDateTimeInput className="input" style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
               value={deliveryDate} onChange={setDeliveryDate} ariaLabel="Florist delivery date" />
           </div>
+          {error && <p style={{ fontSize: '0.75rem', color: '#B91C1C' }}>⚠ {error}</p>}
           <button onClick={save} disabled={saving} className="btn btn-forest btn-sm">{saving ? 'Saving…' : 'Save dates'}</button>
         </div>
       )}

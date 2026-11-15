@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
   pending_payment:   { label: 'Pending',    bg: '#F1EFE8', color: '#5F5E5A' },
@@ -112,10 +113,10 @@ function printInvoice(order: any, profile: any) {
 }
 
 export default function BuyerOrdersPage() {
+  const router = useRouter()
   const [orders, setOrders]   = useState<any[]>([])
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [tab, setTab]         = useState<'orders' | 'invoices'>('orders')
 
   useEffect(() => {
@@ -135,13 +136,8 @@ export default function BuyerOrdersPage() {
     })
   }, [])
 
-  const toggle = (id: string) => setExpanded(s => {
-    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
-  })
-
   const invoiceStatuses = ['payment_confirmed','preparing','ready_for_pickup','out_for_delivery','delivered','resolved']
   const displayOrders = tab === 'invoices' ? orders.filter(o => invoiceStatuses.includes(o.status)) : orders
-  const isB2B = profile?.role === 'buyer_b2b'
 
   const th: React.CSSProperties = { padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--forest)', opacity: 0.5, borderBottom: '1px solid var(--olive)', whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '11px 12px', borderBottom: '1px solid var(--olive)', fontSize: '0.875rem', color: 'var(--forest)', verticalAlign: 'middle' }
@@ -204,7 +200,6 @@ export default function BuyerOrdersPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--olive)' }}>
-                <th style={{ ...th, width: '2rem' }} />
                 <th style={th}>Order</th>
                 <th style={th}>Date</th>
                 {tab === 'orders'
@@ -229,26 +224,23 @@ export default function BuyerOrdersPage() {
             <tbody>
               {displayOrders.map((order, idx) => {
                 const s = STATUS_MAP[order.status] || { label: order.status, bg: '#F1EFE8', color: '#5F5E5A' }
-                const isOpen = expanded.has(order.id)
                 const itemCount = order.order_items?.length || 0
                 const summary = order.order_items?.slice(0, 2).map((i: any) => `${i.quantity}× ${i.products?.name}`).join(', ')
                   + (itemCount > 2 ? ` +${itemCount - 2} more` : '')
 
                 return (
                   <>
-                    {/* Main row */}
+                    {/* Main row — clicking anywhere goes straight to the full
+                        order detail page, same as the admin equivalent list. */}
                     <tr key={order.id}
-                      onClick={() => toggle(order.id)}
-                      style={{ cursor: 'pointer', background: isOpen ? '#fafaf7' : 'white', transition: 'background 0.1s' }}>
-                      <td style={{ ...td, textAlign: 'center', width: '2rem' }}>
-                        <span style={{ display: 'inline-block', transition: 'transform 0.18s', transform: isOpen ? 'rotate(90deg)' : 'none', fontSize: '0.6rem', color: 'var(--moss)' }}>▶</span>
-                      </td>
-                      <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}
-                          onClick={e => e.stopPropagation()}>
-                        <Link href={`/dashboard/buyer/orders/${order.id}`}
-                          style={{ color: 'var(--forest)', textDecoration: 'none', borderBottom: '1.5px dotted var(--moss)' }}>
+                      onClick={() => router.push(`/dashboard/buyer/orders/${order.id}`)}
+                      style={{ cursor: 'pointer', background: 'white', transition: 'background 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fafaf7')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                      <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--forest)', textDecoration: 'none', borderBottom: '1.5px dotted var(--moss)' }}>
                           {order.order_number}
-                        </Link>
+                        </span>
                       </td>
                       <td style={{ ...td, opacity: 0.6, whiteSpace: 'nowrap' }}>
                         {formatAEST(order.created_at, 'dd MMM yyyy')}
@@ -304,87 +296,6 @@ export default function BuyerOrdersPage() {
                         </div>
                       </td>
                     </tr>
-
-                    {/* Expanded detail row */}
-                    {isOpen && (
-                      <tr key={order.id + '-detail'}>
-                        <td colSpan={tab === 'invoices' ? 8 : 7} style={{ padding: 0, background: '#fafaf7', borderBottom: '1px solid var(--olive)' }}>
-                          <div style={{ padding: '1rem 1.25rem 1.25rem 2.75rem' }}>
-
-                            {/* Meta */}
-                            <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                              <div>
-                                <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.2rem' }}>Fulfillment</p>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>
-                                  {order.fulfillment_type === 'hub_pickup' ? '🏭 Hub Pickup' : '🚚 Delivery'}
-                                  {order.delivery_suburb ? ` · ${order.delivery_suburb}, ${order.delivery_state || ''}` : ''}
-                                </p>
-                              </div>
-                              {order.notes && (
-                                <div>
-                                  <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.2rem' }}>Notes</p>
-                                  <p style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>{order.notes}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Line items */}
-                            <div className="table-wrap">
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '1px solid var(--sage)' }}>
-                                  {['Product','Qty','Unit price','Ex-GST', isB2B ? 'GST' : '','Total'].filter(Boolean).map(h => (
-                                    <th key={h} style={{ padding: '6px 8px', textAlign: ['Ex-GST','GST','Total','Unit price','Qty'].includes(h) ? 'right' : 'left', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--forest)', opacity: 0.5 }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(order.order_items || []).map((item: any) => {
-                                  const gst = item.products?.is_gst_free ? 0 : Math.round((item.subtotal_cents * 0.1) / 1.1)
-                                  const exGst = item.subtotal_cents - gst
-                                  return (
-                                    <tr key={item.id} style={{ borderBottom: '1px solid var(--olive)' }}>
-                                      <td style={{ padding: '7px 8px', fontWeight: 600, color: 'var(--forest)' }}>{item.products?.name}</td>
-                                      <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{item.quantity} {item.products?.unit}</td>
-                                      <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(Math.round(item.unit_price_cents / 1.1))}</td>
-                                      <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)' }}>{formatPrice(exGst)}</td>
-                                      {isB2B && <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--forest)', opacity: 0.6 }}>{item.products?.is_gst_free ? <span style={{ fontSize: '0.65rem' }}>GST-free</span> : formatPrice(gst)}</td>}
-                                      <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--forest)' }}>{formatPrice(item.subtotal_cents)}</td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                            </div>
-
-                            {/* Totals */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
-                              <div style={{ width: '15rem', fontSize: '0.8rem' }}>
-                                {isB2B && (
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--forest)', opacity: 0.7, padding: '3px 0' }}>
-                                    <span>Subtotal (ex-GST)</span>
-                                    <span>{formatPrice(order.total_cents - (order.gst_cents || 0) - (order.delivery_fee_cents || 0))}</span>
-                                  </div>
-                                )}
-                                {isB2B && (order.gst_cents || 0) > 0 && (
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--forest)', opacity: 0.7, padding: '3px 0' }}>
-                                    <span>GST (10%)</span><span>{formatPrice(order.gst_cents)}</span>
-                                  </div>
-                                )}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--forest)', opacity: 0.7, padding: '3px 0' }}>
-                                  <span>{order.fulfillment_type === 'hub_pickup' ? 'Hub pickup' : 'Delivery'}</span>
-                                  <span>{(order.delivery_fee_cents || 0) === 0 ? 'Free' : formatPrice(order.delivery_fee_cents)}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--forest)', borderTop: '1.5px solid var(--forest)', paddingTop: '6px', marginTop: '4px', fontSize: '0.875rem' }}>
-                                  <span>Total {isB2B ? '(inc-GST)' : ''}</span>
-                                  <span>{formatPrice(order.total_cents)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </>
                 )
               })}

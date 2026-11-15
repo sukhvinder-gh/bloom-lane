@@ -24,5 +24,11 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   if (error || !order) notFound()
 
-  return <AdminOrderDetail order={order} />
+  const { data: emailLog } = await admin
+    .from('order_email_log')
+    .select('email_type, recipient, status, error, created_at')
+    .eq('order_id', id)
+    .order('created_at', { ascending: false })
+
+  return <AdminOrderDetail order={order} emailLog={emailLog || []} />
 }

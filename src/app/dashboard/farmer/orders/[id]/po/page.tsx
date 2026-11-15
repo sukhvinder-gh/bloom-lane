@@ -81,14 +81,17 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // Fetch existing PO status (if any)
   const { data: poRecord } = await admin
     .from('purchase_orders')
-    .select('status, rejection_reason, rejected_at, pickup_method, fulfillment_option_id, grower_fulfillment_date')
+    .select('status, rejection_reason, rejected_at, pickup_method, fulfillment_option_id, grower_fulfillment_date, harvest_date')
     .eq('order_id', orderId)
     .eq('farmer_id', farmer.id)
     .maybeSingle()
 
-  // Each grower sets their own date now — falls back to the shared
-  // order-level value for any PO row created before that existed.
+  // grower_fulfillment_date is the buyer's deadline (set at checkout, or by
+  // admin override) — falls back to the shared order-level value for any PO
+  // row created before per-farmer dates existed. Read-only here; the grower
+  // sets their own, separate harvest_date below instead.
   const effectiveFulfillmentDate: string | null = (poRecord as any)?.grower_fulfillment_date || order.grower_fulfillment_date
+  const harvestDate: string | null = (poRecord as any)?.harvest_date || null
 
   const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
 
@@ -186,11 +189,22 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
                 <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Fulfil by:</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {effectiveFulfillmentDate ? formatAEST(effectiveFulfillmentDate, 'dd MMM yyyy, h:mm a') : 'Not yet set by the buyer'}
+                </span>
+              </div>
+              <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Harvest date:</span>
                 <FulfilmentDateEditor
                   orderId={orderId}
-                  initialDate={effectiveFulfillmentDate}
-                  displayValue={effectiveFulfillmentDate ? formatAEST(effectiveFulfillmentDate, 'dd MMM yyyy, h:mm a') : 'Not set — click Edit to choose a date'}
+                  initialDate={harvestDate}
+                  displayValue={harvestDate ? formatAEST(harvestDate, 'dd MMM yyyy, h:mm a') : 'Not set — click Edit to choose a date'}
+                  apiPath="harvest-date"
+                  bodyField="harvest_date"
                 />
+                {harvestDate && effectiveFulfillmentDate && new Date(harvestDate) > new Date(effectiveFulfillmentDate) && (
+                  <span style={{ fontSize: '0.7rem', color: '#92400E', marginLeft: '0.375rem' }}>⚠ After the fulfil-by date</span>
+                )}
               </div>
               <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
                 <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Delivery method:</span>
