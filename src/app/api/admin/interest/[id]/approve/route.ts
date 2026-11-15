@@ -70,6 +70,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const targetRole: 'farmer' | 'buyer_b2b' = interest.role === 'grower' ? 'farmer' : 'buyer_b2b'
 
+  let buyerAbn: string | null = null
+  if (targetRole === 'buyer_b2b') {
+    const abn = String(body.abn || interest.abn || '').trim()
+    if (abn && !validateABNFormat(abn)) {
+      return NextResponse.json({ error: 'ABN must be a valid 11-digit number' }, { status: 400 })
+    }
+    buyerAbn = abn || null
+  }
+
   let farmerFields: { business_name: string; abn: string; address: string; suburb: string; state: string; postcode: string } | null = null
   if (targetRole === 'farmer') {
     const business_name = String(body.business_name || interest.business_name || '').trim()
@@ -107,6 +116,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .update({
       business_name: interest.business_name || farmerFields?.business_name || null,
       phone: interest.phone || null,
+      abn: buyerAbn,
     })
     .eq('id', newUserId)
 
