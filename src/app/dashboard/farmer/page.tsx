@@ -126,7 +126,7 @@ export default async function FarmerOverviewPage() {
                 <div>
                   <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#92400e', marginBottom: '0.2rem' }}>🎫 Set up your membership</p>
                   <p className="type-label-sm" style={{ color: '#92400e', opacity: 0.85 }}>
-                    Choose Hub Membership or the free Grower Listing to start listing products for sale.
+                    Set up your Free Grower Listing to start listing products for sale.
                   </p>
                 </div>
                 <Link href="/dashboard/farmer/membership" className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>

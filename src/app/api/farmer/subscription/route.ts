@@ -87,6 +87,18 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
+  // Membership can only be set up once admin has approved the farmer row —
+  // without this, a pending_approval grower could activate the free plan
+  // (or even pay for Hub Membership) before anyone had reviewed them.
+  const { data: farmerStatus } = await admin
+    .from('farmers')
+    .select('status')
+    .eq('user_id', user.id)
+    .single()
+  if (farmerStatus?.status !== 'approved') {
+    return NextResponse.json({ error: 'Your account is still awaiting admin approval. We\'ll email you once it\'s ready.' }, { status: 403 })
+  }
+
   // Update farmer profile. hub_id must be a real UUID or null — an empty
   // string (what the form sends when "— Select your hub —" is left as-is,
   // valid for the Free Grower Listing plan) would otherwise fail at the

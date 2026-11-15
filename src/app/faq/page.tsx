@@ -96,7 +96,7 @@ export default function FaqPage() {
         },
         {
           q: 'Do I have to join a hub?',
-          a: 'No. Hub Membership is one option. You can also sell through farm pickup and your own delivery options without belonging to a hub. If you do join, you belong to one hub at a time and can switch from your Membership page.',
+          a: 'No. The Free Grower Listing lets you sell through farm pickup and your own delivery options without belonging to a hub. Hub Membership (trading days at a shared hub) is coming soon — once it opens, you\'ll belong to one hub at a time and can switch from your Membership page.',
         },
         {
           q: 'What is the RCTI agreement?',

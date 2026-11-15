@@ -66,7 +66,7 @@ export default async function InventoryLayout({ children }: { children: ReactNod
           <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🎫</p>
           <h2 style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.5rem' }}>Set up your membership first</h2>
           <p style={{ color: 'var(--moss)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Choose Hub Membership or the free Grower Listing before listing products for sale.
+            Set up your Free Grower Listing before listing products for sale.
           </p>
           <Link href="/dashboard/farmer/membership" className="btn btn-forest">Set Up Membership →</Link>
         </div>
