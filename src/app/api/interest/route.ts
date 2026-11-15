@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   if (!full_name || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Please enter your name and a valid email address.' }, { status: 400 })
   }
-  if (role === 'grower' && !validateABNFormat(abn || '')) {
+  if (!validateABNFormat(abn || '')) {
     return NextResponse.json({ error: 'Please enter a valid 11-digit ABN' }, { status: 400 })
   }
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   // which case admin still fills these in manually at approval time.
   let state: string | null = null
   let postcode: string | null = null
-  if (role === 'grower' && abn) {
+  if (abn) {
     const lookup = await lookupABN(abn).catch(() => null)
     if (lookup?.state) state = lookup.state
     if (lookup?.postcode) postcode = lookup.postcode

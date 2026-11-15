@@ -62,7 +62,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
     const res = await fetch(`/api/admin/interest/${approveTarget.id}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(approveTarget.role === 'grower' ? approveForm : {}),
+      body: JSON.stringify(approveTarget.role === 'grower' ? approveForm : { abn: approveForm.abn }),
     })
     const json = await res.json()
     setApproving(false)
@@ -232,7 +232,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                     : `Creates a business buyer account for ${approveTarget.email} and emails them a temporary password. ABN verification happens separately on the Buyers page.`}
                 </p>
 
-                {approveTarget.role === 'grower' && (
+                {approveTarget.role === 'grower' ? (
                   <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
                     <input className="input" placeholder="Business / farm name" value={approveForm.business_name}
                       onChange={e => setApproveForm(f => ({ ...f, business_name: e.target.value }))} />
@@ -250,6 +250,11 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                       <input className="input" placeholder="Postcode" value={approveForm.postcode}
                         onChange={e => setApproveForm(f => ({ ...f, postcode: e.target.value.replace(/\D/g, '').slice(0, 4) }))} />
                     </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                    <input className="input" placeholder="ABN (11 digits)" value={approveForm.abn}
+                      onChange={e => setApproveForm(f => ({ ...f, abn: e.target.value.replace(/\D/g, '').slice(0, 11) }))} />
                   </div>
                 )}
 
