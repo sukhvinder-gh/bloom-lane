@@ -51,8 +51,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .select('id')
     .eq('email', interest.email)
     .maybeSingle()
+
+  // Someone can already have an account by the time admin gets to this row
+  // (e.g. they signed up directly, or an earlier approve attempt partially
+  // succeeded) — rather than dead-ending the admin with no way forward,
+  // just link this interest row to the existing account. No new user/email
+  // is created, since one already exists.
   if (existingProfile) {
-    return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
+    await admin
+      .from('interest_registrations')
+      .update({ converted_user_id: existingProfile.id, converted_at: new Date().toISOString(), contacted: true })
+      .eq('id', id)
+    return NextResponse.json({
+      data: { userId: existingProfile.id, tempPassword: null, emailSent: false, linkedExisting: true },
+      warning: 'An account with this email already existed, so no new account or email was created — this interest row has been linked to it and marked handled.',
+    })
   }
 
   const targetRole: 'farmer' | 'buyer_b2b' = interest.role === 'grower' ? 'farmer' : 'buyer_b2b'

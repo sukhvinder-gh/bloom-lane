@@ -585,26 +585,29 @@ export default function GrowerSubscriptionPage() {
       <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
           {
-            value: 'hub_membership' as const,
-            label: 'Hub Membership',
-            badge: hubMembershipOpen ? 'Option 1' : 'Coming soon',
-            badgeColor: '#92400E',
-            badgeBg: '#FEF3C7',
-            price: `$${(priceMap[billing] / 100).toFixed(0)}/mo`,
-            features: ['Attend Hub Thursdays', 'Sell at your own prices', 'Featured in weekly comms', 'No minimum quantity'],
-            best: 'Growers who enjoy direct selling',
-            disabled: !hubMembershipOpen,
-          },
-          {
             value: 'wholesale_collection' as const,
             label: FREE_TIER_LABEL,
-            badge: 'Option 2',
+            badge: 'Option 1',
             badgeColor: '#065F46',
             badgeBg: '#D1FAE5',
             price: 'No membership fee',
             features: ['Collection from farm', 'Paid in full on collection', 'Farm credited in all promotion', 'No attendance required'],
             best: 'Growers who prefer to focus on growing',
             disabled: false,
+          },
+          {
+            value: 'hub_membership' as const,
+            label: 'Hub Membership',
+            badge: hubMembershipOpen ? 'Active' : 'Option 2 · Coming soon',
+            badgeColor: '#92400E',
+            badgeBg: '#FEF3C7',
+            price: `$${(priceMap[billing] / 100).toFixed(0)}/mo`,
+            // Hidden until Hub Membership actually opens for new sign-ups —
+            // showing feature bullets for a plan no one can join yet reads
+            // as a live offer rather than a preview.
+            features: hubMembershipOpen ? ['Attend Hub Thursdays', 'Sell at your own prices', 'Featured in weekly comms', 'No minimum quantity'] : [],
+            best: 'Growers who enjoy direct selling',
+            disabled: !hubMembershipOpen,
           },
         ].map(opt => {
           const active = plan === opt.value
@@ -628,13 +631,17 @@ export default function GrowerSubscriptionPage() {
               </span>
               <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>{opt.label}</p>
               <p style={{ fontSize: '0.8rem', color: opt.value === 'hub_membership' ? '#92400E' : '#065F46', fontWeight: 700, marginBottom: '0.875rem' }}>{opt.price}</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                {opt.features.map(f => (
-                  <li key={f} style={{ fontSize: '0.775rem', color: 'var(--forest)', display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                    <span style={{ color: opt.value === 'hub_membership' ? '#92400E' : '#065F46', flexShrink: 0 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
+              {opt.features.length > 0 ? (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {opt.features.map(f => (
+                    <li key={f} style={{ fontSize: '0.775rem', color: 'var(--forest)', display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                      <span style={{ color: opt.value === 'hub_membership' ? '#92400E' : '#065F46', flexShrink: 0 }}>✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ fontSize: '0.775rem', color: 'var(--moss)', margin: '0 0 0.875rem' }}>Details coming soon.</p>
+              )}
               <p style={{ fontSize: '0.7rem', color: 'var(--moss)', borderTop: '1px solid var(--sage)', paddingTop: '0.625rem' }}>
                 <strong>Best for</strong> {opt.best}
               </p>
@@ -694,7 +701,8 @@ export default function GrowerSubscriptionPage() {
             </div>
             <div>
               <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Region</label>
-              <input className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} placeholder="e.g. Yarra Valley" style={{ width: '100%' }} />
+              <input className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} placeholder="City or Regional Council name, e.g. Yarra Ranges" style={{ width: '100%' }} />
+              <p style={{ fontSize: '0.7rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Your city or Regional Council name.</p>
             </div>
           </div>
         </div>
