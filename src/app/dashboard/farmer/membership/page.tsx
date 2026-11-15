@@ -7,7 +7,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
 import { sanitizeABNInput } from '@/lib/utils/abn'
-import { AUSTRALIAN_STATES, LGAS_BY_STATE, regionOptionsForState } from '@/lib/utils/lga'
+import { AUSTRALIAN_STATES, regionOptionsForState } from '@/lib/utils/lga'
 
 // Display label only — the underlying plan value ('wholesale_collection')
 // is unchanged in the database/subscriptions.plan enum. This tier is a
@@ -368,7 +368,7 @@ export default function GrowerSubscriptionPage() {
   const [rctiFullName, setRctiFullName] = useState('')
   const [farmAddress, setFarmAddress] = useState('')
   const [farmRegion, setFarmRegion]   = useState('')
-  const [farmerState, setFarmerState] = useState('')
+  const [farmState, setFarmState]     = useState('')
 
   useEffect(() => {
     const safe = (p: Promise<any>) => p.catch(() => ({}))
@@ -395,7 +395,7 @@ export default function GrowerSubscriptionPage() {
         setRctiFullName(f.rcti_full_name || '')
         setFarmAddress(f.farm_address || '')
         setFarmRegion(f.farm_region || '')
-        setFarmerState(f.state || '')
+        setFarmState(f.state || '')
         const subActive = subData.subscription?.status === 'active' || subData.subscription?.status === 'pending'
         setViewMode(subActive ? 'details' : 'edit')
       }
@@ -431,6 +431,7 @@ export default function GrowerSubscriptionPage() {
         rcti_full_name: rctiFullName,
         farm_address: farmAddress,
         farm_region: farmRegion,
+        state: farmState,
       }),
     })
     const data = await res.json()
@@ -699,25 +700,24 @@ export default function GrowerSubscriptionPage() {
               <input className="input" value={abn} onChange={e => setAbn(sanitizeABNInput(e.target.value))} placeholder="XX XXX XXX XXX" maxLength={11} required style={{ width: '100%' }} />
             </div>
             <div>
-              <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Farm Address</label>
+              <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Address</label>
               <input className="input" value={farmAddress} onChange={e => setFarmAddress(e.target.value)} placeholder="Street address" style={{ width: '100%' }} />
             </div>
             <div>
-              <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Region</label>
-              <select className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} style={{ width: '100%' }}>
+              <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>State</label>
+              <select className="input" value={farmState} onChange={e => { setFarmState(e.target.value); setFarmRegion('') }} style={{ width: '100%' }}>
                 <option value="">— Select —</option>
-                {farmerState ? (
-                  regionOptionsForState(farmerState, farmRegion).map(r => <option key={r} value={r}>{r}</option>)
-                ) : (
-                  AUSTRALIAN_STATES.map(s => (
-                    <optgroup key={s} label={s}>
-                      {LGAS_BY_STATE[s].map(r => <option key={r} value={r}>{r}</option>)}
-                    </optgroup>
-                  ))
-                )}
+                {AUSTRALIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <p style={{ fontSize: '0.7rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Your city or Regional Council name.</p>
             </div>
+          </div>
+          <div style={{ marginTop: '0.875rem' }}>
+            <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Region</label>
+            <select className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} style={{ width: '100%' }} disabled={!farmState}>
+              <option value="">{farmState ? '— Select —' : 'Select a state first'}</option>
+              {regionOptionsForState(farmState, farmRegion).map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <p style={{ fontSize: '0.7rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Your city or Regional Council name.</p>
           </div>
         </div>
 

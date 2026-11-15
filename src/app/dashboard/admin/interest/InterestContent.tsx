@@ -10,6 +10,9 @@ type Row = {
   email: string
   phone: string | null
   business_name: string | null
+  abn: string | null
+  state: string | null
+  postcode: string | null
   region: string | null
   notes: string | null
   contacted: boolean
@@ -48,7 +51,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
   function openApprove(row: Row) {
     setApproveError('')
     setLastApproved(null)
-    setApproveForm({ business_name: row.business_name || '', abn: '', address: '', suburb: row.region || '', state: 'VIC', postcode: '' })
+    setApproveForm({ business_name: row.business_name || '', abn: row.abn || '', address: '', suburb: row.region || '', state: row.state || 'VIC', postcode: row.postcode || '' })
     setApproveTarget(row)
   }
 
