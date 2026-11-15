@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { validateABNFormat, sanitizeABNInput } from '@/lib/utils/abn'
+import { AUSTRALIAN_STATES, regionOptionsForState } from '@/lib/utils/lga'
 
 const STATUS_BADGE: Record<string, string> = {
   pending_approval: 'badge badge-amber',
@@ -210,11 +211,17 @@ export default function EditFarmerForm({ farmer: initial, requesterRole }: { far
             </div>
             <div>
               <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>State</label>
-              <input className="input" value={form.state} onChange={e => set('state', e.target.value)} placeholder="VIC" style={{ width: '100%' }} />
+              <select className="input" value={form.state} onChange={e => { set('state', e.target.value); set('region', '') }} style={{ width: '100%' }}>
+                <option value="">— Select —</option>
+                {AUSTRALIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div>
               <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>Region</label>
-              <input className="input" value={form.region} onChange={e => set('region', e.target.value)} placeholder="Yarra Valley" style={{ width: '100%' }} />
+              <select className="input" value={form.region} onChange={e => set('region', e.target.value)} style={{ width: '100%' }}>
+                <option value="">— Select —</option>
+                {regionOptionsForState(form.state, initial.region).map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
             </div>
           </div>
 

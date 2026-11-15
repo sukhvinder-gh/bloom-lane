@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import SingleImageUpload from '@/components/SingleImageUpload'
 import { sanitizeABNInput } from '@/lib/utils/abn'
+import { AUSTRALIAN_STATES, regionOptionsForState } from '@/lib/utils/lga'
 
 type MarketWindow = { day: string; open: string; close: string }
 
@@ -385,7 +386,10 @@ export default function FarmerStorefrontPage() {
         {/* Region */}
         <div>
           <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>Region</label>
-          <input style={inputStyle} value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} placeholder="e.g. Yarra Valley, Mornington Peninsula" />
+          <select style={inputStyle} value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))}>
+            <option value="">— Select your region —</option>
+            {regionOptionsForState(form.state, farmer?.region).map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
           <p style={{ fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.5, marginTop: '0.3rem' }}>Shown publicly on your grower profile to help buyers find you</p>
         </div>
 
@@ -436,8 +440,8 @@ export default function FarmerStorefrontPage() {
           </div>
           <div>
             <label style={{ display: 'block', fontWeight: 700, color: 'var(--forest)', fontSize: '0.875rem', marginBottom: '0.35rem' }}>State</label>
-            <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} style={inputStyle}>
-              {['VIC','NSW','QLD','SA','WA','TAS','NT','ACT'].map(s => <option key={s}>{s}</option>)}
+            <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value, region: '' }))} style={inputStyle}>
+              {AUSTRALIAN_STATES.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div>

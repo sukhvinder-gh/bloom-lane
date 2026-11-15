@@ -34,7 +34,9 @@ const STATUS_LABEL: Record<string, [string, string]> = {
   cancelled:         ['#6b7280', '✕ Cancelled'],
 }
 
-export default function AdminOrderDetail({ order }: { order: any }) {
+type EmailLogRow = { email_type: 'buyer_confirmation' | 'grower_po'; recipient: string; status: 'sent' | 'failed'; error: string | null; created_at: string }
+
+export default function AdminOrderDetail({ order, emailLog = [] }: { order: any; emailLog?: EmailLogRow[] }) {
   const [status, setStatus]         = useState(order.status)
   const [updating, setUpdating]     = useState(false)
   const [fulfillDate, setFulfillDate] = useState(order.grower_fulfillment_date?.slice(0, 16) || '')
@@ -74,12 +76,18 @@ export default function AdminOrderDetail({ order }: { order: any }) {
 
   async function saveDates() {
     setSavingDates(true)
-    await fetch(`/api/admin/orders/${order.id}/dates`, {
+    const res = await fetch(`/api/admin/orders/${order.id}/dates`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grower_fulfillment_date: fulfillDate || null, florist_delivery_date: deliveryDate || null }),
     })
     setSavingDates(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setDatesMsg(`✗ ${d.error || 'Save failed'}`)
+      setTimeout(() => setDatesMsg(''), 5000)
+      return
+    }
     setDatesMsg('✓ Dates saved')
     setTimeout(() => setDatesMsg(''), 3000)
   }
@@ -156,6 +164,19 @@ export default function AdminOrderDetail({ order }: { order: any }) {
           <span style={{ padding: '0.3rem 0.875rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 700, background: statusColor + '22', color: statusColor }}>{statusLabel}</span>
         </div>
       </div>
+
+      {/* Email send history — so a failure (e.g. missing confirmation email)
+          is visible here instead of only in server logs */}
+      {emailLog.length > 0 && (
+        <div style={{ marginBottom: '1.5rem', fontSize: '0.78rem', color: 'var(--moss)', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem' }}>
+          {emailLog.map((e, i) => (
+            <span key={i} title={e.error || undefined}>
+              {e.status === 'sent' ? '✓' : '✗'} {e.email_type === 'buyer_confirmation' ? 'Buyer confirmation' : `PO for ${e.recipient}`}
+              {e.status === 'failed' && e.error ? ` — ${e.error}` : ''}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
 

@@ -30,6 +30,11 @@ const checkoutSchema = z.object({
   // than one configured delivery slot. Never trusted as-is — validated below
   // against that farmer's real options before it affects price.
   fulfillment_option_selections: z.record(z.string().uuid(), z.string().uuid()).optional().default({}),
+  // The buyer's own fulfilment deadline, set at checkout rather than left for
+  // admin to fill in afterwards. florist_delivery_date covers pooled
+  // delivery; pickup_dates covers farm pickup, one concrete date per farmer.
+  florist_delivery_date: z.string().datetime().optional(),
+  pickup_dates: z.record(z.string().uuid(), z.string().datetime()).optional().default({}),
 })
 
 export async function POST(request: NextRequest) {
@@ -95,7 +100,8 @@ export async function POST(request: NextRequest) {
   const { items, fulfillment_type, hub_id, delivery_address,
     delivery_suburb, delivery_state, delivery_postcode, notes,
     farm_pickup_farmer_ids: requestedFarmPickupIds,
-    fulfillment_option_selections: requestedOptionSelections } = parsed.data
+    fulfillment_option_selections: requestedOptionSelections,
+    florist_delivery_date, pickup_dates } = parsed.data
 
   // Fetch product details first for validation
   // farmers(gst_registered, offers_farm_pickup) is joined so GST and farm
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents))')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents, day_of_week, start_time, end_time))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -157,12 +163,39 @@ export async function POST(request: NextRequest) {
     if (chosen) validatedOptionSelections[fid] = chosen.id
   }
 
+  // The buyer must supply a real fulfilment deadline — required, not left
+  // for admin to fill in after the fact. A pickup date must land on the
+  // actual day of week the grower configured (defense in depth — the
+  // checkout UI only ever offers valid occurrences, but never trust the
+  // client).
+  const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  for (const fid of farmPickupFarmerIds) {
+    const picked = pickup_dates[fid]
+    if (!picked) {
+      const name = (products.find(p => p.farmer_id === fid) as any)?.farmers?.business_name || 'This grower'
+      return NextResponse.json({ error: `Please choose a pickup date for ${name}.` }, { status: 400 })
+    }
+    const product = products.find(p => p.farmer_id === fid)
+    const pickupOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'pickup')
+    const chosenId = validatedOptionSelections[fid]
+    const chosenOption = pickupOptions.find((o: any) => o.id === chosenId)
+    if (chosenOption?.day_of_week) {
+      const pickedDay = DAY_NAMES[new Date(picked).getDay()]
+      if (pickedDay !== chosenOption.day_of_week) {
+        return NextResponse.json({ error: `The pickup date for ${(product as any)?.farmers?.business_name || 'this grower'} must fall on a ${chosenOption.day_of_week}.` }, { status: 400 })
+      }
+    }
+  }
+
   if (hasPooledItems) {
     if (fulfillment_type === 'hub_pickup' && !hub_id) {
       return NextResponse.json({ error: 'Hub ID required for hub pickup' }, { status: 400 })
     }
     if (fulfillment_type === 'direct_delivery' && !delivery_address) {
       return NextResponse.json({ error: 'Delivery address required' }, { status: 400 })
+    }
+    if (fulfillment_type === 'direct_delivery' && !florist_delivery_date) {
+      return NextResponse.json({ error: 'Please choose a delivery date and time.' }, { status: 400 })
     }
     // Delivery pricing is entirely grower-set (see farmer_fulfillment_options)
     // — there's no platform-wide delivery fee to fall back on, so a pooled
@@ -297,6 +330,12 @@ export async function POST(request: NextRequest) {
 
   const totals = calculateOrderTotals(orderItems, deliveryFeeCents)
 
+  // Only the pickup dates that actually belong to a validated farm-pickup
+  // farmer on this order — never trust the client's map as-is.
+  const buyerFulfillmentDates = Object.fromEntries(
+    farmPickupFarmerIds.filter(fid => pickup_dates[fid]).map(fid => [fid, pickup_dates[fid]])
+  )
+
   // Create order
   const { data: order, error: orderError } = await adminSupabase
     .from('orders')
@@ -318,6 +357,8 @@ export async function POST(request: NextRequest) {
       notes,
       farm_pickup_farmer_ids: farmPickupFarmerIds,
       fulfillment_option_selections: validatedOptionSelections,
+      florist_delivery_date: fulfillment_type === 'direct_delivery' ? (florist_delivery_date || null) : null,
+      buyer_fulfillment_dates: buyerFulfillmentDates,
     })
     .select()
     .single()

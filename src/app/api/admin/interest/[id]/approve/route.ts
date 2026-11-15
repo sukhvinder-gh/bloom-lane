@@ -73,11 +73,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let farmerFields: { business_name: string; abn: string; address: string; suburb: string; state: string; postcode: string } | null = null
   if (targetRole === 'farmer') {
     const business_name = String(body.business_name || interest.business_name || '').trim()
-    const abn = String(body.abn || '').trim()
+    const abn = String(body.abn || interest.abn || '').trim()
     const address = String(body.address || '').trim()
     const suburb = String(body.suburb || '').trim()
-    const state = String(body.state || '').trim()
-    const postcode = String(body.postcode || '').trim()
+    const state = String(body.state || interest.state || '').trim()
+    const postcode = String(body.postcode || interest.postcode || '').trim()
 
     if (!business_name) return NextResponse.json({ error: 'Business name is required' }, { status: 400 })
     if (!validateABNFormat(abn)) return NextResponse.json({ error: 'A valid 11-digit ABN is required' }, { status: 400 })

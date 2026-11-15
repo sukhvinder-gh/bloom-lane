@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendEmail, getAdminInbox } from '@/lib/email/mailer'
+import { validateABNFormat, lookupABN } from '@/lib/utils/abn'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -42,15 +43,54 @@ export async function POST(request: NextRequest) {
   const business_name = String(body.business_name ?? '').trim().slice(0, 200) || null
   const region = String(body.region ?? '').trim().slice(0, 200) || null
   const notes = String(body.notes ?? '').trim().slice(0, 2000) || null
+  const abn = String(body.abn ?? '').replace(/\D/g, '').slice(0, 11) || null
 
   if (!role) return NextResponse.json({ error: 'Missing role' }, { status: 400 })
   if (!full_name || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Please enter your name and a valid email address.' }, { status: 400 })
   }
+  if (role === 'grower' && !validateABNFormat(abn || '')) {
+    return NextResponse.json({ error: 'Please enter a valid 11-digit ABN' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
+
+  // Someone who already has a real account (grower, buyer, admin — any
+  // role) can't register interest again; they should sign in instead.
+  const { data: existingProfile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle()
+  if (existingProfile) {
+    return NextResponse.json({ error: 'An account with this email already exists. Please sign in instead.' }, { status: 409 })
+  }
+
+  // Already submitted and not yet actioned — avoid piling up duplicate rows
+  // for the same person (e.g. a double-submit or trying again next week).
+  const { data: existingInterest } = await admin
+    .from('interest_registrations')
+    .select('id')
+    .eq('email', email)
+    .is('converted_user_id', null)
+    .maybeSingle()
+  if (existingInterest) {
+    return NextResponse.json({ error: "You've already registered interest with this email — we'll be in touch soon." }, { status: 409 })
+  }
+
+  // ABN lookup pre-fills state/postcode for admin's Approve step later —
+  // best-effort only; ABR_GUID may not be set, or the API may be down, in
+  // which case admin still fills these in manually at approval time.
+  let state: string | null = null
+  let postcode: string | null = null
+  if (role === 'grower' && abn) {
+    const lookup = await lookupABN(abn).catch(() => null)
+    if (lookup?.state) state = lookup.state
+    if (lookup?.postcode) postcode = lookup.postcode
+  }
+
   const { error } = await admin.from('interest_registrations').insert({
-    role, full_name, email, phone, business_name, region, notes,
+    role, full_name, email, phone, business_name, region, notes, abn, state, postcode,
   })
   if (error) {
     console.error('[INTEREST] insert failed:', error)

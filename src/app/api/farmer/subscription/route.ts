@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     rcti_full_name,
     farm_address,
     farm_region,
+    state,
   } = body
 
   // hub_id is only required for Hub Membership — the UI labels it
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
     updated_at: new Date().toISOString(),
   }
   if (business_name) farmerUpdate.business_name = business_name
+  if (state) farmerUpdate.state = state
 
   const { error: farmerErr } = await admin
     .from('farmers')

@@ -61,31 +61,40 @@ export async function finalizeOrderPayment(
 
     const { data: orderRow } = await supabase
       .from('orders')
-      .select('farm_pickup_farmer_ids, fulfillment_option_selections, grower_fulfillment_date')
+      .select('farm_pickup_farmer_ids, fulfillment_option_selections, grower_fulfillment_date, florist_delivery_date, buyer_fulfillment_dates')
       .eq('id', orderId)
       .single()
     const farmPickupIds = new Set((orderRow as any)?.farm_pickup_farmer_ids || [])
     const optionSelections: Record<string, string> = (orderRow as any)?.fulfillment_option_selections || {}
+    const floristDeliveryDate: string | null = (orderRow as any)?.florist_delivery_date || null
+    const buyerFulfillmentDates: Record<string, string> = (orderRow as any)?.buyer_fulfillment_dates || {}
 
     if (orderItems && orderItems.length > 0) {
       const farmerIds = [...new Set(orderItems.map(i => i.farmer_id))]
 
       // Auto-set the order-level fulfilment date too — admin override UI and
-      // the buyer-facing order view still read this shared column. Only
-      // fills it in if nothing's set yet, so an admin override always wins.
+      // the buyer-facing order view still read this shared column. Prefers
+      // the buyer's own delivery date from checkout; only falls back to the
+      // computed default when the buyer didn't supply one (legacy orders)
+      // and nothing's set yet, so an admin override always wins.
       if (!(orderRow as any)?.grower_fulfillment_date) {
-        const defaultDate = await computeDefaultFulfillmentDate(supabase, farmerIds)
-        await supabase.from('orders').update({ grower_fulfillment_date: defaultDate.toISOString() }).eq('id', orderId)
+        const fallbackDate = floristDeliveryDate ? new Date(floristDeliveryDate) : await computeDefaultFulfillmentDate(supabase, farmerIds)
+        await supabase.from('orders').update({ grower_fulfillment_date: fallbackDate.toISOString() }).eq('id', orderId)
       }
 
-      // Each grower gets their own default date on their own PO row — a
-      // farmer with no configured market/hub schedule shouldn't inherit
-      // another farmer's later close date just because they share an order.
+      // Each grower's own date on their own PO row — buyer-supplied first
+      // (their own pickup date if they're farm-pickup, else the shared
+      // delivery date), computed default only as a fallback for whichever
+      // farmer the buyer didn't supply a date for (legacy orders, edge
+      // cases). A farmer with no configured market/hub schedule shouldn't
+      // inherit another farmer's later close date just because they share
+      // an order, so the fallback is still computed per-farmer.
       const perFarmerDates = await Promise.all(
-        farmerIds.map(async farmerId => ({
-          farmerId,
-          date: await computeDefaultFulfillmentDate(supabase, [farmerId]),
-        }))
+        farmerIds.map(async farmerId => {
+          const buyerDate = farmPickupIds.has(farmerId) ? buyerFulfillmentDates[farmerId] : floristDeliveryDate
+          const date = buyerDate ? new Date(buyerDate) : await computeDefaultFulfillmentDate(supabase, [farmerId])
+          return { farmerId, date }
+        })
       )
       const dateByFarmer = new Map(perFarmerDates.map(d => [d.farmerId, d.date]))
 
@@ -149,6 +158,16 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
     .eq('id', (order as any).buyer_id)
     .single()
 
+  // Persisted alongside the existing console logging below — a failure here
+  // previously left no trace once server logs rolled over.
+  async function logEmail(emailType: 'buyer_confirmation' | 'grower_po', recipient: string, status: 'sent' | 'failed', error?: string) {
+    try {
+      await supabase.from('order_email_log').insert({ order_id: orderId, email_type: emailType, recipient, status, error: error ?? null })
+    } catch (logErr) {
+      console.error('[EMAIL] Failed to write order_email_log row:', logErr)
+    }
+  }
+
   // --- 1. Buyer order confirmation ---
   if (buyerProfile?.email) {
     try {
@@ -174,8 +193,10 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
         })),
       })
       console.log('[EMAIL] Buyer confirmation sent to', buyerProfile.email)
+      await logEmail('buyer_confirmation', buyerProfile.email, 'sent')
     } catch (err) {
       console.error('[EMAIL] Buyer confirmation failed for order', order.order_number, err)
+      await logEmail('buyer_confirmation', buyerProfile.email, 'failed', err instanceof Error ? err.message : String(err))
     }
   } else {
     console.warn('[EMAIL] No buyer email found for order', order.order_number)
@@ -238,8 +259,10 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
           })),
         })
         console.log('[EMAIL] PO sent to farmer', farmer.email)
+        await logEmail('grower_po', farmer.email, 'sent')
       } catch (err) {
         console.error('[EMAIL] PO email failed for farmer', farmer.email, err)
+        await logEmail('grower_po', farmer.email, 'failed', err instanceof Error ? err.message : String(err))
       }
     })
   )

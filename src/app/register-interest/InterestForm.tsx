@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
+import { sanitizeABNInput, validateABNFormat } from '@/lib/utils/abn'
 
 export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', region: '', notes: '', website: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', abn: '', region: '', notes: '', website: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -10,6 +11,10 @@ export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (role === 'grower' && !validateABNFormat(form.abn)) {
+      setError('Please enter a valid 11-digit ABN')
+      return
+    }
     setSending(true); setError('')
     try {
       const res = await fetch('/api/interest', {
@@ -58,6 +63,12 @@ export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
           <input id="i-business" className="input" maxLength={200} value={form.business_name} onChange={e => set('business_name', e.target.value)} style={{ width: '100%' }} />
         </div>
       </div>
+      {role === 'grower' && (
+        <div>
+          <label className="label" htmlFor="i-abn">ABN *</label>
+          <input id="i-abn" className="input" required maxLength={11} placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => set('abn', sanitizeABNInput(e.target.value))} style={{ width: '100%' }} />
+        </div>
+      )}
       <div>
         <label className="label" htmlFor="i-region">{role === 'grower' ? 'Where do you grow?' : 'Where are you based?'}</label>
         <input id="i-region" className="input" maxLength={200} placeholder="e.g. Yarra Valley, VIC" value={form.region} onChange={e => set('region', e.target.value)} style={{ width: '100%' }} />

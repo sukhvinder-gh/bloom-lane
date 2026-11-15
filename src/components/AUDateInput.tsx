@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 // Chrome/Edge derive native <input type="date"/"datetime-local"> display
 // format from the OS/browser locale, ignoring the page's `lang` attribute
@@ -51,17 +51,36 @@ function useOverlayInput(name: string | undefined, value: string | undefined, de
   return { current, handleChange }
 }
 
+// A native date/datetime-local input's own `.value` is "" until every
+// subfield (day, month, year, and for datetime-local, hour+minute) is
+// filled — so a controlled `value={value}` re-render mid-edit (the instant
+// between finishing the date and starting the time) forces the DOM value
+// back to that interim "", wiping what was just typed. Driving the input as
+// `defaultValue` and only imperatively syncing `ref.current.value` when
+// `value` changes for a reason OTHER than this same input's own onChange
+// (guarded by the ref already matching) avoids that reset entirely.
+function useExternalValueSync(ref: React.RefObject<HTMLInputElement | null>, value: string | undefined, isControlled: boolean) {
+  useEffect(() => {
+    if (!isControlled || !ref.current) return
+    const next = value || ''
+    if (ref.current.value !== next) ref.current.value = next
+  }, [ref, value, isControlled])
+}
+
 export function AUDateInput({ value, onChange, name, defaultValue, className, style, ariaLabel, min, max }: Props) {
   const { current, handleChange } = useOverlayInput(name, value, defaultValue, onChange)
   const display = formatDMY(current)
+  const isControlled = name === undefined
+  const inputRef = useRef<HTMLInputElement>(null)
+  useExternalValueSync(inputRef, value, isControlled)
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: style?.width }}>
       <input
+        ref={inputRef}
         type="date"
         name={name}
-        value={name !== undefined ? undefined : value}
-        defaultValue={name !== undefined ? defaultValue : undefined}
+        defaultValue={isControlled ? value : defaultValue}
         onChange={e => handleChange(e.target.value)}
         aria-label={ariaLabel}
         min={min}
@@ -92,14 +111,17 @@ export function AUDateInput({ value, onChange, name, defaultValue, className, st
 export function AUDateTimeInput({ value, onChange, name, defaultValue, className, style, ariaLabel, min, max }: Props) {
   const { current, handleChange } = useOverlayInput(name, value, defaultValue, onChange)
   const display = formatDMYTime(current)
+  const isControlled = name === undefined
+  const inputRef = useRef<HTMLInputElement>(null)
+  useExternalValueSync(inputRef, value, isControlled)
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: style?.width }}>
       <input
+        ref={inputRef}
         type="datetime-local"
         name={name}
-        value={name !== undefined ? undefined : value}
-        defaultValue={name !== undefined ? defaultValue : undefined}
+        defaultValue={isControlled ? value : defaultValue}
         onChange={e => handleChange(e.target.value)}
         aria-label={ariaLabel}
         min={min}
