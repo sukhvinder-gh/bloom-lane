@@ -7,6 +7,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
 import { sanitizeABNInput } from '@/lib/utils/abn'
+import { AUSTRALIAN_STATES, LGAS_BY_STATE, regionOptionsForState } from '@/lib/utils/lga'
 
 // Display label only — the underlying plan value ('wholesale_collection')
 // is unchanged in the database/subscriptions.plan enum. This tier is a
@@ -367,6 +368,7 @@ export default function GrowerSubscriptionPage() {
   const [rctiFullName, setRctiFullName] = useState('')
   const [farmAddress, setFarmAddress] = useState('')
   const [farmRegion, setFarmRegion]   = useState('')
+  const [farmerState, setFarmerState] = useState('')
 
   useEffect(() => {
     const safe = (p: Promise<any>) => p.catch(() => ({}))
@@ -393,6 +395,7 @@ export default function GrowerSubscriptionPage() {
         setRctiFullName(f.rcti_full_name || '')
         setFarmAddress(f.farm_address || '')
         setFarmRegion(f.farm_region || '')
+        setFarmerState(f.state || '')
         const subActive = subData.subscription?.status === 'active' || subData.subscription?.status === 'pending'
         setViewMode(subActive ? 'details' : 'edit')
       }
@@ -701,7 +704,18 @@ export default function GrowerSubscriptionPage() {
             </div>
             <div>
               <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Region</label>
-              <input className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} placeholder="City or Regional Council name, e.g. Yarra Ranges" style={{ width: '100%' }} />
+              <select className="input" value={farmRegion} onChange={e => setFarmRegion(e.target.value)} style={{ width: '100%' }}>
+                <option value="">— Select —</option>
+                {farmerState ? (
+                  regionOptionsForState(farmerState, farmRegion).map(r => <option key={r} value={r}>{r}</option>)
+                ) : (
+                  AUSTRALIAN_STATES.map(s => (
+                    <optgroup key={s} label={s}>
+                      {LGAS_BY_STATE[s].map(r => <option key={r} value={r}>{r}</option>)}
+                    </optgroup>
+                  ))
+                )}
+              </select>
               <p style={{ fontSize: '0.7rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Your city or Regional Council name.</p>
             </div>
           </div>

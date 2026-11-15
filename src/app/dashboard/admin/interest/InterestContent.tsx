@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { formatAEST } from '@/lib/utils/timezone'
+import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
 
 type Row = {
   id: string
@@ -239,8 +240,10 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.5rem' }}>
                       <input className="input" placeholder="Suburb" value={approveForm.suburb}
                         onChange={e => setApproveForm(f => ({ ...f, suburb: e.target.value }))} />
-                      <input className="input" placeholder="State" value={approveForm.state}
-                        onChange={e => setApproveForm(f => ({ ...f, state: e.target.value }))} />
+                      <select className="input" value={approveForm.state}
+                        onChange={e => setApproveForm(f => ({ ...f, state: e.target.value }))}>
+                        {AUSTRALIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
                       <input className="input" placeholder="Postcode" value={approveForm.postcode}
                         onChange={e => setApproveForm(f => ({ ...f, postcode: e.target.value.replace(/\D/g, '').slice(0, 4) }))} />
                     </div>
