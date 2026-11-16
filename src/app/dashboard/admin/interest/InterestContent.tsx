@@ -11,6 +11,7 @@ type Row = {
   phone: string | null
   business_name: string | null
   abn: string | null
+  address: string | null
   state: string | null
   postcode: string | null
   region: string | null
@@ -24,9 +25,9 @@ type Row = {
 type Tab = 'all' | 'grower' | 'buyer'
 
 function exportCSV(rows: Row[]) {
-  const header = ['Role', 'Name', 'Email', 'Phone', 'Business/Farm', 'Region', 'Notes', 'Submitted', 'Contacted']
+  const header = ['Role', 'Name', 'Email', 'Phone', 'Business/Farm', 'Address', 'Suburb', 'State', 'Postcode', 'Notes', 'Submitted', 'Contacted']
   const csvRows = rows.map(r => [
-    r.role, r.full_name, r.email, r.phone || '', r.business_name || '', r.region || '',
+    r.role, r.full_name, r.email, r.phone || '', r.business_name || '', r.address || '', r.region || '', r.state || '', r.postcode || '',
     (r.notes || '').replace(/\n/g, ' '), r.created_at, r.contacted ? 'Yes' : 'No',
   ].map(v => `"${String(v).replace(/"/g, '""')}"`))
   const csv = [header.join(','), ...csvRows].join('\n')
@@ -51,7 +52,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
   function openApprove(row: Row) {
     setApproveError('')
     setLastApproved(null)
-    setApproveForm({ business_name: row.business_name || '', abn: row.abn || '', address: '', suburb: row.region || '', state: row.state || 'VIC', postcode: row.postcode || '' })
+    setApproveForm({ business_name: row.business_name || '', abn: row.abn || '', address: row.address || '', suburb: row.region || '', state: row.state || 'VIC', postcode: row.postcode || '' })
     setApproveTarget(row)
   }
 
@@ -170,7 +171,11 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem' }}>
                     <p style={{ color: 'var(--navy)', fontSize: '0.85rem' }}>{row.business_name || '—'}</p>
-                    {row.region && <p className="type-label-sm" style={{ color: 'var(--moss)' }}>{row.region}</p>}
+                    {(row.address || row.region) && (
+                      <p className="type-label-sm" style={{ color: 'var(--moss)' }}>
+                        {[row.address, row.region, row.state, row.postcode].filter(Boolean).join(', ')}
+                      </p>
+                    )}
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem', color: 'var(--moss)', fontSize: '0.8rem', maxWidth: '16rem' }}>{row.notes || '—'}</td>
                   <td style={{ padding: '0.875rem 1.25rem', color: 'var(--moss)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{formatAEST(row.created_at, 'dd MMM yyyy')}</td>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendEmail, getAdminInbox } from '@/lib/email/mailer'
-import { validateABNFormat, lookupABN } from '@/lib/utils/abn'
+import { validateABNFormat } from '@/lib/utils/abn'
+import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -41,7 +42,10 @@ export async function POST(request: NextRequest) {
   const email = String(body.email ?? '').trim().slice(0, 200)
   const phone = String(body.phone ?? '').trim().slice(0, 40) || null
   const business_name = String(body.business_name ?? '').trim().slice(0, 200) || null
+  const address = String(body.address ?? '').trim().slice(0, 200) || null
   const region = String(body.region ?? '').trim().slice(0, 200) || null
+  const state = AUSTRALIAN_STATES.includes(body.state) ? body.state : null
+  const postcode = /^\d{4}$/.test(String(body.postcode ?? '')) ? String(body.postcode) : null
   const notes = String(body.notes ?? '').trim().slice(0, 2000) || null
   const abn = String(body.abn ?? '').replace(/\D/g, '').slice(0, 11) || null
 
@@ -51,6 +55,9 @@ export async function POST(request: NextRequest) {
   }
   if (!validateABNFormat(abn || '')) {
     return NextResponse.json({ error: 'Please enter a valid 11-digit ABN' }, { status: 400 })
+  }
+  if (!address || !region || !state || !postcode) {
+    return NextResponse.json({ error: 'Please enter a complete address, including a valid 4-digit postcode' }, { status: 400 })
   }
 
   const admin = createAdminClient()
@@ -78,19 +85,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "You've already registered interest with this email — we'll be in touch soon." }, { status: 409 })
   }
 
-  // ABN lookup pre-fills state/postcode for admin's Approve step later —
-  // best-effort only; ABR_GUID may not be set, or the API may be down, in
-  // which case admin still fills these in manually at approval time.
-  let state: string | null = null
-  let postcode: string | null = null
-  if (abn) {
-    const lookup = await lookupABN(abn).catch(() => null)
-    if (lookup?.state) state = lookup.state
-    if (lookup?.postcode) postcode = lookup.postcode
-  }
-
   const { error } = await admin.from('interest_registrations').insert({
-    role, full_name, email, phone, business_name, region, notes, abn, state, postcode,
+    role, full_name, email, phone, business_name, address, region, notes, abn, state, postcode,
   })
   if (error) {
     console.error('[INTEREST] insert failed:', error)
@@ -151,7 +147,7 @@ export async function POST(request: NextRequest) {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>${[
             `<td width="50%" valign="top"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Business</div><div style="color:#1a3a2a;font-size:14px;font-weight:600">${business_name ? escapeHtml(business_name) : '—'}</div></td>`,
-            `<td width="50%" valign="top"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Region</div><div style="color:#1a3a2a;font-size:14px;font-weight:600">${region ? escapeHtml(region) : '—'}</div></td>`,
+            `<td width="50%" valign="top"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Address</div><div style="color:#1a3a2a;font-size:14px;font-weight:600">${address ? escapeHtml(address) : '—'}${region ? `, ${escapeHtml(region)}` : ''}${state ? ` ${escapeHtml(state)}` : ''}${postcode ? ` ${escapeHtml(postcode)}` : ''}</div></td>`,
           ].join('')}</tr>
         </table>
       </div>
