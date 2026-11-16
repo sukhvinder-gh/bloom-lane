@@ -24,6 +24,9 @@ function AdminStatusBadge({ status }: { status: string }) {
 
 // All valid manual transitions per status
 const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon: string; danger?: boolean }>> = {
+  pending_payment: [
+    { status: '_delete',          label: 'Delete Order',    icon: '🗑', danger: true },
+  ],
   payment_confirmed: [
     { status: 'preparing',        label: 'Mark Preparing',  icon: '⚙' },
     { status: 'cancelled',        label: 'Cancel Order',    icon: '✕', danger: true },
@@ -46,14 +49,18 @@ const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon
     { status: 'delivered',        label: 'Resolve — Delivered', icon: '✓' },
     { status: 'refunded',         label: 'Resolve — Refund',    icon: '↩' },
   ],
+  cancelled: [
+    { status: '_delete',          label: 'Delete Order',    icon: '🗑', danger: true },
+  ],
 }
 
-function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any; onUpdate: (id: string, status: string) => void; onResolved: (id: string) => void; loading: boolean }) {
+function OrderActionsMenu({ order, onUpdate, onResolved, onDeleted, loading }: { order: any; onUpdate: (id: string, status: string) => void; onResolved: (id: string) => void; onDeleted: (id: string) => void; loading: boolean }) {
   const [open, setOpen] = useState(false)
   const [genPayoutsMsg, setGenPayoutsMsg] = useState('')
   const [resolveMsg, setResolveMsg] = useState('')
   const [resendMsg, setResendMsg] = useState('')
   const [resendPicker, setResendPicker] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [confirm, setConfirm] = useState<{ status: string; label: string; danger?: boolean; isPartialResolve?: boolean } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const actions = STATUS_ACTIONS[order.status] || []
@@ -77,6 +84,8 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
       setTimeout(() => setGenPayoutsMsg(''), 4000)
     } else if (status === '_resolve_partial') {
       setConfirm({ status, label: 'Proceed with partial fill', isPartialResolve: true })
+    } else if (status === '_delete') {
+      setConfirm({ status, label: 'Delete Order', danger: true })
     } else {
       const action = actions.find(a => a.status === status)
       setConfirm({ status, label: action?.label || status, danger: action?.danger })
@@ -110,6 +119,17 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
       } else {
         alert(data.error || 'Could not resolve partial rejection')
       }
+    } else if (confirm.status === '_delete') {
+      setConfirm(null)
+      setDeleting(true)
+      const res = await fetch(`/api/admin/orders/${order.id}`, { method: 'DELETE' })
+      setDeleting(false)
+      if (res.ok) {
+        onDeleted(order.id)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Could not delete order')
+      }
     } else {
       onUpdate(order.id, confirm.status)
       setConfirm(null)
@@ -122,7 +142,8 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
     : actions
 
   const canResend = !['pending_payment', 'cancelled'].includes(order.status)
-  if (allActions.length === 0 && !canResend && !genPayoutsMsg && !resolveMsg && !resendMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  if (allActions.length === 0 && !canResend && !genPayoutsMsg && !resolveMsg && !resendMsg && !deleting) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', paddingLeft: '0.5rem' }}>—</span>
+  if (deleting) return <span style={{ fontSize: '0.75rem', color: 'var(--moss)', fontWeight: 700 }}>Deleting…</span>
   if (genPayoutsMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{genPayoutsMsg}</span>
   if (resolveMsg) return <span style={{ fontSize: '0.75rem', color: '#065F46', fontWeight: 700 }}>{resolveMsg}</span>
   if (resendMsg) return <span style={{ fontSize: '0.75rem', color: 'var(--forest)', fontWeight: 700 }}>{resendMsg}</span>
@@ -175,10 +196,16 @@ function OrderActionsMenu({ order, onUpdate, onResolved, loading }: { order: any
           onClick={() => setConfirm(null)}>
           <div style={{ background: 'white', borderRadius: '1.25rem', padding: '2rem', maxWidth: '22rem', width: '90%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.625rem' }}>Confirm status change</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.625rem' }}>
+              {confirm.status === '_delete' ? 'Delete this order?' : 'Confirm status change'}
+            </p>
             <p style={{ fontSize: '0.875rem', color: 'var(--moss)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Change <strong style={{ color: 'var(--forest)' }}>{order.order_number}</strong> to:<br />
-              <strong style={{ color: confirm.danger ? '#b91c1c' : 'var(--navy)', fontSize: '1rem' }}>{confirm.label}</strong>
+              {confirm.status === '_delete' ? (
+                <>This permanently deletes <strong style={{ color: 'var(--forest)' }}>{order.order_number}</strong> and its items. This can't be undone.</>
+              ) : (
+                <>Change <strong style={{ color: 'var(--forest)' }}>{order.order_number}</strong> to:<br />
+                <strong style={{ color: confirm.danger ? '#b91c1c' : 'var(--navy)', fontSize: '1rem' }}>{confirm.label}</strong></>
+              )}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={() => setConfirm(null)}
@@ -341,6 +368,10 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
     setOrders(os => os.map(o => o.id === orderId ? { ...o, has_partial_rejection: false } : o))
   }
 
+  function removeOrderLocally(orderId: string) {
+    setOrders(os => os.filter(o => o.id !== orderId))
+  }
+
   async function updateStatus(orderId: string, status: string) {
     setUpdatingId(orderId)
     const res = await fetch(`/api/orders/${orderId}/status`, {
@@ -465,7 +496,7 @@ export default function OrdersContent({ initialOrders, initialRejectedPOs }: { i
                       <td style={{ padding: '0.875rem 1.25rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <DateManager order={order} onUpdate={updateOrderField} />
-                          <OrderActionsMenu order={order} onUpdate={updateStatus} onResolved={resolvePartialLocally} loading={updatingId === order.id} />
+                          <OrderActionsMenu order={order} onUpdate={updateStatus} onResolved={resolvePartialLocally} onDeleted={removeOrderLocally} loading={updatingId === order.id} />
                         </div>
                       </td>
                     </tr>
