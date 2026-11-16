@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { sanitizeABNInput, validateABNFormat } from '@/lib/utils/abn'
 import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', abn: '', address: '', region: '', state: 'VIC', postcode: '', notes: '', website: '' })
@@ -76,7 +77,18 @@ export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
         <label className="label" htmlFor="i-address" style={{ display: 'block', marginBottom: '0.3rem' }}>
           {role === 'grower' ? 'Where do you grow?' : 'Where are you based?'}
         </label>
-        <input id="i-address" className="input" required maxLength={200} placeholder="Street address" value={form.address} onChange={e => set('address', e.target.value)} style={{ width: '100%' }} />
+        <AddressAutocompleteInput id="i-address" className="input" required maxLength={200} placeholder="Street address" value={form.address}
+          onChange={v => set('address', v)}
+          onSelect={({ address, suburb, state, postcode }) => {
+            setForm(f => ({
+              ...f,
+              address,
+              region: suburb || f.region,
+              state: (AUSTRALIAN_STATES as readonly string[]).includes(state) ? state : f.state,
+              postcode: postcode || f.postcode,
+            }))
+          }}
+          style={{ width: '100%' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
         <div>
