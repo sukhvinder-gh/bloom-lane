@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type AUAddressResult = {
   address: string
@@ -46,69 +46,90 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
   return loadPromise
 }
 
-// A plain street-address input that becomes a Google Places Autocomplete
-// field once NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is configured — without it, it
-// silently stays a normal text input so forms using this still work.
+type AddressComponent = { longText?: string; shortText?: string; types: string[] }
+
+// Place Autocomplete (New) returns address components with the same type
+// strings as the legacy Geocoding API (street_number, route, locality,
+// administrative_area_level_1, postal_code), just with longText/shortText
+// instead of long_name/short_name.
+function partsFromComponents(components: AddressComponent[]): AUAddressResult {
+  const part = (type: string, useShort = false) => {
+    const c = components.find(c => c.types.includes(type))
+    return c ? (useShort ? c.shortText : c.longText) || '' : ''
+  }
+  return {
+    address: [part('street_number'), part('route')].filter(Boolean).join(' '),
+    suburb: part('locality') || part('sublocality') || part('postal_town'),
+    state: part('administrative_area_level_1', true),
+    postcode: part('postal_code'),
+  }
+}
+
+// A plain street-address input that becomes Google's Place Autocomplete (New)
+// widget once NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is configured and "Places API
+// (New)" is enabled/billed on that key's project — without either, it just
+// stays a normal text input so forms using this still work.
 export default function AddressAutocompleteInput({ id, className, style, placeholder, required, maxLength, value, onChange, onSelect }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
   const onSelectRef = useRef(onSelect)
+  const [widgetReady, setWidgetReady] = useState(false)
   onChangeRef.current = onChange
   onSelectRef.current = onSelect
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    const input = inputRef.current
-    if (!apiKey || !input) return
+    const container = containerRef.current
+    if (!apiKey || !container) return
     let cancelled = false
-    let autocomplete: any = null
+    let el: any = null
 
     loadGoogleMaps(apiKey).then(() => {
-      if (cancelled || !input || !(window as any).google?.maps?.places) return
-      const places = (window as any).google.maps.places
-      autocomplete = new places.Autocomplete(input, {
-        componentRestrictions: { country: 'au' },
-        fields: ['address_components', 'formatted_address'],
-        types: ['address'],
-      })
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace()
-        const components: Array<{ types: string[]; long_name: string; short_name: string }> = place.address_components || []
-        const part = (type: string, useShort = false) => {
-          const c = components.find(c => c.types.includes(type))
-          return c ? (useShort ? c.short_name : c.long_name) : ''
+      if (cancelled || !container) return
+      const places = (window as any).google?.maps?.places
+      if (!places?.PlaceAutocompleteElement) return
+      el = new places.PlaceAutocompleteElement({ includedRegionCodes: ['au'], placeholder })
+      el.style.width = '100%'
+      container.appendChild(el)
+      el.addEventListener('gmp-select', async (event: any) => {
+        try {
+          const place = event.placePrediction.toPlace()
+          await place.fetchFields({ fields: ['addressComponents', 'formattedAddress'] })
+          const parsed = partsFromComponents(place.addressComponents || [])
+          const address = parsed.address || place.formattedAddress || ''
+          onChangeRef.current(address)
+          onSelectRef.current({ ...parsed, address })
+        } catch {
+          // Selection didn't resolve to a usable address — leave the field as-is.
         }
-        const streetAddress = [part('street_number'), part('route')].filter(Boolean).join(' ')
-        const suburb = part('locality') || part('sublocality') || part('postal_town')
-        const state = part('administrative_area_level_1', true)
-        const postcode = part('postal_code')
-
-        onChangeRef.current(streetAddress || place.formatted_address || '')
-        onSelectRef.current({ address: streetAddress || place.formatted_address || '', suburb, state, postcode })
       })
+      setWidgetReady(true)
     }).catch(() => {
-      // No autocomplete this session (key missing/blocked/offline) — the
-      // input just behaves as plain free text, which is still a valid form.
+      // No autocomplete this session (key missing/blocked/not enabled yet) —
+      // the plain input below just stays a normal text field.
     })
 
     return () => {
       cancelled = true
-      if (autocomplete) (window as any).google?.maps?.event?.clearInstanceListeners(autocomplete)
+      el?.remove()
     }
   }, [])
 
   return (
-    <input
-      ref={inputRef}
-      id={id}
-      className={className}
-      style={style}
-      placeholder={placeholder}
-      required={required}
-      maxLength={maxLength}
-      autoComplete="off"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
+    <div ref={containerRef}>
+      {!widgetReady && (
+        <input
+          id={id}
+          className={className}
+          style={style}
+          placeholder={placeholder}
+          required={required}
+          maxLength={maxLength}
+          autoComplete="off"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+        />
+      )}
+    </div>
   )
 }
