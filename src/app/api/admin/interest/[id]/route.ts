@@ -30,3 +30,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ data })
 }
+
+// DELETE — remove one interest registration (e.g. test/duplicate rows).
+// Nothing else references this table by foreign key, including an already
+// approved/converted row — the real account it created stays untouched.
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const check = await requireAdmin()
+  if ('error' in check) return NextResponse.json({ error: check.error }, { status: check.status })
+
+  const { id } = await params
+  const { error } = await check.admin.from('interest_registrations').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

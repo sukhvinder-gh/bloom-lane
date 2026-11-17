@@ -103,6 +103,19 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
     setUpdating(null)
   }
 
+  async function deleteRow(row: Row) {
+    if (!confirm(`Delete ${row.full_name}'s interest registration? This can't be undone.`)) return
+    setUpdating(row.id)
+    const res = await fetch(`/api/admin/interest/${row.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setRows(rs => rs.filter(r => r.id !== row.id))
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || 'Could not delete this row')
+    }
+    setUpdating(null)
+  }
+
   return (
     <div className="page-pad" style={{ padding: '2.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -186,14 +199,20 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                     </label>
                   </td>
                   <td style={{ padding: '0.875rem 1.25rem' }}>
-                    {row.converted_user_id ? (
-                      <span className="badge badge-sage">✓ Approved</span>
-                    ) : (
-                      <button onClick={() => openApprove(row)}
-                        style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        Approve
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {row.converted_user_id ? (
+                        <span className="badge badge-sage">✓ Approved</span>
+                      ) : (
+                        <button onClick={() => openApprove(row)}
+                          style={{ background: 'var(--navy)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 0.875rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Approve
+                        </button>
+                      )}
+                      <button onClick={() => deleteRow(row)} disabled={updating === row.id} title="Delete this registration"
+                        style={{ background: 'none', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '0.5rem 0.625rem', fontSize: '0.85rem', cursor: updating === row.id ? 'wait' : 'pointer', color: '#b91c1c', lineHeight: 1 }}>
+                        🗑
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}
