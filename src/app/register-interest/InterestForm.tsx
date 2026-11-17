@@ -1,9 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { sanitizeABNInput, validateABNFormat } from '@/lib/utils/abn'
+import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', abn: '', region: '', notes: '', website: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', business_name: '', abn: '', address: '', region: '', state: 'VIC', postcode: '', notes: '', website: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -13,6 +15,10 @@ export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
     e.preventDefault()
     if (!validateABNFormat(form.abn)) {
       setError('Please enter a valid 11-digit ABN')
+      return
+    }
+    if (!form.address.trim() || !form.region.trim() || !form.state || !/^\d{4}$/.test(form.postcode)) {
+      setError('Please enter a complete address, including a valid 4-digit postcode')
       return
     }
     setSending(true); setError('')
@@ -68,8 +74,37 @@ export default function InterestForm({ role }: { role: 'grower' | 'buyer' }) {
         <input id="i-abn" className="input" required maxLength={11} placeholder="XX XXX XXX XXX" value={form.abn} onChange={e => set('abn', sanitizeABNInput(e.target.value))} style={{ width: '100%' }} />
       </div>
       <div>
-        <label className="label" htmlFor="i-region">{role === 'grower' ? 'Where do you grow?' : 'Where are you based?'}</label>
-        <input id="i-region" className="input" maxLength={200} placeholder="e.g. Yarra Valley, VIC" value={form.region} onChange={e => set('region', e.target.value)} style={{ width: '100%' }} />
+        <label className="label" htmlFor="i-address" style={{ display: 'block', marginBottom: '0.3rem' }}>
+          {role === 'grower' ? 'Where do you grow?' : 'Where are you based?'}
+        </label>
+        <AddressAutocompleteInput id="i-address" className="input" required maxLength={200} placeholder="Street address" value={form.address}
+          onChange={v => set('address', v)}
+          onSelect={({ address, suburb, state, postcode }) => {
+            setForm(f => ({
+              ...f,
+              address,
+              region: suburb || f.region,
+              state: (AUSTRALIAN_STATES as readonly string[]).includes(state) ? state : f.state,
+              postcode: postcode || f.postcode,
+            }))
+          }}
+          style={{ width: '100%' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+        <div>
+          <label className="label" htmlFor="i-suburb">Suburb</label>
+          <input id="i-suburb" className="input" required maxLength={200} value={form.region} onChange={e => set('region', e.target.value)} style={{ width: '100%' }} />
+        </div>
+        <div>
+          <label className="label" htmlFor="i-state">State</label>
+          <select id="i-state" className="input" value={form.state} onChange={e => set('state', e.target.value)} style={{ width: '100%' }}>
+            {AUSTRALIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="i-postcode">Postcode</label>
+          <input id="i-postcode" className="input" required maxLength={4} value={form.postcode} onChange={e => set('postcode', e.target.value.replace(/\D/g, '').slice(0, 4))} style={{ width: '100%' }} />
+        </div>
       </div>
       <div>
         <label className="label" htmlFor="i-notes">
