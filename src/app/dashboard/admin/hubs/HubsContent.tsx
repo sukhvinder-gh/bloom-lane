@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { formatAEST } from '@/lib/utils/timezone'
+import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 type HubRow = {
   id: string
@@ -272,7 +274,19 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
               Where growers using this hub as their collection point drop off, and buyers collect from. The coordinator can also set this from their own dashboard.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              <input className="input" value={pickupAddress} onChange={e => setPickupAddress(e.target.value)} placeholder="Street address" style={{ width: '100%' }} />
+              <AddressAutocompleteInput className="input" placeholder="Street address" value={pickupAddress}
+                onChange={setPickupAddress}
+                onSelect={({ address, suburb, state, postcode }) => {
+                  setPickupAddress(address)
+                  if (suburb) setPickupSuburb(suburb)
+                  if ((AUSTRALIAN_STATES as readonly string[]).includes(state)) setPickupState(state)
+                  if (postcode) setPickupPostcode(postcode)
+                  // Region is a separate, broader label (e.g. "Yarra Valley, VIC")
+                  // that an admin can still set by hand — only auto-fill it from
+                  // the picked address when it's empty, same as register-interest.
+                  if (!region.trim() && suburb) setRegion(state ? `${suburb}, ${state}` : suburb)
+                }}
+                style={{ width: '100%' }} />
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>
                 <input className="input" value={pickupSuburb} onChange={e => setPickupSuburb(e.target.value)} placeholder="Suburb" />
                 <input className="input" value={pickupState} onChange={e => setPickupState(e.target.value)} placeholder="State" />

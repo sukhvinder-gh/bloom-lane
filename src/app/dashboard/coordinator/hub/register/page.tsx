@@ -6,6 +6,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
 import SingleImageUpload from '@/components/SingleImageUpload'
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }> = {
   pending:  { label: '⏳ Awaiting admin approval', bg: '#FEF3C7', color: '#92400E' },
@@ -72,7 +73,15 @@ function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub)
 
       <div>
         <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Pickup address</label>
-        <input className="input" value={address} onChange={e => setAddress(e.target.value)} placeholder="Street address" style={{ width: '100%', marginBottom: '0.6rem' }} />
+        <AddressAutocompleteInput className="input" placeholder="Street address" value={address}
+          onChange={setAddress}
+          onSelect={({ address: a, suburb, state: s, postcode: p }) => {
+            setAddress(a)
+            if (suburb) setSuburb(suburb)
+            if (s) setState(s)
+            if (p) setPostcode(p)
+          }}
+          style={{ width: '100%', marginBottom: '0.6rem' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>
           <input className="input" value={suburb} onChange={e => setSuburb(e.target.value)} placeholder="Suburb" />
           <input className="input" value={state} onChange={e => setState(e.target.value)} placeholder="State" />
