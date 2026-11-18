@@ -44,13 +44,15 @@ function buildTimelineSteps(readyLabel: string) {
 }
 
 // Every purchase_orders row on this order has its own pickup_method — an
-// order is only truly "for delivery" if none of them are farm pickup.
+// order is only truly "for delivery" if none of them are farm pickup or a
+// collection point (both are buyer-collected, unlike pooled delivery).
 function readyStageLabel(order: any): string {
   if (order.fulfillment_type === 'hub_pickup') return 'Ready for pickup'
   const methods: string[] = (order.purchase_orders || []).map((po: any) => po.pickup_method)
   if (methods.length === 0) return 'Ready for delivery'
-  const allPickup = methods.every(m => m === 'farm_pickup')
-  const anyPickup = methods.some(m => m === 'farm_pickup')
+  const isPickupLike = (m: string) => m === 'farm_pickup' || m === 'collection_point'
+  const allPickup = methods.every(isPickupLike)
+  const anyPickup = methods.some(isPickupLike)
   if (allPickup) return 'Ready for pickup'
   if (anyPickup) return 'Ready for pickup/delivery'
   return 'Ready for delivery'
@@ -77,18 +79,23 @@ export default function BuyerOrderDetailPage() {
   const timelineSteps = buildTimelineSteps(readyLabel)
   const currentIdx = timelineSteps.findIndex(s => s.statuses.includes(order.status))
   const poPickupMethods: string[] = (order.purchase_orders || []).map((po: any) => po.pickup_method)
-  const allFarmPickup = poPickupMethods.length > 0 && poPickupMethods.every(m => m === 'farm_pickup')
-  const anyFarmPickup = poPickupMethods.some(m => m === 'farm_pickup')
+  // "FarmPickup" here covers both farm pickup and collection point — both are
+  // buyer-collected and suppress the pooled delivery address, unlike delivery.
+  const allFarmPickup = poPickupMethods.length > 0 && poPickupMethods.every(m => m === 'farm_pickup' || m === 'collection_point')
+  const anyFarmPickup = poPickupMethods.some(m => m === 'farm_pickup' || m === 'collection_point')
 
   // One message thread per grower — a multi-supplier order must never let a
   // buyer's question to one grower leak into another grower's conversation.
   const growerThreads = (order.purchase_orders || []).map((po: any) => {
     const item = order.order_items?.find((i: any) => i.farmer_id === po.farmer_id)
+    const hub = po.farmer_fulfillment_options?.hubs
     return {
       poId: po.id,
       farmerName: item?.farmers?.business_name || 'Grower',
-      pickupMethod: po.pickup_method as 'standard' | 'farm_pickup',
+      pickupMethod: po.pickup_method as 'standard' | 'farm_pickup' | 'collection_point',
       farmAddress: [po.farmers?.address, po.farmers?.suburb, po.farmers?.state].filter(Boolean).join(', '),
+      hubName: hub?.name || null,
+      hubAddress: [hub?.pickup_address, hub?.pickup_suburb, hub?.pickup_state].filter(Boolean).join(', '),
     }
   })
 
@@ -211,6 +218,11 @@ export default function BuyerOrderDetailPage() {
                       🚜 <strong>{t.farmerName}</strong> — farm pickup{t.farmAddress ? `, ${t.farmAddress}` : ''}
                     </div>
                   )}
+                  {t.pickupMethod === 'collection_point' && (
+                    <div style={{ background: 'var(--sage-soft)', border: '1px solid var(--sage)', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '0.75rem', fontSize: '0.82rem', color: 'var(--forest)' }}>
+                      📍 <strong>{t.farmerName}</strong> — collection point{t.hubName ? ` at ${t.hubName}` : ''}{t.hubAddress ? `, ${t.hubAddress}` : ''}
+                    </div>
+                  )}
                   <MessageThread purchaseOrderId={t.poId} title={`Message ${t.farmerName}`} />
                 </div>
               ))}
@@ -265,6 +277,8 @@ export default function BuyerOrderDetailPage() {
                   <p key={t.poId} style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
                     {t.pickupMethod === 'farm_pickup'
                       ? `🚜 ${t.farmerName} — farm pickup${t.farmAddress ? `, ${t.farmAddress}` : ''}`
+                      : t.pickupMethod === 'collection_point'
+                      ? `📍 ${t.farmerName} — collection point${t.hubName ? ` at ${t.hubName}` : ''}${t.hubAddress ? `, ${t.hubAddress}` : ''}`
                       : `🚚 ${t.farmerName} — delivery`}
                   </p>
                 ))}

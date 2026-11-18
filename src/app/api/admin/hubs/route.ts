@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
-import { sanitizeMarketWindows, type MarketWindow } from '@/lib/utils/marketWindow'
+import { sanitizeMarketWindows, sanitizePickupWindows, type MarketWindow } from '@/lib/utils/marketWindow'
 import { sendEmail } from '@/lib/email/mailer'
 
 const HUB_SELECT = '*, profiles!hubs_coordinator_id_fkey(full_name, email)'
@@ -44,23 +44,36 @@ export async function POST(request: NextRequest) {
   const check = await requireAdmin()
   if ('error' in check) return NextResponse.json({ error: check.error }, { status: check.status })
 
-  const { name, region, coordinator_id, market_windows } = await request.json()
+  const { name, region, coordinator_id, market_windows, pickup_address, pickup_suburb, pickup_state, pickup_postcode, pickup_windows } = await request.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Hub name is required' }, { status: 400 })
 
   const windows = sanitizeMarketWindows(market_windows ?? [])
   if (typeof windows === 'string') return NextResponse.json({ error: windows }, { status: 400 })
+  const pickupWindows = sanitizePickupWindows(pickup_windows ?? [])
+  if (typeof pickupWindows === 'string') return NextResponse.json({ error: pickupWindows }, { status: 400 })
 
   const row = {
     name: name.trim(),
     region: region?.trim() || null,
     coordinator_id: coordinator_id || null,
     ...legacyWindowColumns(windows),
+    pickup_address: pickup_address?.trim() || null,
+    pickup_suburb: pickup_suburb?.trim() || null,
+    pickup_state: pickup_state?.trim() || null,
+    pickup_postcode: pickup_postcode?.trim() || null,
     status: 'active',
   }
-  let { data, error } = await check.admin.from('hubs').insert({ ...row, market_windows: windows }).select(HUB_SELECT).single()
-  // Migration 037 not applied yet: fall back to saving just the first window.
-  if (error && /market_windows/.test(error.message)) {
-    ;({ data, error } = await check.admin.from('hubs').insert(row).select(HUB_SELECT).single())
+  const insertRow: Record<string, unknown> = { ...row, market_windows: windows, pickup_windows: pickupWindows }
+  let { data, error } = await check.admin.from('hubs').insert(insertRow).select(HUB_SELECT).single()
+  // A column from a migration that hasn't been applied yet — drop it and retry
+  // rather than failing hub creation entirely over an optional field.
+  while (error && /market_windows|pickup_address|pickup_suburb|pickup_state|pickup_postcode|pickup_windows/.test(error.message)) {
+    const before = Object.keys(insertRow).length
+    for (const col of ['market_windows', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']) {
+      if (error.message.includes(col)) delete insertRow[col]
+    }
+    if (Object.keys(insertRow).length === before) break
+    ;({ data, error } = await check.admin.from('hubs').insert(insertRow).select(HUB_SELECT).single())
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -89,6 +102,10 @@ export async function PATCH(request: NextRequest) {
   if (body.name  !== undefined)          updates.name           = body.name.trim()
   if (body.region !== undefined)         updates.region         = body.region?.trim() || null
   if ('coordinator_id' in body)          updates.coordinator_id = body.coordinator_id || null
+  if (body.pickup_address !== undefined)  updates.pickup_address  = body.pickup_address?.trim() || null
+  if (body.pickup_suburb !== undefined)   updates.pickup_suburb   = body.pickup_suburb?.trim() || null
+  if (body.pickup_state !== undefined)    updates.pickup_state    = body.pickup_state?.trim() || null
+  if (body.pickup_postcode !== undefined) updates.pickup_postcode = body.pickup_postcode?.trim() || null
   let windows: MarketWindow[] | null = null
   if ('market_windows' in body) {
     const parsed = sanitizeMarketWindows(body.market_windows ?? [])
@@ -97,6 +114,11 @@ export async function PATCH(request: NextRequest) {
     Object.assign(updates, legacyWindowColumns(parsed))
   }
   if (windows) updates.market_windows = windows
+  if ('pickup_windows' in body) {
+    const parsedPickup = sanitizePickupWindows(body.pickup_windows ?? [])
+    if (typeof parsedPickup === 'string') return NextResponse.json({ error: parsedPickup }, { status: 400 })
+    updates.pickup_windows = parsedPickup
+  }
   // Snapshot who approved this and when — a plain text/timestamp pair
   // (migration 038), not a live lookup, so it still reads correctly even if
   // that admin account is later renamed or removed.
@@ -106,12 +128,13 @@ export async function PATCH(request: NextRequest) {
   }
 
   let { data, error } = await check.admin.from('hubs').update(updates).eq('id', id).select(HUB_SELECT).single()
-  // A column from migration 037 or 038 doesn't exist in this database yet —
+  // A column from a migration that doesn't exist in this database yet —
   // drop whichever keys it's complaining about and retry, rather than
-  // failing the whole request over an optional audit/scheduling field.
-  while (error && /market_windows|approved_by_name|approved_at/.test(error.message)) {
+  // failing the whole request over an optional audit/scheduling/pickup field.
+  const OPTIONAL_COLS = ['market_windows', 'approved_by_name', 'approved_at', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']
+  while (error && OPTIONAL_COLS.some(col => error!.message.includes(col))) {
     const before = Object.keys(updates).length
-    for (const col of ['market_windows', 'approved_by_name', 'approved_at']) {
+    for (const col of OPTIONAL_COLS) {
       if (error.message.includes(col)) delete updates[col]
     }
     if (Object.keys(updates).length === before) break // nothing matched — avoid looping forever

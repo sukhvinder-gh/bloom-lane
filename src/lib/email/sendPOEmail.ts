@@ -87,7 +87,11 @@ export async function sendPOEmail(farmerEmail: string, po: POData): Promise<void
             <td valign="top">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Delivery Method</div>
               <div style="color:#1a3a2a;font-size:14px;font-weight:600">
-                ${po.fulfillment_type === 'hub_pickup'
+                ${po.pickup_method === 'farm_pickup'
+                  ? 'Farm pickup — buyer collects directly from you'
+                  : po.pickup_method === 'collection_point'
+                  ? po.hub_address ? `Collection point — ${po.hub_address}` : 'Collection point (coordinator to confirm)'
+                  : po.fulfillment_type === 'hub_pickup'
                   ? po.hub_address ? `Hub drop-off — ${po.hub_address}` : 'Hub drop-off (admin to confirm)'
                   : 'Direct delivery to florist'}
               </div>

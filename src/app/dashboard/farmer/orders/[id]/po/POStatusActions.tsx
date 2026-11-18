@@ -76,7 +76,10 @@ export function POStatusActions({
 }: {
   orderId: string
   initialStatus: POStatus
-  pickupMethod?: 'standard' | 'farm_pickup'
+  // Collection point falls through to STANDARD_STEPS, same as plain
+  // delivery — the grower still has a real "drop off" leg (at the hub),
+  // unlike farm pickup where the buyer collects directly from the farm.
+  pickupMethod?: 'standard' | 'farm_pickup' | 'collection_point'
 }) {
   const [status, setStatus] = useState<string>(initialStatus)
   const [confirming, setConfirming] = useState(false)

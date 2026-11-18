@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 import { sendEmail, getAdminInbox } from '@/lib/email/mailer'
+import { sanitizePickupWindows } from '@/lib/utils/marketWindow'
 
 const ADMIN_ROLES = ['admin', 'platform_admin', 'super_admin']
 
@@ -142,22 +143,35 @@ export async function POST(request: NextRequest) {
   })
 }
 
-// PATCH — update logo/banner on a hub this coordinator owns. Separate from
-// POST (which only ever creates a new hub) since a coordinator editing their
-// existing hub's photo shouldn't go through registration/payment again.
+// PATCH — update a hub this coordinator owns: logo/banner, and the physical
+// pickup location + collection schedule (distinct from the admin-owned
+// "ordering window" / market_windows, which governs when buyers can place
+// orders, not when they physically meet). Separate from POST (which only
+// ever creates a new hub) since a coordinator editing their existing hub
+// shouldn't go through registration/payment again.
 export async function PATCH(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { hub_id, logo_url, banner_url } = await request.json()
+  const body = await request.json()
+  const { hub_id, logo_url, banner_url, pickup_address, pickup_suburb, pickup_state, pickup_postcode } = body
   if (!hub_id) return NextResponse.json({ error: 'hub_id is required' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const update: Record<string, string | null> = {}
+  const update: Record<string, unknown> = {}
   if (logo_url !== undefined) update.logo_url = logo_url
   if (banner_url !== undefined) update.banner_url = banner_url
+  if (pickup_address !== undefined) update.pickup_address = pickup_address?.trim() || null
+  if (pickup_suburb !== undefined) update.pickup_suburb = pickup_suburb?.trim() || null
+  if (pickup_state !== undefined) update.pickup_state = pickup_state?.trim() || null
+  if (pickup_postcode !== undefined) update.pickup_postcode = pickup_postcode?.trim() || null
+  if ('pickup_windows' in body) {
+    const windows = sanitizePickupWindows(body.pickup_windows ?? [])
+    if (typeof windows === 'string') return NextResponse.json({ error: windows }, { status: 400 })
+    update.pickup_windows = windows
+  }
 
+  const admin = createAdminClient()
   const { data, error } = await admin
     .from('hubs')
     .update(update)

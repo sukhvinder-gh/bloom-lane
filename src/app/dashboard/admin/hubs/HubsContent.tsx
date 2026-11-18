@@ -17,6 +17,11 @@ type HubRow = {
   market_windows?: { day: string; open: string; close: string }[] | null
   approved_by_name?: string | null
   approved_at?: string | null
+  pickup_address?: string | null
+  pickup_suburb?: string | null
+  pickup_state?: string | null
+  pickup_postcode?: string | null
+  pickup_windows?: { day: string; open: string; close: string }[] | null
 }
 
 type Coordinator = { id: string; full_name: string | null; email: string | null }
@@ -154,6 +159,15 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
   })
   const updateWindow = (i: number, patch: Partial<{ day: string; open: string; close: string }>) =>
     setWindows(ws => ws.map((w, idx) => idx === i ? { ...w, ...patch } : w))
+
+  const [pickupAddress,  setPickupAddress]  = useState(hub?.pickup_address  ?? '')
+  const [pickupSuburb,   setPickupSuburb]   = useState(hub?.pickup_suburb   ?? '')
+  const [pickupState,    setPickupState]    = useState(hub?.pickup_state    ?? '')
+  const [pickupPostcode, setPickupPostcode] = useState(hub?.pickup_postcode ?? '')
+  const [pickupWindows, setPickupWindows] = useState<{ day: string; open: string; close: string }[]>(hub?.pickup_windows ?? [])
+  const updatePickupWindow = (i: number, patch: Partial<{ day: string; open: string; close: string }>) =>
+    setPickupWindows(ws => ws.map((w, idx) => idx === i ? { ...w, ...patch } : w))
+
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
@@ -169,6 +183,11 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
       region:             region.trim() || null,
       coordinator_id:     coordinatorId || null,
       market_windows:     windows,
+      pickup_address:     pickupAddress.trim() || null,
+      pickup_suburb:      pickupSuburb.trim() || null,
+      pickup_state:       pickupState.trim() || null,
+      pickup_postcode:    pickupPostcode.trim() || null,
+      pickup_windows:     pickupWindows,
     }
     if (isEdit) body.id = hub.id
 
@@ -243,6 +262,48 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
               <button type="button" onClick={() => setWindows(ws => [...ws, { day: '', open: '08:00', close: '17:00' }])}
                 className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>
                 + Add ordering window
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Pickup location</label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+              Where growers using this hub as their collection point drop off, and buyers collect from. The coordinator can also set this from their own dashboard.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <input className="input" value={pickupAddress} onChange={e => setPickupAddress(e.target.value)} placeholder="Street address" style={{ width: '100%' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>
+                <input className="input" value={pickupSuburb} onChange={e => setPickupSuburb(e.target.value)} placeholder="Suburb" />
+                <input className="input" value={pickupState} onChange={e => setPickupState(e.target.value)} placeholder="State" />
+                <input className="input" value={pickupPostcode} onChange={e => setPickupPostcode(e.target.value)} placeholder="Postcode" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Collection schedule</label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.5rem' }}>
+              When buyers collect and growers drop off at this location — separate from the ordering window above.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {pickupWindows.map((w, i) => (
+                <div key={i} className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                  <select className="input" value={w.day} onChange={e => updatePickupWindow(i, { day: e.target.value })} required>
+                    <option value="">Day…</option>
+                    {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                      <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                    ))}
+                  </select>
+                  <input className="input" type="time" value={w.open} onChange={e => updatePickupWindow(i, { open: e.target.value })} required aria-label="Opens" />
+                  <input className="input" type="time" value={w.close} onChange={e => updatePickupWindow(i, { close: e.target.value })} required aria-label="Closes" />
+                  <button type="button" onClick={() => setPickupWindows(ws => ws.filter((_, idx) => idx !== i))} aria-label="Remove window"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '1rem', padding: '0.25rem 0.4rem' }}>✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setPickupWindows(ws => [...ws, { day: '', open: '08:00', close: '17:00' }])}
+                className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>
+                + Add collection window
               </button>
             </div>
           </div>

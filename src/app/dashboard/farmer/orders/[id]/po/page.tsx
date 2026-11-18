@@ -93,19 +93,26 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   const effectiveFulfillmentDate: string | null = (poRecord as any)?.grower_fulfillment_date || order.grower_fulfillment_date
   const harvestDate: string | null = (poRecord as any)?.harvest_date || null
 
-  const pickupMethod: 'standard' | 'farm_pickup' = (poRecord as any)?.pickup_method === 'farm_pickup' ? 'farm_pickup' : 'standard'
+  const rawPickupMethod = (poRecord as any)?.pickup_method
+  const pickupMethod: 'standard' | 'farm_pickup' | 'collection_point' =
+    rawPickupMethod === 'farm_pickup' || rawPickupMethod === 'collection_point' ? rawPickupMethod : 'standard'
 
   // If the buyer picked a specific pickup or delivery slot (a grower with
   // more than one configured), show that slot's real day/time/cost instead
-  // of the generic "Direct delivery" / "Farm pickup" line.
-  let selectedFulfillmentOption: { type: string; day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null } | null = null
+  // of the generic "Direct delivery" / "Farm pickup" line. For a collection
+  // point, the hub (joined here) carries the real address/schedule — the
+  // option row itself has no day/time of its own.
+  let selectedFulfillmentOption: {
+    type: string; day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null
+    hubs: { name: string; pickup_address: string | null; pickup_suburb: string | null; pickup_state: string | null; pickup_windows: { day: string; open: string; close: string }[] | null } | null
+  } | null = null
   if ((poRecord as any)?.fulfillment_option_id) {
     const { data } = await admin
       .from('farmer_fulfillment_options')
-      .select('type, day_of_week, start_time, end_time, cost_cents, notes')
+      .select('type, day_of_week, start_time, end_time, cost_cents, notes, hubs(name, pickup_address, pickup_suburb, pickup_state, pickup_windows)')
       .eq('id', (poRecord as any).fulfillment_option_id)
       .maybeSingle()
-    selectedFulfillmentOption = data
+    selectedFulfillmentOption = data as any
   }
 
   const commissionRate: number = effectiveCommissionRate(farmer as any, await getCommissionRates(admin))
@@ -213,6 +220,10 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                     selectedFulfillmentOption
                       ? `🚜 Farm pickup${selectedFulfillmentOption.day_of_week ? ` — ${selectedFulfillmentOption.day_of_week.charAt(0).toUpperCase()}${selectedFulfillmentOption.day_of_week.slice(1)}` : ''}${selectedFulfillmentOption.start_time && selectedFulfillmentOption.end_time ? ` ${selectedFulfillmentOption.start_time}–${selectedFulfillmentOption.end_time}` : ''}${selectedFulfillmentOption.notes ? ` · ${selectedFulfillmentOption.notes}` : ''}`
                       : '🚜 Farm pickup — buyer collects directly from you'
+                  ) : pickupMethod === 'collection_point' ? (
+                    selectedFulfillmentOption?.hubs
+                      ? `📍 Collection point — ${[selectedFulfillmentOption.hubs.name, selectedFulfillmentOption.hubs.pickup_address, selectedFulfillmentOption.hubs.pickup_suburb, selectedFulfillmentOption.hubs.pickup_state].filter(Boolean).join(', ')}`
+                      : '📍 Collection point (coordinator to confirm location)'
                   ) : order.fulfillment_type === 'hub_pickup' ? (
                     hubZone
                       ? `Hub drop-off — ${[hubZone.hub_address, hubZone.hub_suburb, hubZone.hub_state].filter(Boolean).join(', ')}`
@@ -222,7 +233,15 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                   ) : 'Direct delivery to florist'}
                 </span>
               </div>
-              {pickupMethod !== 'farm_pickup' && order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
+              {pickupMethod === 'collection_point' && selectedFulfillmentOption?.hubs?.pickup_windows && selectedFulfillmentOption.hubs.pickup_windows.length > 0 && (
+                <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
+                  <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Collection window:</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600 }}>
+                    {selectedFulfillmentOption.hubs.pickup_windows.map(w => `${w.day.charAt(0).toUpperCase()}${w.day.slice(1)} ${w.open}–${w.close}`).join(', ')}
+                  </span>
+                </div>
+              )}
+              {pickupMethod === 'standard' && order.fulfillment_type === 'hub_pickup' && hubZone && (hubZone.hub_collection_day || hubZone.hub_collection_time_start) && (
                 <div className="po-dates-row" style={{ display: 'flex', gap: '0.5rem' }}>
                   <span className="po-dates-label" style={{ fontSize: '0.8rem', color: 'var(--moss)', width: '7.5rem', flexShrink: 0 }}>Collection window:</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--forest)', fontWeight: 600, whiteSpace: 'nowrap' }}>

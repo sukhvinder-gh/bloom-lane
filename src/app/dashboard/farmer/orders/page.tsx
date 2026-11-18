@@ -275,7 +275,7 @@ export default function FarmerOrdersPage() {
                       <td style={{ ...td, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', fontSize: '0.875rem' }}>
                         {order.order_number}
                         <div style={{ fontSize: '0.7rem', fontFamily: 'var(--font-body)', fontWeight: 400, color: 'var(--moss)', marginTop: '1px' }}>
-                          {poPickupMethods[order.id] === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub' : '🚚 Delivery'}
+                          {poPickupMethods[order.id] === 'farm_pickup' ? '🚜 Farm pickup' : poPickupMethods[order.id] === 'collection_point' ? '📍 Collection point' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub' : '🚚 Delivery'}
                         </div>
                       </td>
 

@@ -61,6 +61,10 @@ export interface POData {
   grower_fulfillment_date: string | null
   fulfillment_type: string | null
   hub_address: string | null
+  // This grower's own pickup_method ('standard' | 'farm_pickup' |
+  // 'collection_point') — distinct from fulfillment_type, which is the
+  // legacy order-wide hub_pickup/direct_delivery choice.
+  pickup_method?: string | null
   farmer_business_name: string
   farmer_abn: string | null
   farmer_suburb: string | null
@@ -124,7 +128,11 @@ export function PODocument({ po }: { po: POData }) {
             <View style={styles.dateRow}>
               <Text style={styles.dateKey}>Delivery method:</Text>
               <Text style={styles.dateVal}>
-                {po.fulfillment_type === 'hub_pickup'
+                {po.pickup_method === 'farm_pickup'
+                  ? 'Farm pickup — buyer collects directly from you'
+                  : po.pickup_method === 'collection_point'
+                  ? po.hub_address ? `Collection point — ${po.hub_address}` : 'Collection point (coordinator to confirm)'
+                  : po.fulfillment_type === 'hub_pickup'
                   ? po.hub_address ? `Hub drop-off — ${po.hub_address}` : 'Hub drop-off (TBC)'
                   : 'Direct delivery to florist'}
               </Text>

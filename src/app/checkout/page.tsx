@@ -22,6 +22,16 @@ function nextOccurrences(day: string | null | undefined, time: string | null | u
   return Array.from({ length: count }, (_, i) => new Date(first.getTime() + i * 7 * 24 * 60 * 60 * 1000))
 }
 
+// Same idea, but for a hub's collection schedule — which can have several
+// weekly windows (e.g. Wednesday and Saturday) — merges all of them and
+// returns the soonest `count` occurrences across any of them.
+function nextOccurrencesForWindows(windows: { day: string; open: string; close: string }[] | null | undefined, count: number): Date[] {
+  if (!windows || windows.length === 0) return []
+  const all = windows.flatMap(w => nextOccurrences(w.day, w.open, count))
+  all.sort((a, b) => a.getTime() - b.getTime())
+  return all.slice(0, count)
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, fulfillment_type, setFulfillmentType, clearCart, subtotalCents, isB2B } = useCart()
@@ -39,6 +49,7 @@ export default function CheckoutPage() {
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
 
   const [farmPickupIds, setFarmPickupIds] = useState<Set<string>>(new Set())
+  const [collectionPointIds, setCollectionPointIds] = useState<Set<string>>(new Set())
   // farmer_id -> the concrete pickup date the buyer chose, and the one
   // shared delivery date/time for pooled items — the buyer sets the real
   // fulfilment deadline here now, instead of admin setting it after the
@@ -73,10 +84,37 @@ export default function CheckoutPage() {
       next.has(farmerId) ? next.delete(farmerId) : next.add(farmerId)
       return next
     })
+    // A farmer is either farm pickup or a collection point, never both.
+    setCollectionPointIds(s => { if (!s.has(farmerId)) return s; const next = new Set(s); next.delete(farmerId); return next })
   }
 
-  // Nothing left to pool through hub/delivery once every item's grower is farm-pickup.
-  const pooledItems = items.filter(i => !farmPickupIds.has(i.product.farmer_id))
+  function toggleCollectionPoint(farmerId: string) {
+    setCollectionPointIds(s => {
+      const next = new Set(s)
+      next.has(farmerId) ? next.delete(farmerId) : next.add(farmerId)
+      return next
+    })
+    setFarmPickupIds(s => { if (!s.has(farmerId)) return s; const next = new Set(s); next.delete(farmerId); return next })
+  }
+
+  // Growers in this cart who offer a collection point — same shape as
+  // pickupEligibleFarmers, but each "option" is a specific hub choice (a
+  // grower can offer more than one), and the schedule comes from the hub,
+  // not the option row.
+  const collectionPointEligibleFarmers = (() => {
+    const seen = new Map<string, any>()
+    for (const item of items) {
+      const f = (item.product as any).farmers
+      const options = (f?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point' && o.hubs)
+      if (options.length > 0 && !seen.has(item.product.farmer_id)) {
+        seen.set(item.product.farmer_id, { ...f, farmer_id: item.product.farmer_id, options })
+      }
+    }
+    return [...seen.values()]
+  })()
+
+  // Nothing left to pool through delivery once every item's grower is farm-pickup or a collection point.
+  const pooledItems = items.filter(i => !farmPickupIds.has(i.product.farmer_id) && !collectionPointIds.has(i.product.farmer_id))
 
   // Each pooled grower may have their own configured delivery cost/day/time
   // (set on their storefront) — sum those per-grower instead of one flat fee,
@@ -139,11 +177,13 @@ export default function CheckoutPage() {
   async function placeOrder() {
     setError('')
 
-    // Every farm-pickup farmer needs a concrete pickup date, and pooled
-    // delivery needs one too — required, not optional, so the order never
-    // reaches admin with no real deadline on it.
+    // Every farm-pickup and collection-point farmer needs a concrete pickup
+    // date, and pooled delivery needs one too — required, not optional, so
+    // the order never reaches admin with no real deadline on it.
     const missingPickupDate = [...farmPickupIds].some(fid => !pickupDates[fid])
     if (missingPickupDate) { setError('Please choose a pickup date for each farm you\'re collecting from.'); return }
+    const missingCollectionDate = [...collectionPointIds].some(fid => !pickupDates[fid])
+    if (missingCollectionDate) { setError('Please choose a collection date for each collection point you\'re using.'); return }
     if (fulfillment_type === 'direct_delivery' && pooledItems.length > 0 && !deliveryDate) {
       setError('Please choose a delivery date and time.'); return
     }
@@ -179,14 +219,23 @@ export default function CheckoutPage() {
           delivery_postcode: address.postcode,
           notes,
           farm_pickup_farmer_ids: [...farmPickupIds],
+          collection_point_farmer_ids: [...collectionPointIds],
           florist_delivery_date: fulfillment_type === 'direct_delivery' && pooledItems.length > 0 && deliveryDate ? new Date(deliveryDate).toISOString() : undefined,
-          pickup_dates: Object.fromEntries([...farmPickupIds].filter(fid => pickupDates[fid]).map(fid => [fid, pickupDates[fid]])),
+          pickup_dates: Object.fromEntries([...farmPickupIds, ...collectionPointIds].filter(fid => pickupDates[fid]).map(fid => [fid, pickupDates[fid]])),
           fulfillment_option_selections: {
             // Which specific pickup slot, for growers opted into farm pickup
             // who configured more than one.
             ...Object.fromEntries(
               pickupEligibleFarmers
                 .filter(f => farmPickupIds.has(f.farmer_id) && f.options.length > 0)
+                .map(f => [f.farmer_id, selectedOption(f.farmer_id, f.options)?.id])
+                .filter(([, id]) => id)
+            ),
+            // Which specific hub, for growers opted into a collection point
+            // who configured more than one.
+            ...Object.fromEntries(
+              collectionPointEligibleFarmers
+                .filter(f => collectionPointIds.has(f.farmer_id) && f.options.length > 0)
                 .map(f => [f.farmer_id, selectedOption(f.farmer_id, f.options)?.id])
                 .filter(([, id]) => id)
             ),
@@ -270,9 +319,14 @@ export default function CheckoutPage() {
                 // should see that against the specific item, not just once
                 // buried in a single collection-method section below.
                 const isPickup = farmPickupIds.has(item.product.farmer_id)
+                const isCollectionPoint = collectionPointIds.has(item.product.farmer_id)
                 let fulfillmentTag: string | null = null
                 if (isPickup) {
                   fulfillmentTag = '🚜 farm pickup'
+                } else if (isCollectionPoint) {
+                  const cpEntry = collectionPointEligibleFarmers.find(f => f.farmer_id === item.product.farmer_id)
+                  const chosenHub = cpEntry && cpEntry.options.length > 0 ? selectedOption(cpEntry.farmer_id, cpEntry.options) : null
+                  fulfillmentTag = `📍 collection point${chosenHub?.hubs?.name ? ` · ${chosenHub.hubs.name}` : ''}`
                 } else {
                   const deliveryEntry = pooledDeliveryInfo.find(f => f.farmer_id === item.product.farmer_id)
                   const chosen = deliveryEntry && deliveryEntry.options.length > 0 ? selectedOption(deliveryEntry.farmer_id, deliveryEntry.options) : null
@@ -463,6 +517,99 @@ export default function CheckoutPage() {
                             <AUDateTimeInput className="input" value={pickupDates[f.farmer_id] || ''}
                               onChange={v => setPickupDates(s => ({ ...s, [f.farmer_id]: v ? new Date(v).toISOString() : '' }))}
                               ariaLabel="Pickup date and time" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Collection point — per grower, like farm pickup above, but
+              collecting from a shared hub run by a coordinator instead of
+              the farm itself. The schedule always comes from the chosen
+              hub, not the grower. */}
+          {collectionPointEligibleFarmers.length > 0 && (
+            <div className="card reveal" style={{ padding: '2rem' }}>
+              <h2 className="type-label-lg" style={{ color: 'var(--forest)', marginBottom: '0.375rem' }}>📍 Collection point available</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--moss)', marginBottom: '1.25rem' }}>
+                These growers drop off at a shared community location instead of delivering or offering farm pickup.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {collectionPointEligibleFarmers.map(f => {
+                  const checked = collectionPointIds.has(f.farmer_id)
+                  const chosen = checked && f.options.length > 0 ? selectedOption(f.farmer_id, f.options) : null
+                  const hubLabel = (o: any) => [o.hubs?.name, o.hubs?.region ? `(${o.hubs.region})` : ''].filter(Boolean).join(' ')
+                  const hubAddress = (o: any) => [o.hubs?.pickup_address, o.hubs?.pickup_suburb, o.hubs?.pickup_state].filter(Boolean).join(', ')
+
+                  return (
+                    <div key={f.farmer_id}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem', padding: '1rem', background: checked ? 'var(--forest)' : 'var(--olive)', borderRadius: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleCollectionPoint(f.farmer_id)}
+                          style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--forest)', flexShrink: 0, marginTop: '0.1rem' }} />
+                        <div>
+                          <p style={{ fontWeight: 700, fontSize: '0.875rem', color: checked ? 'var(--cream)' : 'var(--forest)' }}>{f.business_name}</p>
+                          {checked && f.options.length === 1 && (
+                            <p style={{ fontSize: '0.78rem', color: checked ? 'var(--sage)' : 'var(--moss)', marginTop: '0.15rem' }}>
+                              {hubLabel(f.options[0])}{hubAddress(f.options[0]) ? ` — ${hubAddress(f.options[0])}` : ''}
+                            </p>
+                          )}
+                          {!checked && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.15rem' }}>
+                              {f.options.length > 1 ? `${f.options.length} hubs available` : hubLabel(f.options[0])}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+
+                      {/* More than one hub configured — let the buyer choose which */}
+                      {checked && f.options.length > 1 && (
+                        <div style={{ marginTop: '0.5rem', marginLeft: '1rem', padding: '0.875rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.4rem' }}>Choose a hub</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {f.options.map((o: any) => (
+                              <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name={`cp-opt-${f.farmer_id}`} checked={chosen?.id === o.id}
+                                  onChange={() => setFulfillmentOptionIds(s => ({ ...s, [f.farmer_id]: o.id }))}
+                                  style={{ accentColor: 'var(--forest)' }} />
+                                <span style={{ fontSize: '0.8rem', color: 'var(--forest)' }}>{hubLabel(o)}</span>
+                                {hubAddress(o) && <span style={{ fontSize: '0.72rem', color: 'var(--moss)' }}>· {hubAddress(o)}</span>}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Concrete collection date — computed from the chosen
+                          hub's own schedule (coordinator-owned), so the buyer
+                          can't land on a day the hub isn't open. */}
+                      {checked && (
+                        <div style={{ marginTop: '0.5rem', marginLeft: '1rem', padding: '0.875rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.5rem' }}>Choose a collection date *</p>
+                          {chosen && nextOccurrencesForWindows(chosen.hubs?.pickup_windows, 4).length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {nextOccurrencesForWindows(chosen.hubs?.pickup_windows, 4).map(d => {
+                                const iso = d.toISOString()
+                                const isChosen = pickupDates[f.farmer_id] === iso
+                                return (
+                                  <button key={iso} type="button" onClick={() => setPickupDates(s => ({ ...s, [f.farmer_id]: iso }))}
+                                    style={{ padding: '0.4rem 0.75rem', borderRadius: '99px', border: `1.5px solid ${isChosen ? 'var(--forest)' : 'var(--sage)'}`, background: isChosen ? 'var(--forest)' : 'white', color: isChosen ? 'white' : 'var(--forest)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                                    {d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <>
+                              <p style={{ fontSize: '0.72rem', color: 'var(--moss)', marginBottom: '0.5rem' }}>
+                                The coordinator hasn't set a collection schedule yet — pick a date and we'll confirm it with you.
+                              </p>
+                              <AUDateTimeInput className="input" value={pickupDates[f.farmer_id] || ''}
+                                onChange={v => setPickupDates(s => ({ ...s, [f.farmer_id]: v ? new Date(v).toISOString() : '' }))}
+                                ariaLabel="Collection date and time" />
+                            </>
                           )}
                         </div>
                       )}
