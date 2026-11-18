@@ -11,10 +11,11 @@ type Props = {
 }
 
 const NAV = [
-  { href: '/dashboard/coordinator/hub/register', label: 'My Hub',      icon: '🏛️' },
-  { href: '/dashboard/coordinator/hub/payouts',  label: 'Payouts',     icon: '💳' },
-  { href: '/marketplace',                        label: 'Marketplace', icon: '🛍️' },
-  { href: '/growers',                            label: 'Growers',     icon: '🌾' },
+  { href: '/dashboard/coordinator/hub/register',   label: 'My Hub',           icon: '🏛️' },
+  { href: '/dashboard/coordinator/hub/collection',  label: 'Collection Point', icon: '📍' },
+  { href: '/dashboard/coordinator/hub/payouts',     label: 'Payouts',          icon: '💳' },
+  { href: '/marketplace',                           label: 'Marketplace',      icon: '🛍️' },
+  { href: '/growers',                               label: 'Growers',          icon: '🌾' },
 ]
 export default function CoordinatorSidebar({ role, userName, userEmail }: Props) {
   const pathname = usePathname()

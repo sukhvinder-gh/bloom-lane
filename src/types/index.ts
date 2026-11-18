@@ -96,6 +96,17 @@ export interface Product {
       cost_cents?: number
       max_distance_km?: number
       notes?: string
+      hub_id?: string | null
+      // Present only for type === 'collection_point' — the hub's own pickup
+      // location/schedule, resolved via the hub_id join.
+      hubs?: {
+        name: string
+        region: string | null
+        pickup_address: string | null
+        pickup_suburb: string | null
+        pickup_state: string | null
+        pickup_windows: { day: string; open: string; close: string }[] | null
+      } | null
     }>
   }
   name: string

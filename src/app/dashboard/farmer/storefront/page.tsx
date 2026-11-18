@@ -42,18 +42,29 @@ export default function FarmerStorefrontPage() {
 
   type FulfillmentOption = {
     id?: string
-    type: 'pickup' | 'delivery'
+    type: 'pickup' | 'delivery' | 'collection_point'
     day_of_week: string
     start_time: string
     end_time: string
     cost_cents: number
     max_distance_km: string
     notes: string
+    hub_id: string
+  }
+  type ActiveHub = {
+    id: string; name: string; region: string | null
+    pickup_address: string | null; pickup_suburb: string | null; pickup_state: string | null
+    pickup_windows: MarketWindow[] | null
   }
   const [fulfillmentOptions, setFulfillmentOptions] = useState<FulfillmentOption[]>([])
   const [savingOptions, setSavingOptions] = useState(false)
+  const [activeHubs, setActiveHubs] = useState<ActiveHub[]>([])
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    supabase.from('hubs').select('id, name, region, pickup_address, pickup_suburb, pickup_state, pickup_windows').eq('status', 'active')
+      .then(({ data }) => setActiveHubs(data || []))
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -108,15 +119,19 @@ export default function FarmerStorefrontPage() {
         cost_cents: o.cost_cents || 0,
         max_distance_km: o.max_distance_km != null ? String(o.max_distance_km) : '',
         notes: o.notes || '',
+        hub_id: o.hub_id || '',
       })))
     }
     setLoading(false)
   }
 
-  function addFulfillmentOption(type: 'pickup' | 'delivery') {
+  function addFulfillmentOption(type: 'pickup' | 'delivery' | 'collection_point') {
     setFulfillmentOptions(opts => [...opts, {
-      type, day_of_week: 'wednesday', start_time: '09:00', end_time: '17:00',
-      cost_cents: 0, max_distance_km: '', notes: '',
+      type,
+      day_of_week: type === 'collection_point' ? '' : 'wednesday',
+      start_time: type === 'collection_point' ? '' : '09:00',
+      end_time: type === 'collection_point' ? '' : '17:00',
+      cost_cents: 0, max_distance_km: '', notes: '', hub_id: '',
     }])
   }
 
@@ -135,18 +150,28 @@ export default function FarmerStorefrontPage() {
 
     // Simplest consistent approach: replace the full set rather than diffing
     // inserts/updates/deletes individually.
+    if (fulfillmentOptions.some(o => o.type === 'collection_point' && !o.hub_id)) {
+      setError('Pick a hub for each collection point option')
+      setSavingOptions(false)
+      return
+    }
+
     await supabase.from('farmer_fulfillment_options').delete().eq('farmer_id', farmer.id)
     if (fulfillmentOptions.length > 0) {
       const { error: insertErr } = await supabase.from('farmer_fulfillment_options').insert(
         fulfillmentOptions.map(o => ({
           farmer_id: farmer.id,
           type: o.type,
-          day_of_week: o.day_of_week || null,
-          start_time: o.start_time || null,
-          end_time: o.end_time || null,
+          // The collection point's schedule lives on the hub, not here —
+          // the coordinator owns it, so a grower picking that hub doesn't
+          // set their own day/time.
+          day_of_week: o.type === 'collection_point' ? null : (o.day_of_week || null),
+          start_time: o.type === 'collection_point' ? null : (o.start_time || null),
+          end_time: o.type === 'collection_point' ? null : (o.end_time || null),
           cost_cents: o.cost_cents || 0,
           max_distance_km: o.type === 'delivery' && o.max_distance_km ? parseInt(o.max_distance_km) : null,
           notes: o.notes || null,
+          hub_id: o.type === 'collection_point' ? (o.hub_id || null) : null,
         }))
       )
       if (insertErr) setError(insertErr.message)
@@ -563,21 +588,42 @@ export default function FarmerStorefrontPage() {
               <div key={i} style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, color: 'var(--forest)', fontSize: '0.85rem' }}>
-                    {opt.type === 'pickup' ? '🚜 Farm pickup' : '🚚 Delivery'}
+                    {opt.type === 'pickup' ? '🚜 Farm pickup' : opt.type === 'collection_point' ? '📍 Collection point' : '🚚 Delivery'}
                   </span>
                   <button onClick={() => removeFulfillmentOption(i)} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}>
                     Remove
                   </button>
                 </div>
-                <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
-                  <select value={opt.day_of_week} onChange={e => updateFulfillmentOption(i, { day_of_week: e.target.value })} style={inputStyle}>
-                    {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
-                      <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
-                    ))}
-                  </select>
-                  <input type="time" style={inputStyle} value={opt.start_time} onChange={e => updateFulfillmentOption(i, { start_time: e.target.value })} />
-                  <input type="time" style={inputStyle} value={opt.end_time} onChange={e => updateFulfillmentOption(i, { end_time: e.target.value })} />
-                </div>
+                {opt.type === 'collection_point' ? (
+                  <div>
+                    <select value={opt.hub_id} onChange={e => updateFulfillmentOption(i, { hub_id: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
+                      <option value="">Choose a hub…</option>
+                      {activeHubs.map(h => <option key={h.id} value={h.id}>{h.name}{h.region ? ` (${h.region})` : ''}</option>)}
+                    </select>
+                    {(() => {
+                      const hub = activeHubs.find(h => h.id === opt.hub_id)
+                      if (!hub) return null
+                      const addr = [hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')
+                      const schedule = (hub.pickup_windows || []).map(w => `${w.day[0].toUpperCase() + w.day.slice(1)} ${w.open}–${w.close}`).join(', ')
+                      return (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--forest)', opacity: 0.7, marginTop: '0.4rem' }}>
+                          {addr || 'No pickup address set by the coordinator yet'}
+                          {schedule ? ` · ${schedule}` : ' · No schedule set by the coordinator yet'}
+                        </p>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                    <select value={opt.day_of_week} onChange={e => updateFulfillmentOption(i, { day_of_week: e.target.value })} style={inputStyle}>
+                      {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d => (
+                        <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>
+                      ))}
+                    </select>
+                    <input type="time" style={inputStyle} value={opt.start_time} onChange={e => updateFulfillmentOption(i, { start_time: e.target.value })} />
+                    <input type="time" style={inputStyle} value={opt.end_time} onChange={e => updateFulfillmentOption(i, { end_time: e.target.value })} />
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: opt.type === 'delivery' ? '1fr 1fr' : '1fr', gap: '0.6rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--forest)', opacity: 0.7, marginBottom: '0.25rem' }}>Cost ($)</label>
@@ -607,9 +653,10 @@ export default function FarmerStorefrontPage() {
               </div>
             ))}
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <button onClick={() => addFulfillmentOption('pickup')} className="btn btn-ghost btn-sm">+ Add pickup option</button>
               <button onClick={() => addFulfillmentOption('delivery')} className="btn btn-ghost btn-sm">+ Add delivery option</button>
+              <button onClick={() => addFulfillmentOption('collection_point')} className="btn btn-ghost btn-sm">+ Add collection point</button>
             </div>
 
             <button

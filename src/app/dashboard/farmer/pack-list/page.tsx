@@ -38,7 +38,7 @@ function OrderCard({ order, busyIds, onToggleItem, onToggleOrder }: {
           <div>
             <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--forest)', textDecoration: order.all_packed ? 'line-through' : 'none', opacity: order.all_packed ? 0.6 : 1 }}>{order.buyer_name}</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--moss)', marginLeft: '0.75rem' }}>
-              {order.pickup_method === 'farm_pickup' ? '🚜 Farm pickup' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}
+              {order.pickup_method === 'farm_pickup' ? '🚜 Farm pickup' : order.pickup_method === 'collection_point' ? '📍 Collection point' : order.fulfillment_type === 'hub_pickup' ? '🏭 Hub pickup' : '🚚 Direct delivery'}
             </span>
             {order.overdue && (
               <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', fontWeight: 700, color: '#B91C1C', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '99px' }}>

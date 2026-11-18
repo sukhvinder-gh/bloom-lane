@@ -26,6 +26,7 @@ const checkoutSchema = z.object({
   hub_id: z.string().uuid().optional(),
   notes: z.string().max(500).optional(),
   farm_pickup_farmer_ids: z.array(z.string().uuid()).max(50).optional().default([]),
+  collection_point_farmer_ids: z.array(z.string().uuid()).max(50).optional().default([]),
   // farmer_id -> chosen farmer_fulfillment_options.id, for growers with more
   // than one configured delivery slot. Never trusted as-is — validated below
   // against that farmer's real options before it affects price.
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
   const { items, fulfillment_type, hub_id, delivery_address,
     delivery_suburb, delivery_state, delivery_postcode, notes,
     farm_pickup_farmer_ids: requestedFarmPickupIds,
+    collection_point_farmer_ids: requestedCollectionPointIds,
     fulfillment_option_selections: requestedOptionSelections,
     florist_delivery_date, pickup_dates } = parsed.data
 
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents, day_of_week, start_time, end_time))')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents, day_of_week, start_time, end_time, hub_id, hubs(pickup_windows)))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -148,18 +150,35 @@ export async function POST(request: NextRequest) {
       products.some(p => p.farmer_id === fid && (p as any).farmers?.offers_farm_pickup)
     )
   )]
-  const hasPooledItems = products.some(p => !farmPickupFarmerIds.includes(p.farmer_id))
+  // Collection point isn't gated by a boolean flag like farm pickup —
+  // a grower is eligible if they actually configured a collection_point
+  // option. Never both farm pickup and collection point for the same
+  // farmer (the UI enforces this; defense in depth here too).
+  const collectionPointFarmerIds = [...new Set(
+    requestedCollectionPointIds.filter(fid =>
+      !farmPickupFarmerIds.includes(fid) &&
+      products.some(p => p.farmer_id === fid && ((p as any).farmers?.farmer_fulfillment_options || []).some((o: any) => o.type === 'collection_point'))
+    )
+  )]
+  const hasPooledItems = products.some(p => !farmPickupFarmerIds.includes(p.farmer_id) && !collectionPointFarmerIds.includes(p.farmer_id))
 
   // Sanitized version of the buyer's fulfillment-slot picks — only entries
   // that survived validation against that farmer's real options, keyed by
   // farmer_id. Delivery entries are added later (they affect price); pickup
-  // entries are validated here (day/time only — farm pickup carries no fee).
+  // and collection-point entries are validated here (no fee either way).
   const validatedOptionSelections: Record<string, string> = {}
   for (const fid of farmPickupFarmerIds) {
     const product = products.find(p => p.farmer_id === fid)
     const pickupOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'pickup')
     const requestedId = requestedOptionSelections[fid]
     const chosen = (requestedId && pickupOptions.find((o: any) => o.id === requestedId)) || pickupOptions[0]
+    if (chosen) validatedOptionSelections[fid] = chosen.id
+  }
+  for (const fid of collectionPointFarmerIds) {
+    const product = products.find(p => p.farmer_id === fid)
+    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point')
+    const requestedId = requestedOptionSelections[fid]
+    const chosen = (requestedId && cpOptions.find((o: any) => o.id === requestedId)) || cpOptions[0]
     if (chosen) validatedOptionSelections[fid] = chosen.id
   }
 
@@ -186,6 +205,27 @@ export async function POST(request: NextRequest) {
       }
     }
   }
+  // Collection point's schedule lives on the hub (coordinator-owned), not on
+  // the grower's option row — so the valid days come from the hub's own
+  // pickup_windows instead of a single day_of_week.
+  for (const fid of collectionPointFarmerIds) {
+    const picked = pickup_dates[fid]
+    if (!picked) {
+      const name = (products.find(p => p.farmer_id === fid) as any)?.farmers?.business_name || 'This grower'
+      return NextResponse.json({ error: `Please choose a collection date for ${name}.` }, { status: 400 })
+    }
+    const product = products.find(p => p.farmer_id === fid)
+    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point')
+    const chosenId = validatedOptionSelections[fid]
+    const chosenOption = cpOptions.find((o: any) => o.id === chosenId)
+    const windows = chosenOption?.hubs?.pickup_windows || []
+    if (windows.length > 0) {
+      const pickedDay = DAY_NAMES[new Date(picked).getDay()]
+      if (!windows.some((w: any) => w.day === pickedDay)) {
+        return NextResponse.json({ error: `The collection date for ${(product as any)?.farmers?.business_name || 'this grower'} must fall on a day the hub is open for collection.` }, { status: 400 })
+      }
+    }
+  }
 
   if (hasPooledItems) {
     if (fulfillment_type === 'hub_pickup' && !hub_id) {
@@ -204,7 +244,7 @@ export async function POST(request: NextRequest) {
     // an arbitrary fee on their behalf.
     if (fulfillment_type === 'direct_delivery') {
       const pooledFarmerIds = [...new Set(
-        products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
+        products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id) && !collectionPointFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
       )]
       const noDeliveryOption = pooledFarmerIds.filter(fid => {
         const product = products.find(p => p.farmer_id === fid)
@@ -316,7 +356,7 @@ export async function POST(request: NextRequest) {
   let deliveryFeeCents = 0
   if (fulfillment_type === 'direct_delivery' && hasPooledItems) {
     const pooledFarmerIds = [...new Set(
-      products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
+      products.filter(p => !farmPickupFarmerIds.includes(p.farmer_id) && !collectionPointFarmerIds.includes(p.farmer_id)).map(p => p.farmer_id)
     )]
     deliveryFeeCents = pooledFarmerIds.reduce((sum, fid) => {
       const product = products.find(p => p.farmer_id === fid)
@@ -331,9 +371,9 @@ export async function POST(request: NextRequest) {
   const totals = calculateOrderTotals(orderItems, deliveryFeeCents)
 
   // Only the pickup dates that actually belong to a validated farm-pickup
-  // farmer on this order — never trust the client's map as-is.
+  // or collection-point farmer on this order — never trust the client's map as-is.
   const buyerFulfillmentDates = Object.fromEntries(
-    farmPickupFarmerIds.filter(fid => pickup_dates[fid]).map(fid => [fid, pickup_dates[fid]])
+    [...farmPickupFarmerIds, ...collectionPointFarmerIds].filter(fid => pickup_dates[fid]).map(fid => [fid, pickup_dates[fid]])
   )
 
   // Create order
@@ -356,6 +396,7 @@ export async function POST(request: NextRequest) {
       buyer_is_b2b: isB2B,
       notes,
       farm_pickup_farmer_ids: farmPickupFarmerIds,
+      collection_point_farmer_ids: collectionPointFarmerIds,
       fulfillment_option_selections: validatedOptionSelections,
       florist_delivery_date: fulfillment_type === 'direct_delivery' ? (florist_delivery_date || null) : null,
       buyer_fulfillment_dates: buyerFulfillmentDates,

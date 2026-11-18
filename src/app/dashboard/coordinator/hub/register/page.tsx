@@ -6,6 +6,7 @@ import { getStripe } from '@/lib/stripe/client'
 import { STRIPE_APPEARANCE } from '@/lib/stripe/appearance'
 import StripePaymentForm from '@/components/StripePaymentForm'
 import SingleImageUpload from '@/components/SingleImageUpload'
+import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }> = {
   pending:  { label: '⏳ Awaiting admin approval', bg: '#FEF3C7', color: '#92400E' },
@@ -13,10 +14,14 @@ const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }>
   inactive: { label: 'Inactive', bg: '#F1EFE8', color: '#5F5E5A' },
 }
 
+type PickupWindow = { day: string; open: string; close: string }
 type Hub = {
   id: string; name: string; region: string | null; status: string
   stripe_account_id?: string | null; stripe_onboarding_complete?: boolean
   logo_url?: string | null; banner_url?: string | null
+  pickup_address?: string | null; pickup_suburb?: string | null
+  pickup_state?: string | null; pickup_postcode?: string | null
+  pickup_windows?: PickupWindow[] | null
 }
 type Sub = { status: string; amount_cents: number } | null
 type Member = {
@@ -24,6 +29,144 @@ type Member = {
   business_name: string | null
   profiles: { full_name: string | null; email: string | null } | null
   subscriptions: { status: string; plan: string; expires_at: string | null }[]
+}
+
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub) => void }) {
+  const [address,  setAddress]  = useState(hub.pickup_address  ?? '')
+  const [suburb,   setSuburb]   = useState(hub.pickup_suburb   ?? '')
+  const [state,    setState]    = useState(hub.pickup_state    ?? '')
+  const [postcode, setPostcode] = useState(hub.pickup_postcode ?? '')
+  const [windows, setWindows] = useState<PickupWindow[]>(hub.pickup_windows ?? [])
+  const updateWindow = (i: number, patch: Partial<PickupWindow>) =>
+    setWindows(ws => ws.map((w, idx) => idx === i ? { ...w, ...patch } : w))
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  async function save() {
+    setSaving(true); setMsg(null)
+    const res = await fetch('/api/coordinator/hub', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hub_id: hub.id,
+        pickup_address: address, pickup_suburb: suburb, pickup_state: state, pickup_postcode: postcode,
+        pickup_windows: windows,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setMsg({ type: 'err', text: data.error || 'Could not save' }); setSaving(false); return }
+    onSaved(data.hub)
+    setMsg({ type: 'ok', text: 'Saved' })
+    setSaving(false)
+  }
+
+  return (
+    <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+      <div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>Collection Point</h2>
+        <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>
+          Where growers drop off and buyers collect, and when — this is what growers and buyers see once they pick your hub as a pickup location.
+        </p>
+      </div>
+
+      <div>
+        <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Pickup address</label>
+        <AddressAutocompleteInput className="input" placeholder="Street address" value={address}
+          onChange={setAddress}
+          onSelect={({ address: a, suburb, state: s, postcode: p }) => {
+            setAddress(a)
+            if (suburb) setSuburb(suburb)
+            if (s) setState(s)
+            if (p) setPostcode(p)
+          }}
+          style={{ width: '100%', marginBottom: '0.6rem' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>
+          <input className="input" value={suburb} onChange={e => setSuburb(e.target.value)} placeholder="Suburb" />
+          <input className="input" value={state} onChange={e => setState(e.target.value)} placeholder="State" />
+          <input className="input" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="Postcode" />
+        </div>
+      </div>
+
+      <div>
+        <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Collection schedule</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          {windows.map((w, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+              <select className="input" value={w.day} onChange={e => updateWindow(i, { day: e.target.value })} required>
+                <option value="">Day…</option>
+                {DAYS.map(d => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
+              </select>
+              <input className="input" type="time" value={w.open} onChange={e => updateWindow(i, { open: e.target.value })} required aria-label="Opens" />
+              <input className="input" type="time" value={w.close} onChange={e => updateWindow(i, { close: e.target.value })} required aria-label="Closes" />
+              <button type="button" onClick={() => setWindows(ws => ws.filter((_, idx) => idx !== i))} aria-label="Remove window"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '1rem', padding: '0.25rem 0.4rem' }}>✕</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setWindows(ws => [...ws, { day: '', open: '08:00', close: '17:00' }])}
+            className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>
+            + Add collection window
+          </button>
+        </div>
+      </div>
+
+      {msg && <Banner type={msg.type} text={msg.text} />}
+
+      <button type="button" onClick={save} disabled={saving} className="btn btn-forest" style={{ alignSelf: 'flex-start', minWidth: '7.5rem' }}>
+        {saving ? 'Saving…' : 'Save Collection Point'}
+      </button>
+    </div>
+  )
+}
+
+function NotifyHubCard({ hubId }: { hubId: string }) {
+  const [open, setOpen] = useState(false)
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  async function send() {
+    setSending(true); setResult(null)
+    const res = await fetch('/api/coordinator/hub/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hub_id: hubId, subject, message }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setResult({ type: 'err', text: data.error || 'Could not send' })
+    } else if (data.sent === 0 && data.recipients === 0) {
+      setResult({ type: 'ok', text: 'No growers or buyers to notify yet.' })
+    } else {
+      setResult({ type: 'ok', text: `Sent to ${data.sent} of ${data.recipients} recipients.` })
+      setSubject(''); setMessage('')
+    }
+    setSending(false)
+  }
+
+  return (
+    <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)' }}>Notify my hub</h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Reaches growers using this as their collection point, and buyers with an order still awaiting collection.</p>
+        </div>
+        <button type="button" onClick={() => setOpen(o => !o)} className="btn btn-ghost btn-sm">{open ? 'Cancel' : 'Compose'}</button>
+      </div>
+      {open && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <input className="input" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" style={{ width: '100%' }} />
+          <textarea className="input" value={message} onChange={e => setMessage(e.target.value)} placeholder="Message" rows={4} style={{ width: '100%', resize: 'vertical' }} />
+          {result && <Banner type={result.type} text={result.text} />}
+          <button type="button" onClick={send} disabled={sending || !subject.trim() || !message.trim()} className="btn btn-forest" style={{ alignSelf: 'flex-start', minWidth: '7.5rem' }}>
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function Banner({ type, text }: { type: 'ok' | 'err'; text: string }) {
@@ -208,6 +351,19 @@ export default function CoordinatorHubRegisterPage() {
                   onChange={url => updateHubImage(activeHub.id, 'banner_url', url)}
                 />
               </div>
+            )
+          })()}
+
+          {hasActiveHub && (() => {
+            const activeHub = hubs.find(h => h.status === 'active')!
+            return (
+              <>
+                <CollectionPointEditor
+                  hub={activeHub}
+                  onSaved={updated => setHubs(hs => hs.map(h => h.id === updated.id ? updated : h))}
+                />
+                <NotifyHubCard hubId={activeHub.id} />
+              </>
             )
           })()}
 

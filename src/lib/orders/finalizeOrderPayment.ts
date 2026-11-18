@@ -61,10 +61,11 @@ export async function finalizeOrderPayment(
 
     const { data: orderRow } = await supabase
       .from('orders')
-      .select('farm_pickup_farmer_ids, fulfillment_option_selections, grower_fulfillment_date, florist_delivery_date, buyer_fulfillment_dates')
+      .select('farm_pickup_farmer_ids, collection_point_farmer_ids, fulfillment_option_selections, grower_fulfillment_date, florist_delivery_date, buyer_fulfillment_dates')
       .eq('id', orderId)
       .single()
     const farmPickupIds = new Set((orderRow as any)?.farm_pickup_farmer_ids || [])
+    const collectionPointIds = new Set((orderRow as any)?.collection_point_farmer_ids || [])
     const optionSelections: Record<string, string> = (orderRow as any)?.fulfillment_option_selections || {}
     const floristDeliveryDate: string | null = (orderRow as any)?.florist_delivery_date || null
     const buyerFulfillmentDates: Record<string, string> = (orderRow as any)?.buyer_fulfillment_dates || {}
@@ -91,7 +92,7 @@ export async function finalizeOrderPayment(
       // an order, so the fallback is still computed per-farmer.
       const perFarmerDates = await Promise.all(
         farmerIds.map(async farmerId => {
-          const buyerDate = farmPickupIds.has(farmerId) ? buyerFulfillmentDates[farmerId] : floristDeliveryDate
+          const buyerDate = (farmPickupIds.has(farmerId) || collectionPointIds.has(farmerId)) ? buyerFulfillmentDates[farmerId] : floristDeliveryDate
           const date = buyerDate ? new Date(buyerDate) : await computeDefaultFulfillmentDate(supabase, [farmerId])
           return { farmerId, date }
         })
@@ -105,7 +106,7 @@ export async function finalizeOrderPayment(
             order_id: orderId,
             farmer_id: farmerId,
             status: 'pending',
-            pickup_method: farmPickupIds.has(farmerId) ? 'farm_pickup' : 'standard',
+            pickup_method: farmPickupIds.has(farmerId) ? 'farm_pickup' : collectionPointIds.has(farmerId) ? 'collection_point' : 'standard',
             fulfillment_option_id: optionSelections[farmerId] || null,
             grower_fulfillment_date: dateByFarmer.get(farmerId)!.toISOString(),
           })),
@@ -220,12 +221,35 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
 
   // Each grower's PO email should show their own fulfilment date, not the
   // order-wide collapsed value — falls back to the order-level date for any
-  // PO row created before per-farmer dates existed.
-  const { data: poDates } = await supabase
+  // PO row created before per-farmer dates existed. pickup_method/hub info
+  // is also per-grower (collection_point/farm_pickup are per-farmer choices,
+  // unlike the legacy order-wide hub_pickup/direct_delivery fulfillment_type).
+  const { data: poRows } = await supabase
     .from('purchase_orders')
-    .select('farmer_id, grower_fulfillment_date')
+    .select('farmer_id, grower_fulfillment_date, pickup_method, fulfillment_option_id')
     .eq('order_id', orderId)
-  const dateByFarmer = new Map((poDates || []).map((p: any) => [p.farmer_id, p.grower_fulfillment_date]))
+  const dateByFarmer = new Map((poRows || []).map((p: any) => [p.farmer_id, p.grower_fulfillment_date]))
+  const pickupMethodByFarmer = new Map((poRows || []).map((p: any) => [p.farmer_id, p.pickup_method]))
+
+  // Resolve each collection-point grower's chosen hub address, one lookup
+  // for the whole order rather than per-farmer — most orders have at most a
+  // couple of collection-point growers.
+  const collectionPointOptionIds = (poRows || [])
+    .filter((p: any) => p.pickup_method === 'collection_point' && p.fulfillment_option_id)
+    .map((p: any) => p.fulfillment_option_id)
+  const hubAddressByFarmer = new Map<string, string>()
+  if (collectionPointOptionIds.length > 0) {
+    const { data: cpOptions } = await supabase
+      .from('farmer_fulfillment_options')
+      .select('farmer_id, hubs(name, pickup_address, pickup_suburb, pickup_state)')
+      .in('id', collectionPointOptionIds)
+    for (const opt of cpOptions || []) {
+      const hub = (opt as any).hubs
+      if (!hub) continue
+      const addr = [hub.name, hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')
+      if (addr) hubAddressByFarmer.set((opt as any).farmer_id, addr)
+    }
+  }
 
   await Promise.allSettled(
     farmers.map(async farmer => {
@@ -237,7 +261,8 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
           created_at: order.created_at,
           grower_fulfillment_date: dateByFarmer.get(farmer.id) ?? order.grower_fulfillment_date,
           fulfillment_type: order.fulfillment_type,
-          hub_address: hubAddress,
+          pickup_method: pickupMethodByFarmer.get(farmer.id) ?? 'standard',
+          hub_address: hubAddressByFarmer.get(farmer.id) ?? hubAddress,
           farmer_business_name: farmer.business_name,
           farmer_abn: farmer.abn,
           farmer_suburb: farmer.suburb,

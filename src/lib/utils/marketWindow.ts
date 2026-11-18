@@ -16,8 +16,8 @@ const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
 /** Validates/normalises a client-supplied list of windows. Returns an error string on bad input. */
-export function sanitizeMarketWindows(input: unknown): MarketWindow[] | string {
-  if (!Array.isArray(input)) return 'market_windows must be a list'
+export function sanitizeWindows(input: unknown, label = 'ordering window'): MarketWindow[] | string {
+  if (!Array.isArray(input)) return `${label}s must be a list`
   const out: MarketWindow[] = []
   for (const w of input) {
     const day = String(w?.day ?? '').toLowerCase()
@@ -26,12 +26,20 @@ export function sanitizeMarketWindows(input: unknown): MarketWindow[] | string {
     // Fully blank rows (added but never filled in) are just dropped.
     if (!day && !open && !close) continue
     if (!DAYS.includes(day) || !TIME_RE.test(open) || !TIME_RE.test(close)) {
-      return 'Each ordering window needs a day, an opening time and a closing time'
+      return `Each ${label} needs a day, an opening time and a closing time`
     }
-    if (open >= close) return `The ${day} ordering window must close after it opens`
+    if (open >= close) return `The ${day} ${label} must close after it opens`
     out.push({ day, open, close })
   }
   return out
+}
+
+export function sanitizeMarketWindows(input: unknown): MarketWindow[] | string {
+  return sanitizeWindows(input, 'ordering window')
+}
+
+export function sanitizePickupWindows(input: unknown): MarketWindow[] | string {
+  return sanitizeWindows(input, 'collection window')
 }
 
 /**
