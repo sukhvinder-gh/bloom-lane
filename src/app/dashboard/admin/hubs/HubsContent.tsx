@@ -226,15 +226,15 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
-      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '30rem', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '30rem', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', fontWeight: 700 }}>
             {isEdit ? 'Edit Hub / Collective' : 'Create Hub / Collective'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-3)', padding: '0.2rem 0.4rem' }}>✕</button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        <form id="hub-modal-form" onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem', overflowY: 'auto', flexGrow: 1 }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Hub / Collective Name *</label>
             <input className="input" value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Yarra Valley Growers Collective" style={{ width: '100%' }} autoFocus />
@@ -360,14 +360,14 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
               ⚠ {error}
             </div>
           )}
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.25rem' }}>
-            <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" style={{ minWidth: '5rem' }}>Cancel</button>
-            <button type="submit" disabled={saving || !name.trim()} className="btn btn-sm btn-forest" style={{ minWidth: '7.5rem' }}>
-              {saving ? '…' : isEdit ? 'Save Changes' : 'Create Hub / Collective'}
-            </button>
-          </div>
         </form>
+
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" style={{ minWidth: '5rem' }}>Cancel</button>
+          <button type="submit" form="hub-modal-form" disabled={saving || !name.trim()} className="btn btn-sm btn-forest" style={{ minWidth: '7.5rem' }}>
+            {saving ? '…' : isEdit ? 'Save Changes' : 'Create Hub / Collective'}
+          </button>
+        </div>
       </div>
     </div>
   )
