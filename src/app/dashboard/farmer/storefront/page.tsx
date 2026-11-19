@@ -1,7 +1,7 @@
 // src/app/dashboard/farmer/storefront/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import SingleImageUpload from '@/components/SingleImageUpload'
@@ -61,6 +61,11 @@ export default function FarmerStorefrontPage() {
   const [fulfillmentOptions, setFulfillmentOptions] = useState<FulfillmentOption[]>([])
   const [savingOptions, setSavingOptions] = useState(false)
   const [activeHubs, setActiveHubs] = useState<ActiveHub[]>([])
+  // Snapshot of each row's status as last loaded from the server — used at
+  // save time to tell a brand-new/re-requested collection point (needs to
+  // notify the coordinator) apart from one that was already pending and is
+  // just being resaved alongside an unrelated edit.
+  const loadedStatusById = useRef<Record<string, string>>({})
 
   useEffect(() => { load() }, [])
   useEffect(() => {
@@ -112,6 +117,7 @@ export default function FarmerStorefrontPage() {
         .eq('farmer_id', data.id)
         .order('created_at', { ascending: true })
 
+      loadedStatusById.current = Object.fromEntries((options || []).map((o: any) => [o.id, o.status || 'approved']))
       setFulfillmentOptions((options || []).map((o: any) => ({
         id: o.id,
         type: o.type,
@@ -162,6 +168,17 @@ export default function FarmerStorefrontPage() {
       return
     }
 
+    // A row needs to notify its coordinator when it's freshly pending — a
+    // brand-new request, or one just reset to pending (hub changed, or
+    // "Request again" after a decline) — not every time it's resaved
+    // alongside an unrelated edit while still awaiting the same decision.
+    const newlyPendingHubIds = [...new Set(
+      fulfillmentOptions
+        .filter(o => o.type === 'collection_point' && o.status === 'pending' && o.hub_id &&
+          (!o.id || loadedStatusById.current[o.id] !== 'pending'))
+        .map(o => o.hub_id)
+    )]
+
     await supabase.from('farmer_fulfillment_options').delete().eq('farmer_id', farmer.id)
     if (fulfillmentOptions.length > 0) {
       const { error: insertErr } = await supabase.from('farmer_fulfillment_options').insert(
@@ -181,6 +198,22 @@ export default function FarmerStorefrontPage() {
           status: o.type === 'collection_point' ? o.status : 'approved',
         }))
       )
+      if (!insertErr) {
+        for (const hubId of newlyPendingHubIds) {
+          fetch('/api/farmer/collection-point-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hub_id: hubId }),
+          }).catch(() => {})
+        }
+        // Re-insert gives every row a new id we never read back — fall back
+        // to keying this save's own statuses by whatever id each row still
+        // holds, so an immediate resave (no reload in between) doesn't
+        // notify the coordinator again for the same pending request.
+        loadedStatusById.current = Object.fromEntries(
+          fulfillmentOptions.filter(o => o.id).map(o => [o.id as string, o.status])
+        )
+      }
       if (insertErr) setError(insertErr.message)
     }
     setSavingOptions(false)
