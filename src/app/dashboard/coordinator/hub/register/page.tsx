@@ -125,6 +125,98 @@ function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub)
   )
 }
 
+type CollectionPointRequest = {
+  id: string
+  status: 'pending' | 'approved' | 'declined'
+  created_at: string
+  farmers: { business_name: string | null; email: string | null; region: string | null; suburb: string | null; state: string | null } | null
+}
+
+function CollectionPointRequestsCard({ hubId }: { hubId: string }) {
+  const [requests, setRequests] = useState<CollectionPointRequest[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [decidingId, setDecidingId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  function load() {
+    fetch(`/api/coordinator/hub/requests?hub_id=${hubId}`).then(r => r.json()).then(data => {
+      setRequests(data.data || [])
+      setLoaded(true)
+    }).catch(() => setLoaded(true))
+  }
+
+  useEffect(() => { load() }, [hubId])
+
+  async function decide(optionId: string, status: 'approved' | 'declined') {
+    setDecidingId(optionId); setError(null)
+    const res = await fetch('/api/coordinator/hub/requests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hub_id: hubId, option_id: optionId, status }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error || 'Could not update this request'); setDecidingId(null); return }
+    load()
+    setDecidingId(null)
+  }
+
+  const pending = requests.filter(r => r.status === 'pending')
+  const decided = requests.filter(r => r.status !== 'pending')
+
+  const STATUS_PILL: Record<string, { label: string; bg: string; color: string }> = {
+    approved: { label: '✓ Approved', bg: '#D1FAE5', color: '#065F46' },
+    declined: { label: '✕ Declined', bg: '#FEE2E2', color: '#B91C1C' },
+  }
+
+  return (
+    <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: 'var(--forest)' }}>Collection Point requests</h2>
+        <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Growers who've picked you as their collection point — approve to let buyers choose it at checkout.</p>
+      </div>
+
+      {error && <Banner type="err" text={error} />}
+
+      {!loaded ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>Loading…</p>
+      ) : requests.length === 0 ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--moss)' }}>No growers have requested this hub yet.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {pending.map(r => (
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '0.75rem', flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{r.farmers?.business_name || 'Grower'}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>{[r.farmers?.suburb, r.farmers?.state].filter(Boolean).join(', ') || r.farmers?.region}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="button" onClick={() => decide(r.id, 'approved')} disabled={decidingId === r.id} className="btn btn-forest btn-sm">
+                  {decidingId === r.id ? '…' : 'Approve'}
+                </button>
+                <button type="button" onClick={() => decide(r.id, 'declined')} disabled={decidingId === r.id} className="btn btn-ghost btn-sm">
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+          {decided.map(r => {
+            const s = STATUS_PILL[r.status]
+            return (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem', flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{r.farmers?.business_name || 'Grower'}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>{[r.farmers?.suburb, r.farmers?.state].filter(Boolean).join(', ') || r.farmers?.region}</p>
+                </div>
+                <span style={{ padding: '0.3rem 0.75rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NotifyHubCard({ hubId }: { hubId: string }) {
   const [open, setOpen] = useState(false)
   const [subject, setSubject] = useState('')
@@ -367,6 +459,7 @@ export default function CoordinatorHubRegisterPage() {
                   hub={activeHub}
                   onSaved={updated => setHubs(hs => hs.map(h => h.id === updated.id ? updated : h))}
                 />
+                <CollectionPointRequestsCard hubId={activeHub.id} />
                 <NotifyHubCard hubId={activeHub.id} />
               </>
             )

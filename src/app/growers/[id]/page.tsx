@@ -29,10 +29,13 @@ export default async function GrowerProfilePage({ params }: { params: Promise<{ 
 
   if (!farmer) notFound()
 
+  // A collection point only shows up here once its coordinator has
+  // approved it — a pending/declined request stays grower-side only.
   const { data: fulfillmentOptions } = await admin
     .from('farmer_fulfillment_options')
-    .select('type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes')
+    .select('type, day_of_week, start_time, end_time, cost_cents, max_distance_km, notes, status')
     .eq('farmer_id', id)
+    .or('type.neq.collection_point,status.eq.approved')
     .order('type', { ascending: true })
 
   const { data: products } = await admin
