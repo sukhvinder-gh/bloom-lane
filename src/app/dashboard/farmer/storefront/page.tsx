@@ -50,6 +50,7 @@ export default function FarmerStorefrontPage() {
     max_distance_km: string
     notes: string
     hub_id: string
+    status: string
   }
   type ActiveHub = {
     id: string; name: string; region: string | null
@@ -121,6 +122,7 @@ export default function FarmerStorefrontPage() {
         max_distance_km: o.max_distance_km != null ? String(o.max_distance_km) : '',
         notes: o.notes || '',
         hub_id: o.hub_id || '',
+        status: o.status || 'approved',
       })))
     }
     setLoading(false)
@@ -133,6 +135,9 @@ export default function FarmerStorefrontPage() {
       start_time: type === 'collection_point' ? '' : '09:00',
       end_time: type === 'collection_point' ? '' : '17:00',
       cost_cents: 0, max_distance_km: '', notes: '', hub_id: '',
+      // Requires the coordinator's approval before buyers/checkout can use
+      // it; pickup/delivery never need approval.
+      status: type === 'collection_point' ? 'pending' : 'approved',
     }])
   }
 
@@ -173,6 +178,7 @@ export default function FarmerStorefrontPage() {
           max_distance_km: o.type === 'delivery' && o.max_distance_km ? parseInt(o.max_distance_km) : null,
           notes: o.notes || null,
           hub_id: o.type === 'collection_point' ? (o.hub_id || null) : null,
+          status: o.type === 'collection_point' ? o.status : 'approved',
         }))
       )
       if (insertErr) setError(insertErr.message)
@@ -597,7 +603,29 @@ export default function FarmerStorefrontPage() {
                 </div>
                 {opt.type === 'collection_point' ? (
                   <div>
-                    <select value={opt.hub_id} onChange={e => updateFulfillmentOption(i, { hub_id: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
+                    {opt.status !== 'approved' && (
+                      <p style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap',
+                        fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.4rem',
+                        color: opt.status === 'declined' ? '#B91C1C' : '#92400E',
+                      }}>
+                        {opt.status === 'declined' ? '✕ Declined by the coordinator' : '⏳ Awaiting coordinator approval'}
+                        {opt.status === 'declined' && (
+                          <button
+                            type="button"
+                            onClick={() => updateFulfillmentOption(i, { status: 'pending' })}
+                            style={{ background: 'none', border: 'none', color: 'var(--forest)', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline', fontWeight: 700, padding: 0 }}
+                          >
+                            Request again
+                          </button>
+                        )}
+                      </p>
+                    )}
+                    <select
+                      value={opt.hub_id}
+                      onChange={e => updateFulfillmentOption(i, { hub_id: e.target.value, status: e.target.value === opt.hub_id ? opt.status : 'pending' })}
+                      style={{ ...inputStyle, width: '100%' }}
+                    >
                       <option value="">Choose a hub…</option>
                       {activeHubs.map(h => <option key={h.id} value={h.id}>{h.name}{h.region ? ` (${h.region})` : ''}</option>)}
                     </select>

@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
   const productIds = items.map(i => i.product_id)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents, day_of_week, start_time, end_time, hub_id, hubs(pickup_windows)))')
+    .select('id, name, unit, wholesale_price, b2c_markup_pct, is_gst_free, farmer_id, min_order_b2b, is_listed_this_week, is_active, farmers(business_name, gst_registered, offers_farm_pickup, farmer_fulfillment_options(id, type, cost_cents, day_of_week, start_time, end_time, hub_id, status, hubs(pickup_windows)))')
     .in('id', productIds)
 
   if (!products || products.length !== productIds.length) {
@@ -152,12 +152,13 @@ export async function POST(request: NextRequest) {
   )]
   // Collection point isn't gated by a boolean flag like farm pickup —
   // a grower is eligible if they actually configured a collection_point
-  // option. Never both farm pickup and collection point for the same
-  // farmer (the UI enforces this; defense in depth here too).
+  // option, AND the coordinator has approved it. Never both farm pickup
+  // and collection point for the same farmer (the UI enforces this;
+  // defense in depth here too).
   const collectionPointFarmerIds = [...new Set(
     requestedCollectionPointIds.filter(fid =>
       !farmPickupFarmerIds.includes(fid) &&
-      products.some(p => p.farmer_id === fid && ((p as any).farmers?.farmer_fulfillment_options || []).some((o: any) => o.type === 'collection_point'))
+      products.some(p => p.farmer_id === fid && ((p as any).farmers?.farmer_fulfillment_options || []).some((o: any) => o.type === 'collection_point' && o.status === 'approved'))
     )
   )]
   const hasPooledItems = products.some(p => !farmPickupFarmerIds.includes(p.farmer_id) && !collectionPointFarmerIds.includes(p.farmer_id))
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
   }
   for (const fid of collectionPointFarmerIds) {
     const product = products.find(p => p.farmer_id === fid)
-    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point')
+    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point' && o.status === 'approved')
     const requestedId = requestedOptionSelections[fid]
     const chosen = (requestedId && cpOptions.find((o: any) => o.id === requestedId)) || cpOptions[0]
     if (chosen) validatedOptionSelections[fid] = chosen.id
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Please choose a collection date for ${name}.` }, { status: 400 })
     }
     const product = products.find(p => p.farmer_id === fid)
-    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point')
+    const cpOptions = ((product as any)?.farmers?.farmer_fulfillment_options || []).filter((o: any) => o.type === 'collection_point' && o.status === 'approved')
     const chosenId = validatedOptionSelections[fid]
     const chosenOption = cpOptions.find((o: any) => o.id === chosenId)
     const windows = chosenOption?.hubs?.pickup_windows || []
