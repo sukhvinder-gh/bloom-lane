@@ -41,6 +41,14 @@ type ActiveModal =
   | { type: 'members'; hub: HubRow }
   | { type: 'email'; hub: HubRow }
   | { type: 'delete'; hub: HubRow }
+  | { type: 'requests'; hub: HubRow }
+
+type CollectionPointRequest = {
+  id: string
+  status: 'pending' | 'approved' | 'declined'
+  created_at: string
+  farmers: { business_name: string | null; email: string | null; region: string | null; suburb: string | null; state: string | null } | null
+}
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   pending:  { bg: '#FEF3C7', color: '#92400E' },
@@ -56,12 +64,13 @@ const SUB_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
 }
 
 // ── ActionsMenu ───────────────────────────────────────────────────────────────
-function ActionsMenu({ hub, onEdit, onToggle, onViewMembers, onEmail, onDelete, disabled }: {
+function ActionsMenu({ hub, onEdit, onToggle, onViewMembers, onEmail, onRequests, onDelete, disabled }: {
   hub: HubRow
   onEdit: () => void
   onToggle: () => void
   onViewMembers: () => void
   onEmail: () => void
+  onRequests: () => void
   onDelete: () => void
   disabled: boolean
 }) {
@@ -121,6 +130,9 @@ function ActionsMenu({ hub, onEdit, onToggle, onViewMembers, onEmail, onDelete, 
           </button>
           <button onClick={() => { onEmail(); setOpen(false) }} style={{ ...itemStyle, color: hub.profiles?.email ? 'var(--text-1)' : 'var(--text-3)' }}>
             📧 Email coordinator
+          </button>
+          <button onClick={() => { onRequests(); setOpen(false) }} style={itemStyle}>
+            📍 Collection point requests
           </button>
           <button
             onClick={() => { onToggle(); setOpen(false) }}
@@ -528,6 +540,110 @@ function EmailCoordinatorModal({ hub, onClose }: { hub: HubRow; onClose: () => v
   )
 }
 
+// ── CollectionPointRequestsModal ──────────────────────────────────────────────
+function CollectionPointRequestsModal({ hub, onClose }: { hub: HubRow; onClose: () => void }) {
+  const [requests, setRequests] = useState<CollectionPointRequest[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState<string | null>(null)
+  const [decidingId, setDecidingId] = useState<string | null>(null)
+
+  function load() {
+    fetch(`/api/coordinator/hub/requests?hub_id=${hub.id}`)
+      .then(r => r.json())
+      .then(d => { setRequests(d.data || []); setLoading(false) })
+      .catch(() => { setError('Failed to load requests'); setLoading(false) })
+  }
+
+  useEffect(() => { load() }, [hub.id])
+
+  async function decide(optionId: string, status: 'approved' | 'declined') {
+    setDecidingId(optionId); setError(null)
+    const res = await fetch('/api/coordinator/hub/requests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hub_id: hub.id, option_id: optionId, status }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error || 'Could not update this request'); setDecidingId(null); return }
+    load()
+    setDecidingId(null)
+  }
+
+  const pending = requests.filter(r => r.status === 'pending')
+  const decided = requests.filter(r => r.status !== 'pending')
+  const STATUS_PILL: Record<string, { label: string; bg: string; color: string }> = {
+    approved: { label: '✓ Approved', bg: '#D1FAE5', color: '#065F46' },
+    declined: { label: '✕ Declined', bg: '#FEE2E2', color: '#B91C1C' },
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} />
+      <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '36rem', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', fontWeight: 700, marginBottom: '0.1rem' }}>
+              📍 Collection point requests
+            </h2>
+            <p style={{ fontSize: '0.78rem', color: 'var(--moss)' }}>{hub.name}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-3)', padding: '0.2rem 0.4rem' }}>✕</button>
+        </div>
+
+        <div style={{ overflowY: 'auto', flexGrow: 1, padding: '1rem 1.5rem' }}>
+          {loading && <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>}
+          {error   && <p style={{ color: '#B91C1C', textAlign: 'center', padding: '2rem 0' }}>{error}</p>}
+          {!loading && !error && requests.length === 0 && (
+            <p style={{ color: 'var(--moss)', textAlign: 'center', padding: '2rem 0', opacity: 0.6 }}>No growers have requested this hub yet.</p>
+          )}
+
+          {pending.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: decided.length > 0 ? '1.25rem' : 0 }}>
+              {pending.map(r => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: '#FEF3C7', borderRadius: '0.75rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{r.farmers?.business_name || 'Grower'}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>{[r.farmers?.suburb, r.farmers?.state].filter(Boolean).join(', ') || r.farmers?.region}</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button type="button" onClick={() => decide(r.id, 'approved')} disabled={decidingId === r.id} className="btn btn-forest btn-sm">
+                      {decidingId === r.id ? '…' : 'Approve'}
+                    </button>
+                    <button type="button" onClick={() => decide(r.id, 'declined')} disabled={decidingId === r.id} className="btn btn-ghost btn-sm">
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {decided.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {decided.map(r => {
+                const s = STATUS_PILL[r.status]
+                return (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: 'var(--olive)', borderRadius: '0.75rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--forest)' }}>{r.farmers?.business_name || 'Grower'}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--moss)' }}>{[r.farmers?.suburb, r.farmers?.state].filter(Boolean).join(', ') || r.farmers?.region}</p>
+                    </div>
+                    <span style={{ padding: '3px 10px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>{s.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', textAlign: 'right', flexShrink: 0 }}>
+          <button onClick={onClose} className="btn btn-ghost btn-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── DeleteHubModal ────────────────────────────────────────────────────────────
 function DeleteHubModal({ hub, onClose, onDeleted }: { hub: HubRow; onClose: () => void; onDeleted: (id: string) => void }) {
   const [deleting, setDeleting] = useState(false)
@@ -714,6 +830,7 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
                       onToggle={() => toggleStatus(hub)}
                       onViewMembers={() => setActiveModal({ type: 'members', hub })}
                       onEmail={() => setActiveModal({ type: 'email', hub })}
+                      onRequests={() => setActiveModal({ type: 'requests', hub })}
                       onDelete={() => setActiveModal({ type: 'delete', hub })}
                       disabled={updating === hub.id}
                     />
@@ -742,6 +859,9 @@ export default function HubsContent({ initialHubs }: { initialHubs: any[] }) {
       )}
       {activeModal?.type === 'email' && (
         <EmailCoordinatorModal hub={activeModal.hub} onClose={() => setActiveModal(null)} />
+      )}
+      {activeModal?.type === 'requests' && (
+        <CollectionPointRequestsModal hub={activeModal.hub} onClose={() => setActiveModal(null)} />
       )}
       {activeModal?.type === 'delete' && (
         <DeleteHubModal hub={activeModal.hub} onClose={() => setActiveModal(null)} onDeleted={handleDeleted} />
