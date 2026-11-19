@@ -102,6 +102,7 @@ export interface Product {
       hubs?: {
         name: string
         region: string | null
+        pickup_venue_name: string | null
         pickup_address: string | null
         pickup_suburb: string | null
         pickup_state: string | null

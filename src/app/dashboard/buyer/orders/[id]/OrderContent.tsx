@@ -95,7 +95,7 @@ export default function BuyerOrderDetailPage() {
       pickupMethod: po.pickup_method as 'standard' | 'farm_pickup' | 'collection_point',
       farmAddress: [po.farmers?.address, po.farmers?.suburb, po.farmers?.state].filter(Boolean).join(', '),
       hubName: hub?.name || null,
-      hubAddress: [hub?.pickup_address, hub?.pickup_suburb, hub?.pickup_state].filter(Boolean).join(', '),
+      hubAddress: [hub?.pickup_venue_name, [hub?.pickup_address, hub?.pickup_suburb, hub?.pickup_state].filter(Boolean).join(', ')].filter(Boolean).join(' — '),
     }
   })
 

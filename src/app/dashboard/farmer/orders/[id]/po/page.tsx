@@ -104,12 +104,12 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
   // option row itself has no day/time of its own.
   let selectedFulfillmentOption: {
     type: string; day_of_week: string | null; start_time: string | null; end_time: string | null; cost_cents: number; notes: string | null
-    hubs: { name: string; pickup_address: string | null; pickup_suburb: string | null; pickup_state: string | null; pickup_windows: { day: string; open: string; close: string }[] | null } | null
+    hubs: { name: string; pickup_venue_name: string | null; pickup_address: string | null; pickup_suburb: string | null; pickup_state: string | null; pickup_windows: { day: string; open: string; close: string }[] | null } | null
   } | null = null
   if ((poRecord as any)?.fulfillment_option_id) {
     const { data } = await admin
       .from('farmer_fulfillment_options')
-      .select('type, day_of_week, start_time, end_time, cost_cents, notes, hubs(name, pickup_address, pickup_suburb, pickup_state, pickup_windows)')
+      .select('type, day_of_week, start_time, end_time, cost_cents, notes, hubs(name, pickup_venue_name, pickup_address, pickup_suburb, pickup_state, pickup_windows)')
       .eq('id', (poRecord as any).fulfillment_option_id)
       .maybeSingle()
     selectedFulfillmentOption = data as any
@@ -222,7 +222,7 @@ export default async function FarmerPOPage({ params }: { params: Promise<{ id: s
                       : '🚜 Farm pickup — buyer collects directly from you'
                   ) : pickupMethod === 'collection_point' ? (
                     selectedFulfillmentOption?.hubs
-                      ? `📍 Collection point — ${[selectedFulfillmentOption.hubs.name, selectedFulfillmentOption.hubs.pickup_address, selectedFulfillmentOption.hubs.pickup_suburb, selectedFulfillmentOption.hubs.pickup_state].filter(Boolean).join(', ')}`
+                      ? `📍 Collection point — ${[selectedFulfillmentOption.hubs.name, selectedFulfillmentOption.hubs.pickup_venue_name, selectedFulfillmentOption.hubs.pickup_address, selectedFulfillmentOption.hubs.pickup_suburb, selectedFulfillmentOption.hubs.pickup_state].filter(Boolean).join(', ')}`
                       : '📍 Collection point (coordinator to confirm location)'
                   ) : order.fulfillment_type === 'hub_pickup' ? (
                     hubZone

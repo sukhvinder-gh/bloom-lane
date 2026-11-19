@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   const check = await requireAdmin()
   if ('error' in check) return NextResponse.json({ error: check.error }, { status: check.status })
 
-  const { name, region, coordinator_id, market_windows, pickup_address, pickup_suburb, pickup_state, pickup_postcode, pickup_windows } = await request.json()
+  const { name, region, coordinator_id, market_windows, pickup_venue_name, pickup_address, pickup_suburb, pickup_state, pickup_postcode, pickup_windows } = await request.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Hub name is required' }, { status: 400 })
 
   const windows = sanitizeMarketWindows(market_windows ?? [])
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     region: region?.trim() || null,
     coordinator_id: coordinator_id || null,
     ...legacyWindowColumns(windows),
+    pickup_venue_name: pickup_venue_name?.trim() || null,
     pickup_address: pickup_address?.trim() || null,
     pickup_suburb: pickup_suburb?.trim() || null,
     pickup_state: pickup_state?.trim() || null,
@@ -67,9 +68,9 @@ export async function POST(request: NextRequest) {
   let { data, error } = await check.admin.from('hubs').insert(insertRow).select(HUB_SELECT).single()
   // A column from a migration that hasn't been applied yet — drop it and retry
   // rather than failing hub creation entirely over an optional field.
-  while (error && /market_windows|pickup_address|pickup_suburb|pickup_state|pickup_postcode|pickup_windows/.test(error.message)) {
+  while (error && /market_windows|pickup_venue_name|pickup_address|pickup_suburb|pickup_state|pickup_postcode|pickup_windows/.test(error.message)) {
     const before = Object.keys(insertRow).length
-    for (const col of ['market_windows', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']) {
+    for (const col of ['market_windows', 'pickup_venue_name', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']) {
       if (error.message.includes(col)) delete insertRow[col]
     }
     if (Object.keys(insertRow).length === before) break
@@ -102,6 +103,7 @@ export async function PATCH(request: NextRequest) {
   if (body.name  !== undefined)          updates.name           = body.name.trim()
   if (body.region !== undefined)         updates.region         = body.region?.trim() || null
   if ('coordinator_id' in body)          updates.coordinator_id = body.coordinator_id || null
+  if (body.pickup_venue_name !== undefined) updates.pickup_venue_name = body.pickup_venue_name?.trim() || null
   if (body.pickup_address !== undefined)  updates.pickup_address  = body.pickup_address?.trim() || null
   if (body.pickup_suburb !== undefined)   updates.pickup_suburb   = body.pickup_suburb?.trim() || null
   if (body.pickup_state !== undefined)    updates.pickup_state    = body.pickup_state?.trim() || null
@@ -131,7 +133,7 @@ export async function PATCH(request: NextRequest) {
   // A column from a migration that doesn't exist in this database yet —
   // drop whichever keys it's complaining about and retry, rather than
   // failing the whole request over an optional audit/scheduling/pickup field.
-  const OPTIONAL_COLS = ['market_windows', 'approved_by_name', 'approved_at', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']
+  const OPTIONAL_COLS = ['market_windows', 'approved_by_name', 'approved_at', 'pickup_venue_name', 'pickup_address', 'pickup_suburb', 'pickup_state', 'pickup_postcode', 'pickup_windows']
   while (error && OPTIONAL_COLS.some(col => error!.message.includes(col))) {
     const before = Object.keys(updates).length
     for (const col of OPTIONAL_COLS) {

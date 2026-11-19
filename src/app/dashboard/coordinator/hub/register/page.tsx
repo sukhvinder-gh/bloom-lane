@@ -19,6 +19,7 @@ type Hub = {
   id: string; name: string; region: string | null; status: string
   stripe_account_id?: string | null; stripe_onboarding_complete?: boolean
   logo_url?: string | null; banner_url?: string | null
+  pickup_venue_name?: string | null
   pickup_address?: string | null; pickup_suburb?: string | null
   pickup_state?: string | null; pickup_postcode?: string | null
   pickup_windows?: PickupWindow[] | null
@@ -34,6 +35,7 @@ type Member = {
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub) => void }) {
+  const [venueName, setVenueName] = useState(hub.pickup_venue_name ?? '')
   const [address,  setAddress]  = useState(hub.pickup_address  ?? '')
   const [suburb,   setSuburb]   = useState(hub.pickup_suburb   ?? '')
   const [state,    setState]    = useState(hub.pickup_state    ?? '')
@@ -51,6 +53,7 @@ function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         hub_id: hub.id,
+        pickup_venue_name: venueName,
         pickup_address: address, pickup_suburb: suburb, pickup_state: state, pickup_postcode: postcode,
         pickup_windows: windows,
       }),
@@ -73,6 +76,8 @@ function CollectionPointEditor({ hub, onSaved }: { hub: Hub; onSaved: (hub: Hub)
 
       <div>
         <label className="type-label-sm" style={{ display: 'block', color: 'var(--moss)', marginBottom: '0.3rem' }}>Pickup address</label>
+        <input className="input" value={venueName} onChange={e => setVenueName(e.target.value)}
+          placeholder="Building or shop name (optional), e.g. Community Hall" style={{ width: '100%', marginBottom: '0.6rem' }} />
         <AddressAutocompleteInput className="input" placeholder="Street address" value={address}
           onChange={setAddress}
           onSelect={({ address: a, suburb, state: s, postcode: p }) => {
