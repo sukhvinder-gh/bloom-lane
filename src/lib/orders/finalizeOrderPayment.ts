@@ -241,12 +241,12 @@ async function sendAllOrderEmails(supabase: ReturnType<typeof createAdminClient>
   if (collectionPointOptionIds.length > 0) {
     const { data: cpOptions } = await supabase
       .from('farmer_fulfillment_options')
-      .select('farmer_id, hubs(name, pickup_address, pickup_suburb, pickup_state)')
+      .select('farmer_id, hubs(name, pickup_venue_name, pickup_address, pickup_suburb, pickup_state)')
       .in('id', collectionPointOptionIds)
     for (const opt of cpOptions || []) {
       const hub = (opt as any).hubs
       if (!hub) continue
-      const addr = [hub.name, hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')
+      const addr = [hub.name, hub.pickup_venue_name, hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')
       if (addr) hubAddressByFarmer.set((opt as any).farmer_id, addr)
     }
   }

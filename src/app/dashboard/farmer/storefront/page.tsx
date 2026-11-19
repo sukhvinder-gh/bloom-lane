@@ -53,6 +53,7 @@ export default function FarmerStorefrontPage() {
   }
   type ActiveHub = {
     id: string; name: string; region: string | null
+    pickup_venue_name: string | null
     pickup_address: string | null; pickup_suburb: string | null; pickup_state: string | null
     pickup_windows: MarketWindow[] | null
   }
@@ -62,7 +63,7 @@ export default function FarmerStorefrontPage() {
 
   useEffect(() => { load() }, [])
   useEffect(() => {
-    supabase.from('hubs').select('id, name, region, pickup_address, pickup_suburb, pickup_state, pickup_windows').eq('status', 'active')
+    supabase.from('hubs').select('id, name, region, pickup_venue_name, pickup_address, pickup_suburb, pickup_state, pickup_windows').eq('status', 'active')
       .then(({ data }) => setActiveHubs(data || []))
   }, [])
 
@@ -603,7 +604,7 @@ export default function FarmerStorefrontPage() {
                     {(() => {
                       const hub = activeHubs.find(h => h.id === opt.hub_id)
                       if (!hub) return null
-                      const addr = [hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')
+                      const addr = [hub.pickup_venue_name, [hub.pickup_address, hub.pickup_suburb, hub.pickup_state].filter(Boolean).join(', ')].filter(Boolean).join(' — ')
                       const schedule = (hub.pickup_windows || []).map(w => `${w.day[0].toUpperCase() + w.day.slice(1)} ${w.open}–${w.close}`).join(', ')
                       return (
                         <p style={{ fontSize: '0.78rem', color: 'var(--forest)', opacity: 0.7, marginTop: '0.4rem' }}>

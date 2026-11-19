@@ -542,7 +542,7 @@ export default function CheckoutPage() {
                   const checked = collectionPointIds.has(f.farmer_id)
                   const chosen = checked && f.options.length > 0 ? selectedOption(f.farmer_id, f.options) : null
                   const hubLabel = (o: any) => [o.hubs?.name, o.hubs?.region ? `(${o.hubs.region})` : ''].filter(Boolean).join(' ')
-                  const hubAddress = (o: any) => [o.hubs?.pickup_address, o.hubs?.pickup_suburb, o.hubs?.pickup_state].filter(Boolean).join(', ')
+                  const hubAddress = (o: any) => [o.hubs?.pickup_venue_name, [o.hubs?.pickup_address, o.hubs?.pickup_suburb, o.hubs?.pickup_state].filter(Boolean).join(', ')].filter(Boolean).join(' — ')
 
                   return (
                     <div key={f.farmer_id}>

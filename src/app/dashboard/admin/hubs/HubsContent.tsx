@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { formatAEST } from '@/lib/utils/timezone'
-import { AUSTRALIAN_STATES } from '@/lib/utils/lga'
+import { AUSTRALIAN_STATES, regionOptionsForState } from '@/lib/utils/lga'
 import AddressAutocompleteInput from '@/components/AddressAutocompleteInput'
 
 type HubRow = {
@@ -19,6 +19,7 @@ type HubRow = {
   market_windows?: { day: string; open: string; close: string }[] | null
   approved_by_name?: string | null
   approved_at?: string | null
+  pickup_venue_name?: string | null
   pickup_address?: string | null
   pickup_suburb?: string | null
   pickup_state?: string | null
@@ -149,6 +150,10 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
 }) {
   const [name,          setName]          = useState(hub?.name           ?? '')
   const [region,        setRegion]        = useState(hub?.region         ?? '')
+  // Drives the Region LGA dropdown's available options — not saved directly,
+  // just lets us reuse the same State → LGA list the farmer storefront uses.
+  // Best-guess seed for an existing hub is its pickup location's state.
+  const [regionState,   setRegionState]   = useState(hub?.pickup_state    ?? '')
   const [coordinatorId, setCoordinatorId] = useState(hub?.coordinator_id ?? '')
   // Existing hubs without a market_windows list fall back to their single
   // legacy window, shown as row 1.
@@ -162,6 +167,7 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
   const updateWindow = (i: number, patch: Partial<{ day: string; open: string; close: string }>) =>
     setWindows(ws => ws.map((w, idx) => idx === i ? { ...w, ...patch } : w))
 
+  const [pickupVenueName, setPickupVenueName] = useState(hub?.pickup_venue_name ?? '')
   const [pickupAddress,  setPickupAddress]  = useState(hub?.pickup_address  ?? '')
   const [pickupSuburb,   setPickupSuburb]   = useState(hub?.pickup_suburb   ?? '')
   const [pickupState,    setPickupState]    = useState(hub?.pickup_state    ?? '')
@@ -185,6 +191,7 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
       region:             region.trim() || null,
       coordinator_id:     coordinatorId || null,
       market_windows:     windows,
+      pickup_venue_name:  pickupVenueName.trim() || null,
       pickup_address:     pickupAddress.trim() || null,
       pickup_suburb:      pickupSuburb.trim() || null,
       pickup_state:       pickupState.trim() || null,
@@ -223,7 +230,16 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--moss)', marginBottom: '0.4rem' }}>Region</label>
-            <input className="input" value={region} onChange={e => setRegion(e.target.value)} placeholder="e.g. Yarra Valley, VIC" style={{ width: '100%' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.6rem' }}>
+              <select className="input" value={regionState} onChange={e => { setRegionState(e.target.value); setRegion('') }}>
+                <option value="">State…</option>
+                {AUSTRALIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select className="input" value={region} onChange={e => setRegion(e.target.value)} disabled={!regionState}>
+                <option value="">{regionState ? '— Select region —' : 'Choose a state first'}</option>
+                {regionOptionsForState(regionState, region).map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -274,6 +290,8 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
               Where growers using this hub as their collection point drop off, and buyers collect from. The coordinator can also set this from their own dashboard.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <input className="input" value={pickupVenueName} onChange={e => setPickupVenueName(e.target.value)}
+                placeholder="Building or shop name (optional), e.g. Community Hall" style={{ width: '100%' }} />
               <AddressAutocompleteInput className="input" placeholder="Street address" value={pickupAddress}
                 onChange={setPickupAddress}
                 onSelect={({ address, suburb, state, postcode }) => {
@@ -281,10 +299,13 @@ function HubModal({ hub, coordinators, onClose, onSave }: {
                   if (suburb) setPickupSuburb(suburb)
                   if ((AUSTRALIAN_STATES as readonly string[]).includes(state)) setPickupState(state)
                   if (postcode) setPickupPostcode(postcode)
-                  // Region is a separate, broader label (e.g. "Yarra Valley, VIC")
-                  // that an admin can still set by hand — only auto-fill it from
-                  // the picked address when it's empty, same as register-interest.
-                  if (!region.trim() && suburb) setRegion(state ? `${suburb}, ${state}` : suburb)
+                  // Region is a separate, broader label (an LGA, e.g. "Macedon
+                  // Ranges") that an admin can still set by hand — only
+                  // auto-fill it from the picked address when it's empty.
+                  if (!region.trim() && suburb && (AUSTRALIAN_STATES as readonly string[]).includes(state)) {
+                    setRegionState(state)
+                    setRegion(suburb)
+                  }
                 }}
                 style={{ width: '100%' }} />
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.6rem' }}>

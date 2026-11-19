@@ -155,12 +155,13 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { hub_id, logo_url, banner_url, pickup_address, pickup_suburb, pickup_state, pickup_postcode } = body
+  const { hub_id, logo_url, banner_url, pickup_venue_name, pickup_address, pickup_suburb, pickup_state, pickup_postcode } = body
   if (!hub_id) return NextResponse.json({ error: 'hub_id is required' }, { status: 400 })
 
   const update: Record<string, unknown> = {}
   if (logo_url !== undefined) update.logo_url = logo_url
   if (banner_url !== undefined) update.banner_url = banner_url
+  if (pickup_venue_name !== undefined) update.pickup_venue_name = pickup_venue_name?.trim() || null
   if (pickup_address !== undefined) update.pickup_address = pickup_address?.trim() || null
   if (pickup_suburb !== undefined) update.pickup_suburb = pickup_suburb?.trim() || null
   if (pickup_state !== undefined) update.pickup_state = pickup_state?.trim() || null
