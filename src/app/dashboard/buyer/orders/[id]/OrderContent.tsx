@@ -11,6 +11,9 @@ const CATEGORY_EMOJI: Record<string, string> = {
   herbs: '🌿', fruit: '🍓', eggs: '🥚', honey: '🍯', other: '📦',
 }
 
+// Mirrors DISPUTE_ELIGIBLE_STATUSES in /api/orders/[id]/dispute — keep in sync.
+const DISPUTE_ELIGIBLE_STATUSES = ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered']
+
 // Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal).
 // The "ready" stage's wording depends on how this order is actually being
 // fulfilled (farm pickup vs delivery vs hub) — see readyStageLabel() below —
@@ -67,6 +70,27 @@ export default function BuyerOrderDetailPage() {
     fetch(`/api/orders/${params.id}`).then(r => r.json()).then(d => { setOrder(d.data); setLoading(false) })
   }, [params.id])
 
+  const [showDisputeForm, setShowDisputeForm] = useState(false)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false)
+  const [disputeError, setDisputeError] = useState<string | null>(null)
+
+  async function submitDispute() {
+    if (!disputeReason.trim()) { setDisputeError('Please describe the issue'); return }
+    setDisputeSubmitting(true); setDisputeError(null)
+    const res = await fetch(`/api/orders/${order.id}/dispute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: disputeReason.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setDisputeError(data.error || 'Could not submit your report'); setDisputeSubmitting(false); return }
+    setOrder((o: any) => ({ ...o, status: 'disputed' }))
+    setShowDisputeForm(false)
+    setDisputeReason('')
+    setDisputeSubmitting(false)
+  }
+
   if (loading) return <div className="page-pad" style={{ padding: '2.5rem' }}><div className="card" style={{ height: '20rem', background: 'var(--olive)' }} /></div>
   if (!order) return (
     <div className="page-pad" style={{ padding: '2.5rem', textAlign: 'center' }}>
@@ -107,7 +131,36 @@ export default function BuyerOrderDetailPage() {
         {!['pending_payment', 'cancelled', 'refunded'].includes(order.status) && (
           <Link href={`/dashboard/buyer/orders/${order.id}/invoice`} className="btn btn-outline btn-sm">🧾 Invoice</Link>
         )}
+        {DISPUTE_ELIGIBLE_STATUSES.includes(order.status) && (
+          <button onClick={() => setShowDisputeForm(s => !s)} className="btn btn-outline btn-sm">⚠ Report an issue</button>
+        )}
       </div>
+
+      {/* Report an issue form */}
+      {showDisputeForm && (
+        <div className="card reveal" style={{ padding: '1.5rem', marginBottom: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div>
+            <p style={{ fontWeight: 700, color: 'var(--forest)', marginBottom: '0.25rem' }}>Report an issue with this order</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--moss)' }}>Tell us what went wrong — missing or damaged items, wrong order, anything else. Our team will review it and follow up.</p>
+          </div>
+          <textarea
+            className="input"
+            value={disputeReason}
+            onChange={e => setDisputeReason(e.target.value)}
+            placeholder="Describe the issue…"
+            rows={4}
+            maxLength={2000}
+            style={{ width: '100%', resize: 'vertical' }}
+          />
+          {disputeError && <p style={{ color: '#B91C1C', fontSize: '0.82rem', fontWeight: 600 }}>{disputeError}</p>}
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={submitDispute} disabled={disputeSubmitting || !disputeReason.trim()} className="btn btn-forest btn-sm">
+              {disputeSubmitting ? 'Submitting…' : 'Submit report'}
+            </button>
+            <button onClick={() => { setShowDisputeForm(false); setDisputeError(null) }} className="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Success banner */}
       {isNew && (
@@ -151,6 +204,19 @@ export default function BuyerOrderDetailPage() {
             </div>
 
           </div>
+
+          {/* Dispute notice */}
+          {order.status === 'disputed' && (
+            <div className="card reveal" style={{ padding: '1.25rem 1.5rem', background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+              <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>⚠️</span>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#B91C1C', marginBottom: '0.25rem' }}>We're reviewing your report</p>
+                <p style={{ fontSize: '0.8rem', color: '#991B1B', lineHeight: 1.5 }}>
+                  Our team is looking into the issue you reported and will follow up by email.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Partial rejection notice */}
           {order.has_partial_rejection && (
