@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Lora, Work_Sans } from 'next/font/google'
 import { isMarketOpen } from '@/lib/utils/timezone'
@@ -5,6 +6,12 @@ import { getSessionUserFromCookie } from '@/lib/supabase/server'
 import NewsletterSection from './_components/NewsletterSection'
 import CommunitySection from './_components/CommunitySection'
 import styles from './page.module.css'
+
+export const metadata: Metadata = {
+  title: 'The Green Guild — Australia’s Farm-Fresh Flower & Produce Marketplace',
+  description: "The Green Guild connects Australian flower and produce growers directly with buyers — farm-fresh, local, and cutting out the middleman. Browse growers, shop fresh, or sell what you grow.",
+  alternates: { canonical: '/' },
+}
 
 const lora = Lora({
   subsets: ['latin'],
