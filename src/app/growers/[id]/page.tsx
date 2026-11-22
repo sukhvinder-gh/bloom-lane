@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/server'
 import { formatPrice, getBuyerUnitPrice } from '@/lib/utils/pricing'
 
@@ -10,6 +11,33 @@ const EMOJI: Record<string, string> = { flowers_cut: '🌸', flowers_dried: '�
 // and keeps serving that forever — a grower's storefront edits (or stock
 // changes) would never actually reach this public page.
 export const dynamic = 'force-dynamic'
+
+// Unique per-grower title/description — real, distinct content for search
+// engines to index (rather than every grower profile sharing one generic
+// site-wide tag), and it's what shows up in the search result snippet/link
+// preview when a grower shares their own profile.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const admin = createAdminClient()
+  const { data: farmer } = await admin
+    .from('farmers')
+    .select('business_name, bio, region, suburb, state')
+    .eq('id', id)
+    .eq('status', 'approved')
+    .single()
+
+  if (!farmer) return { title: 'Grower not found — The Green Guild' }
+
+  const location = [farmer.region, farmer.suburb, farmer.state].filter(Boolean).join(', ')
+  const description = farmer.bio?.trim()
+    || `Shop farm-fresh flowers and produce direct from ${farmer.business_name}${location ? `, ${location}` : ''} on The Green Guild — Australia's flower and produce marketplace.`
+
+  return {
+    title: `${farmer.business_name} — The Green Guild`,
+    description: description.slice(0, 160),
+    alternates: { canonical: `/growers/${id}` },
+  }
+}
 
 export default async function GrowerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

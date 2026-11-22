@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /marketplace
+Disallow: /checkout
+Disallow: /cart
+Disallow: /auth/
+Disallow: /api/
+
+Sitemap: https://thegreenguild.com.au/sitemap.xml
