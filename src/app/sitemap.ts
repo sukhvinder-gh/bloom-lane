@@ -1,6 +1,13 @@
 import type { MetadataRoute } from 'next'
 import { createAdminClient } from '@/lib/supabase/server'
 
+// Without this, Next tries to statically prerender the sitemap at build
+// time, which needs a live Supabase admin client — fine when deployed (real
+// env vars), but CI's build step has no SUPABASE_SERVICE_ROLE_KEY and fails
+// the whole build. Forcing request-time rendering defers the Supabase call
+// to when the sitemap is actually fetched in a real deployed environment.
+export const dynamic = 'force-dynamic'
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thegreenguild.com.au'
 
 // Only the public, unauthenticated marketing pages — dashboard/cart/checkout/
