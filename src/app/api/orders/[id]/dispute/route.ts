@@ -6,10 +6,11 @@ function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-// Nothing to dispute before payment, and cancelled/refunded/resolved orders
-// are already closed out — the disputes table's one-dispute-per-order
-// constraint would also block re-filing on a resolved/refunded order anyway.
-const DISPUTE_ELIGIBLE_STATUSES = ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered']
+// Only once an order has actually been delivered is there anything concrete
+// to dispute (missing/damaged/wrong items) — before that, "preparing" etc.
+// has nothing yet to report, and cancelled/refunded/resolved orders are
+// already closed out.
+const DISPUTE_ELIGIBLE_STATUSES = ['delivered']
 
 // POST — a buyer reports a problem with their own order. This is the only
 // way a `disputes` row gets created; previously nothing in the app could

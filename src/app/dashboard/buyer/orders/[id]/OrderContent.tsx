@@ -12,7 +12,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 }
 
 // Mirrors DISPUTE_ELIGIBLE_STATUSES in /api/orders/[id]/dispute — keep in sync.
-const DISPUTE_ELIGIBLE_STATUSES = ['payment_confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered']
+const DISPUTE_ELIGIBLE_STATUSES = ['delivered']
 
 // Buyer-facing status labels — simplified to 4 stages (raw DB statuses are internal).
 // The "ready" stage's wording depends on how this order is actually being
