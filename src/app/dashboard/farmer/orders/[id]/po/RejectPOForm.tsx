@@ -16,10 +16,16 @@ export function RejectPOForm({ orderId, farmerId }: { orderId: string; farmerId:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason, farmer_id: farmerId }),
     })
+    const json = await res.json().catch(() => ({}))
     if (res.ok) {
+      if (json.refund_failed) {
+        alert("PO rejected. The buyer's refund couldn't be processed automatically — our team has been notified and will handle it.")
+      } else if (json.refunded_cents > 0) {
+        alert(`PO rejected. The buyer has been automatically refunded $${(json.refunded_cents / 100).toFixed(2)}.`)
+      }
       router.refresh()
     } else {
-      alert('Could not submit rejection. Please try again.')
+      alert(json.error || 'Could not submit rejection. Please try again.')
     }
     setLoading(false)
     setOpen(false)
