@@ -4,7 +4,7 @@ import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
-import { invoiceTitle, invoiceFooterText } from '@/lib/invoicing/rcti'
+import { invoiceTitle, invoiceFooterText, isRctiEligible } from '@/lib/invoicing/rcti'
 
 // A grower's own copy of their invoice for one order — strictly their own
 // line items only, even when the order also contains other farms' items
@@ -26,7 +26,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
 
   const { data: order } = await admin
     .from('orders')
-    .select('id, order_number, created_at, profiles!orders_buyer_id_fkey(full_name, business_name)')
+    .select('id, order_number, created_at, profiles!orders_buyer_id_fkey(full_name, business_name, gst_registered)')
     .eq('id', orderId)
     .single()
 
@@ -44,6 +44,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
   const gst = items.reduce((s, i) => s + (i.gst_cents || 0), 0)
   const isTaxInvoice = items.some(i => i.gst_applied)
   const buyerName = (order as any).profiles?.business_name || (order as any).profiles?.full_name || 'Buyer'
+  const rctiEligible = isRctiEligible(!!farmer.rcti_agreed, !!(order as any).profiles?.gst_registered)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)', padding: '2rem' }}>
@@ -71,8 +72,8 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && farmer.rcti_agreed ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-                {invoiceTitle(isTaxInvoice, !!farmer.rcti_agreed)}
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && rctiEligible ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+                {invoiceTitle(isTaxInvoice, rctiEligible)}
               </div>
               <div style={{ fontSize: '0.875rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Order #{order.order_number}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.1rem' }}>{formatAEST(order.created_at, 'dd MMMM yyyy')}</div>
@@ -129,7 +130,7 @@ export default async function FarmerInvoicePage({ params }: { params: Promise<{ 
 
           <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
             <p>{invoiceFooterText({
-              isTaxInvoice, rctiAgreed: !!farmer.rcti_agreed, businessName: farmer.business_name,
+              isTaxInvoice, rctiAgreed: rctiEligible, businessName: farmer.business_name,
               rctiFullName: farmer.rcti_full_name, rctiAgreedAt: farmer.rcti_agreed_at,
             })}</p>
           </div>

@@ -10,6 +10,15 @@
 // wording is a one-line change, not a three-renderer hunt (buyer's own
 // invoice, admin's ledger viewer, and the farmer's own copy all use this).
 
+// An RCTI is only a valid arrangement when BOTH sides are GST-registered —
+// the grower having agreed isn't enough on its own if the buyer isn't
+// registered. When this is false, the invoice still goes out (it's a normal
+// Tax Invoice, just not an RCTI) — invoiceTitle/invoiceFooterText already
+// fall back to that honest wording for any rctiAgreed=false input.
+export function isRctiEligible(growerRctiAgreed: boolean, buyerGstRegistered: boolean): boolean {
+  return growerRctiAgreed && buyerGstRegistered
+}
+
 export function invoiceTitle(isTaxInvoice: boolean, rctiAgreed: boolean): string {
   if (!isTaxInvoice) return 'Invoice'
   return rctiAgreed ? 'Recipient Created Tax Invoice' : 'Tax Invoice'

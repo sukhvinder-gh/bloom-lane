@@ -2,7 +2,7 @@
 // All pricing logic lives here. Central truth for GST, markups, splits.
 // AU GST = 10%. Prices stored as cents (integers) to avoid float errors.
 
-import type { Product, PriceBreakdown, AppConfig } from '@/types'
+import type { Product, PriceBreakdown, AppConfig, ProductCategory } from '@/types'
 
 const GST_RATE = 0.10
 
@@ -10,6 +10,20 @@ const GST_RATE = 0.10
 // marking a product GST-free — pending a stakeholder review for ATO
 // accuracy, kept in one place so the final wording is a one-line change.
 export const GST_FREE_EXPLANATION = 'raw, unprocessed food — check ATO guidelines'
+
+// Cut/dried/native flowers and foliage are decorative plant material, not
+// food — the ATO's GST-free food concessions never apply to them, so they
+// are always a taxable supply. A grower who isn't GST-registered simply
+// doesn't charge GST (see gstAppliesToItem); the product itself must never
+// be marked GST-free. Kept here, not inferred per-call, so every place that
+// needs the rule (product forms, bulk import, API validation) agrees.
+const ALWAYS_TAXABLE_CATEGORIES: ReadonlySet<ProductCategory> = new Set([
+  'flowers_cut', 'flowers_dried', 'flowers_native', 'foliage',
+])
+
+export function isAlwaysTaxableCategory(category: ProductCategory | string): boolean {
+  return ALWAYS_TAXABLE_CATEGORIES.has(category as ProductCategory)
+}
 
 /**
  * Whether GST may legally be charged on this line.

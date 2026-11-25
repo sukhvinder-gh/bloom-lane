@@ -42,6 +42,7 @@ export interface Profile {
   full_name: string
   role: UserRole
   phone?: string
+  gst_registered?: boolean // buyer's own GST registration — required (alongside the grower's) for an RCTI to be valid
   created_at: string
   updated_at: string
 }
@@ -66,6 +67,7 @@ export interface Farmer {
   stripe_account_id?: string
   stripe_onboarding_complete: boolean
   gst_registered: boolean // may this grower legally charge GST?
+  gst_registered_from?: string | null // date registration started, for invoice display + historical audit
   rcti_agreed: boolean    // has the grower agreed to platform-issued RCTIs?
   offers_farm_pickup: boolean
   status: FarmerStatus

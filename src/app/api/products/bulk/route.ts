@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { hasActiveMembership } from '@/lib/utils/membership'
 import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
+import { isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import { z } from 'zod'
 
 const VALID_CATEGORIES = ['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']
@@ -75,6 +76,12 @@ export async function POST(request: NextRequest) {
       if (colorTags.length > MAX_COLORS) { errors.push({ row, message: `Max ${MAX_COLORS} colours` }); return }
     }
 
+    const isGstFree = ['yes', 'true', '1'].includes(String(p.is_gst_free).toLowerCase())
+    if (isGstFree && isAlwaysTaxableCategory(p.category)) {
+      errors.push({ row, message: `${p.category.replace('_', ' ')} is always taxable and cannot be marked GST-free` })
+      return
+    }
+
     rows.push({
       farmer_id: farmer.id,
       name: p.name.trim(),
@@ -85,7 +92,7 @@ export async function POST(request: NextRequest) {
       stock_total: stock,
       min_order_b2b: Number.isInteger(minOrder) && minOrder > 0 ? minOrder : 1,
       b2b_stock_pct: stockReservePct,
-      is_gst_free: ['yes', 'true', '1'].includes(String(p.is_gst_free).toLowerCase()),
+      is_gst_free: isGstFree,
       stems_per_unit: stemsPerUnit,
       color_tags: colorTags,
       description: p.description?.trim() || null,

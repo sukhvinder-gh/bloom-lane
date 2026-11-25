@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
-import { calculateStockSplits, formatPrice, GST_FREE_EXPLANATION } from '@/lib/utils/pricing'
+import { calculateStockSplits, formatPrice, GST_FREE_EXPLANATION, isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import { createClient } from '@/lib/supabase/client'
 import ProductImageUpload from '@/components/ProductImageUpload'
 import ColorTagPicker from '@/components/ColorTagPicker'
@@ -54,7 +54,7 @@ export default function EditProductPage() {
     stems_per_unit: '',
   })
 
-  const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
+  const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v, ...(k === 'category' && isAlwaysTaxableCategory(v) ? { is_gst_free: false } : {}) }))
 
   // Load existing product data
   useEffect(() => {
@@ -94,13 +94,16 @@ export default function EditProductPage() {
     load()
   }, [productId])
 
+  const categoryLocksGst = isAlwaysTaxableCategory(form.category)
+  const effectiveGstFree = categoryLocksGst ? false : form.is_gst_free
+
   const stockNum      = parseInt(form.stock_total) || 0
   const b2bPct        = (parseFloat(form.b2b_stock_pct) || 0) / 100
   const splits        = calculateStockSplits(stockNum, b2bPct)
   const wholesaleCents = Math.round(parseFloat(form.wholesale_price_dollars || '0') * 100)
   const markupPct      = (parseFloat(form.markup_pct) || 0) / 100
   const retailEx      = Math.round(wholesaleCents * (1 + markupPct))
-  const retailInc     = Math.round(form.is_gst_free ? retailEx : retailEx * 1.1)
+  const retailInc     = Math.round(effectiveGstFree ? retailEx : retailEx * 1.1)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -120,7 +123,7 @@ export default function EditProductPage() {
         stock_total:        stockNum,
         min_order_b2b:      parseInt(form.min_order_b2b) || 1,
         b2b_stock_pct:      b2bPct,
-        is_gst_free:        form.is_gst_free,
+        is_gst_free:        effectiveGstFree,
         is_listed_this_week: form.is_listed_this_week,
         image_url:          form.image_urls[0] || null,
         image_urls:         form.image_urls,
@@ -292,20 +295,28 @@ export default function EditProductPage() {
             </div>
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={form.is_gst_free} onChange={e => up('is_gst_free', e.target.checked)}
-              style={{ width: '1rem', height: '1rem', accentColor: 'var(--forest)' }} />
-            <span style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
-              This product is <strong>GST-free</strong> ({GST_FREE_EXPLANATION})
-            </span>
-          </label>
+          {categoryLocksGst ? (
+            <div style={{ padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+                Flowers and foliage are always <strong>taxable</strong> — they can&apos;t be marked GST-free.
+              </span>
+            </div>
+          ) : (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '1rem', background: 'var(--olive)', borderRadius: '0.75rem', cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.is_gst_free} onChange={e => up('is_gst_free', e.target.checked)}
+                style={{ width: '1rem', height: '1rem', accentColor: 'var(--forest)' }} />
+              <span style={{ fontSize: '0.85rem', color: 'var(--forest)' }}>
+                This product is <strong>GST-free</strong> ({GST_FREE_EXPLANATION})
+              </span>
+            </label>
+          )}
 
           {wholesaleCents > 0 && (
             <div className="card-sage" style={{ padding: '1.25rem' }}>
               <p className="type-label-sm" style={{ color: 'var(--forest)', opacity: 0.6, marginBottom: '0.875rem' }}>Price preview</p>
               {[
                 { label: 'B2B wholesale (ex-GST)', val: wholesaleCents },
-                { label: 'B2B wholesale (inc-GST)', val: form.is_gst_free ? wholesaleCents : Math.round(wholesaleCents * 1.1) },
+                { label: 'B2B wholesale (inc-GST)', val: effectiveGstFree ? wholesaleCents : Math.round(wholesaleCents * 1.1) },
                 { label: `B2C retail (inc-GST, ${form.markup_pct || 0}% markup)`, val: retailInc },
               ].map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(1,71,46,0.1)' }}>

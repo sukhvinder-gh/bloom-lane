@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { hasActiveMembership } from '@/lib/utils/membership'
+import { isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import { z } from 'zod'
 
 const createProductSchema = z.object({
@@ -24,7 +25,10 @@ const createProductSchema = z.object({
   common_name: z.string().max(80).optional().nullable(),
   latin_name: z.string().max(80).optional().nullable(),
   stems_per_unit: z.number().int().positive().optional().nullable(),
-})
+}).refine(
+  data => !(data.is_gst_free && isAlwaysTaxableCategory(data.category)),
+  { message: 'Cut flowers, dried flowers, natives, and foliage are always taxable and cannot be marked GST-free.', path: ['is_gst_free'] }
+)
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()

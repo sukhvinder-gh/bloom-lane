@@ -37,7 +37,7 @@ export async function sendSubscriptionConfirmation(data: {
       <div style="margin-bottom:10px"><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700">Billing</span><br><span style="color:#1a3a2a;font-size:14px">${data.billing === 'free' ? 'Free' : data.billing.charAt(0).toUpperCase() + data.billing.slice(1)}</span></div>
       <div><span style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700">Amount</span><br><span style="color:#1a3a2a;font-size:14px;font-weight:700">${data.amount_cents === 0 ? 'Free' : fmt(data.amount_cents)}</span></div>
     </div>
-    ${data.gst_registered ? '<p style="color:#4a7a5a;font-size:13px;margin:0 0 16px">As a GST-registered grower, The Green Guild will issue RCTIs on your behalf for all sales through the platform.</p>' : ''}
+    ${data.gst_registered ? '<p style="color:#4a7a5a;font-size:13px;margin:0 0 16px">As a GST-registered grower, The Green Guild will issue RCTIs on your behalf for sales to buyers who are also GST-registered. Sales to other buyers still get a tax invoice — just not an RCTI.</p>' : ''}
     <div style="text-align:center;margin:24px 0">
       <a href="${SITE}/dashboard" style="background:#1a3a2a;color:white;padding:14px 32px;border-radius:99px;text-decoration:none;font-weight:700;font-size:14px;display:inline-block">Go to Dashboard →</a>
     </div>
