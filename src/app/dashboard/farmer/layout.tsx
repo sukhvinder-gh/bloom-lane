@@ -1,7 +1,7 @@
 import { getSessionUserFromCookie, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { isAdminRole } from '@/lib/utils/permissions'
+import { isAdminRole, hasGrowerRole, hasBuyerRole } from '@/lib/utils/permissions'
 import FarmerSidebar from './FarmerSidebar'
 
 export default async function FarmerLayout({ children }: { children: ReactNode }) {
@@ -11,12 +11,12 @@ export default async function FarmerLayout({ children }: { children: ReactNode }
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('role, full_name')
+    .select('role, secondary_role, full_name')
     .eq('id', sessionUser.id)
     .single()
 
   const role = profile?.role || ''
-  if (role !== 'farmer' && !isAdminRole(role)) redirect('/dashboard')
+  if (!hasGrowerRole(profile) && !isAdminRole(role)) redirect('/dashboard')
 
   const { data: farmer } = await admin
     .from('farmers')
@@ -33,6 +33,7 @@ export default async function FarmerLayout({ children }: { children: ReactNode }
         businessName={farmer?.business_name || ''}
         farmerId={farmer?.id || null}
         farmerStatus={farmer?.status || null}
+        hasBuyerAccount={hasBuyerRole(profile)}
       />
       <main style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
         {children}

@@ -53,6 +53,28 @@ export function canEditConfig(role: string | null | undefined): boolean {
   return isSuperAdminRole(role)
 }
 
+// Dual-role accounts: profiles.role is the primary/default role; secondary_role
+// is an additive second capability on the same account (see migration 062).
+// Grower is always primary when an account has both — these helpers check
+// both slots so it doesn't matter which one happens to hold "farmer".
+const BUYER_ROLES = ['buyer_b2b', 'buyer_b2c'] as const
+
+export function hasGrowerRole(p: { role?: string | null; secondary_role?: string | null } | null | undefined): boolean {
+  return p?.role === 'farmer' || p?.secondary_role === 'farmer'
+}
+
+export function hasBuyerRole(p: { role?: string | null; secondary_role?: string | null } | null | undefined): boolean {
+  return (BUYER_ROLES as readonly string[]).includes(p?.role || '') || (BUYER_ROLES as readonly string[]).includes(p?.secondary_role || '')
+}
+
+// Which buyer sub-type (b2b vs b2c) applies, regardless of whether it's
+// sitting in role or secondary_role — used for B2B pricing-tier checks.
+export function buyerSubRole(p: { role?: string | null; secondary_role?: string | null } | null | undefined): 'buyer_b2b' | 'buyer_b2c' | null {
+  if (p?.role === 'buyer_b2b' || p?.role === 'buyer_b2c') return p.role
+  if (p?.secondary_role === 'buyer_b2b' || p?.secondary_role === 'buyer_b2c') return p.secondary_role as 'buyer_b2b' | 'buyer_b2c'
+  return null
+}
+
 export function roleLabel(role: string | null | undefined): string {
   switch (role) {
     case 'super_admin':    return 'Super Admin'

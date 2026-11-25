@@ -51,19 +51,23 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, abn_verified, full_name, business_name')
+    .select('role, secondary_role, abn_verified, full_name, business_name')
     .eq('id', user.id)
     .single()
 
+  // Dual-role accounts (e.g. a grower who's also a buyer) can carry
+  // 'buyer_b2b' in either role or secondary_role — see migration 062.
+  const isB2BAccount = profile?.role === 'buyer_b2b' || profile?.secondary_role === 'buyer_b2b'
+
   // BUG-14 FIX: B2B buyer with unverified ABN gets explicit error
-  if (profile?.role === 'buyer_b2b' && !profile?.abn_verified) {
+  if (isB2BAccount && !profile?.abn_verified) {
     return NextResponse.json(
       { error: 'Your ABN is not yet verified. Wholesale purchasing requires a verified ABN. Please check your email or contact support.' },
       { status: 403 }
     )
   }
 
-  const isB2B = profile?.role === 'buyer_b2b' && profile?.abn_verified === true
+  const isB2B = isB2BAccount && profile?.abn_verified === true
 
   // Release stock from this buyer's own abandoned checkout attempts before
   // reserving more. A pending_payment order holds its stock until Stripe

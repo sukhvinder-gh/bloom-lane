@@ -47,7 +47,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
   const [approveForm, setApproveForm] = useState({ business_name: '', abn: '', address: '', suburb: '', state: 'VIC', postcode: '' })
   const [approving, setApproving] = useState(false)
   const [approveError, setApproveError] = useState('')
-  const [lastApproved, setLastApproved] = useState<{ email: string; tempPassword: string | null; emailSent: boolean; linkedExisting?: boolean } | null>(null)
+  const [lastApproved, setLastApproved] = useState<{ email: string; tempPassword: string | null; emailSent: boolean; addedSecondRole?: boolean } | null>(null)
 
   function openApprove(row: Row) {
     setApproveError('')
@@ -74,7 +74,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
     setRows(rs => rs.map(r => r.id === approveTarget.id
       ? { ...r, converted_user_id: json.data.userId, converted_at: new Date().toISOString(), contacted: true }
       : r))
-    setLastApproved({ email: approveTarget.email, tempPassword: json.data.tempPassword, emailSent: json.data.emailSent, linkedExisting: json.data.linkedExisting })
+    setLastApproved({ email: approveTarget.email, tempPassword: json.data.tempPassword, emailSent: json.data.emailSent, addedSecondRole: json.data.addedSecondRole })
   }
 
   const growerCount = rows.filter(r => r.role === 'grower').length
@@ -228,16 +228,16 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
             {lastApproved ? (
               <>
                 <h2 className="type-subheading" style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>
-                  {lastApproved.linkedExisting ? 'Already had an account' : 'Account created'}
+                  {lastApproved.addedSecondRole ? 'Role added to existing account' : 'Account created'}
                 </h2>
                 <p className="type-label" style={{ color: 'var(--moss)', marginBottom: '1rem' }}>
-                  {lastApproved.linkedExisting
-                    ? `An account already existed for ${lastApproved.email} — no new account or email was created. This row has just been marked handled.`
+                  {lastApproved.addedSecondRole
+                    ? `${lastApproved.email} already had an account — the requested role was added to it. No new account or welcome email was created; they sign in as usual and can switch between roles from their dashboard.`
                     : lastApproved.emailSent
                     ? `A welcome email with sign-in details was sent to ${lastApproved.email}.`
                     : `The account was created, but the welcome email failed to send. Share these details with ${lastApproved.email} directly:`}
                 </p>
-                {!lastApproved.emailSent && !lastApproved.linkedExisting && (
+                {!lastApproved.emailSent && !lastApproved.addedSecondRole && (
                   <div style={{ background: 'var(--offwhite)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
                     <p><strong>Email:</strong> {lastApproved.email}</p>
                     <p><strong>Temporary password:</strong> <code>{lastApproved.tempPassword}</code></p>

@@ -48,23 +48,83 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { data: existingProfile } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, role, secondary_role')
     .eq('email', interest.email)
     .maybeSingle()
 
-  // Someone can already have an account by the time admin gets to this row
-  // (e.g. they signed up directly, or an earlier approve attempt partially
-  // succeeded) — rather than dead-ending the admin with no way forward,
-  // just link this interest row to the existing account. No new user/email
-  // is created, since one already exists.
+  // Someone can already have an account by the time admin gets to this row —
+  // either because they signed up directly, or (the common case now) because
+  // this interest row is a request to add a SECOND role onto an account they
+  // already hold. No new user/email is created either way; instead we grant
+  // the requested role onto the existing profile. Grower is always treated
+  // as the account's primary/default role when both exist — if the account's
+  // current primary role is a plain buyer, it gets promoted to 'farmer' and
+  // the old buyer role moves into secondary_role; a buyer role being added to
+  // an existing grower (or admin/coordinator) account just becomes additive
+  // via secondary_role, leaving the primary role untouched.
   if (existingProfile) {
+    const currentRole = existingProfile.role || ''
+    const currentSecondary = existingProfile.secondary_role || null
+
+    if (interest.role === 'grower') {
+      const { data: existingFarmer } = await admin.from('farmers').select('id').eq('user_id', existingProfile.id).maybeSingle()
+      const alreadyGrower = !!existingFarmer || currentRole === 'farmer' || currentSecondary === 'farmer'
+      if (alreadyGrower) {
+        return NextResponse.json({ error: 'This account is already registered as a grower.' }, { status: 409 })
+      }
+
+      const business_name = String(body.business_name || interest.business_name || '').trim()
+      const abn = String(body.abn || interest.abn || '').trim()
+      const address = String(body.address || '').trim()
+      const suburb = String(body.suburb || '').trim()
+      const state = String(body.state || interest.state || '').trim()
+      const postcode = String(body.postcode || interest.postcode || '').trim()
+
+      if (!business_name) return NextResponse.json({ error: 'Business name is required' }, { status: 400 })
+      if (!validateABNFormat(abn)) return NextResponse.json({ error: 'A valid 11-digit ABN is required' }, { status: 400 })
+      if (!address || !suburb || !state || !postcode) {
+        return NextResponse.json({ error: 'Address, suburb, state, and postcode are required' }, { status: 400 })
+      }
+
+      const { error: farmerError } = await admin.from('farmers').insert({
+        user_id: existingProfile.id,
+        business_name, abn, address, suburb, state, postcode,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: userId,
+      })
+      if (farmerError) return NextResponse.json({ error: `Could not add grower role: ${farmerError.message}` }, { status: 500 })
+
+      const promoteToPrimary = currentRole === 'buyer_b2b' || currentRole === 'buyer_b2c'
+      await admin.from('profiles').update({
+        ...(promoteToPrimary ? { role: 'farmer', secondary_role: currentRole } : {}),
+        business_name: business_name || undefined,
+      }).eq('id', existingProfile.id)
+    } else {
+      const BUYER_ROLES = ['buyer_b2b', 'buyer_b2c']
+      const alreadyBuyer = BUYER_ROLES.includes(currentRole) || BUYER_ROLES.includes(currentSecondary || '')
+      if (alreadyBuyer) {
+        return NextResponse.json({ error: 'This account is already registered as a buyer.' }, { status: 409 })
+      }
+
+      const abn = String(body.abn || interest.abn || '').trim()
+      if (abn && !validateABNFormat(abn)) {
+        return NextResponse.json({ error: 'ABN must be a valid 11-digit number' }, { status: 400 })
+      }
+
+      const updates: Record<string, unknown> = { secondary_role: 'buyer_b2b' }
+      if (abn) updates.abn = abn
+      await admin.from('profiles').update(updates).eq('id', existingProfile.id)
+    }
+
     await admin
       .from('interest_registrations')
       .update({ converted_user_id: existingProfile.id, converted_at: new Date().toISOString(), contacted: true })
       .eq('id', id)
+
     return NextResponse.json({
-      data: { userId: existingProfile.id, tempPassword: null, emailSent: false, linkedExisting: true },
-      warning: 'An account with this email already existed, so no new account or email was created — this interest row has been linked to it and marked handled.',
+      data: { userId: existingProfile.id, tempPassword: null, emailSent: false, addedSecondRole: true },
+      warning: 'This email already had an account — no new account or welcome email was created. The requested role was added to their existing account instead.',
     })
   }
 
