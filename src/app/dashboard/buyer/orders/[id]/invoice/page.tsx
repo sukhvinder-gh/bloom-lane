@@ -4,7 +4,7 @@ import { formatPrice } from '@/lib/utils/pricing'
 import { formatAEST } from '@/lib/utils/timezone'
 import Link from 'next/link'
 import { PrintButton } from '@/components/PrintButton'
-import { invoiceTitle, invoiceFooterText } from '@/lib/invoicing/rcti'
+import { invoiceTitle, invoiceFooterText, isRctiEligible } from '@/lib/invoicing/rcti'
 
 export default async function BuyerInvoicePrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params
@@ -15,7 +15,7 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('full_name, email, abn, business_name, abn_verified, role')
+    .select('full_name, email, abn, business_name, abn_verified, gst_registered, role')
     .eq('id', sessionUser.id)
     .single()
 
@@ -35,6 +35,7 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
 
   const isB2B = profile?.role === 'buyer_b2b'
   const businessName = profile?.business_name || profile?.full_name
+  const buyerGstRegistered = !!profile?.gst_registered
 
   // Each grower is a separate supplier for GST purposes — one document per
   // farmer_id, never a single combined tax invoice across growers.
@@ -109,7 +110,9 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
         )}
 
         {/* One document per grower — never combined */}
-        {growerDocs.map(({ farmerId, farmer, items: farmerItems, subtotal, gst, isTaxInvoice }) => (
+        {growerDocs.map(({ farmerId, farmer, items: farmerItems, subtotal, gst, isTaxInvoice }) => {
+          const rctiEligible = isRctiEligible(!!farmer?.rcti_agreed, buyerGstRegistered)
+          return (
           <div key={farmerId} style={{ background: 'white', border: '1px solid var(--olive)', borderRadius: '1.5rem', padding: '3rem', fontFamily: 'var(--font-body)' }}>
 
             {/* Header */}
@@ -127,8 +130,8 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && farmer?.rcti_agreed ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-                  {invoiceTitle(isTaxInvoice, !!farmer?.rcti_agreed)}
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: isTaxInvoice && rctiEligible ? '1.05rem' : '1.25rem', color: 'var(--forest)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
+                  {invoiceTitle(isTaxInvoice, rctiEligible)}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--moss)', marginTop: '0.25rem' }}>Order #{order.order_number}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--moss)', marginTop: '0.1rem' }}>{formatAEST(order.created_at, 'dd MMMM yyyy')}</div>
@@ -190,12 +193,13 @@ export default async function BuyerInvoicePrintPage({ params }: { params: Promis
             {/* Footer — GST/RCTI status statement */}
             <div style={{ borderTop: '1px solid var(--olive)', paddingTop: '1rem', fontSize: '0.75rem', color: 'var(--moss)' }}>
               <p>{invoiceFooterText({
-                isTaxInvoice, rctiAgreed: !!farmer?.rcti_agreed, businessName: farmer?.business_name,
+                isTaxInvoice, rctiAgreed: rctiEligible, businessName: farmer?.business_name,
                 rctiFullName: farmer?.rcti_full_name, rctiAgreedAt: farmer?.rcti_agreed_at,
               })}</p>
             </div>
           </div>
-        ))}
+          )
+        })}
 
         {/* Each grower's invoice above is the complete, self-contained supply
             document from that grower. The only platform mention on this page

@@ -1,9 +1,8 @@
 // src/lib/email/sendPORejectionEmails.ts
 // When a grower rejects their PO, the buyer needs to hear about it directly —
-// this notifies them by email. Admins are deliberately not cc'd here: they
-// already have full visibility of rejected POs in the admin Orders list
-// (orders.has_partial_rejection / purchase_orders.status='rejected'), and
-// Green Guild isn't meant to be looped into every buyer↔grower transaction.
+// this notifies them by email. Admin gets a separate notification from the
+// caller (src/app/api/orders/[id]/po/reject/route.ts), not from this
+// function — this one is buyer-facing only.
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendEmail } from './mailer'
@@ -12,7 +11,7 @@ function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-export async function notifyPORejection(orderId: string, farmerId: string, reason: string): Promise<void> {
+export async function notifyPORejection(orderId: string, farmerId: string, reason: string, refundedCents = 0): Promise<void> {
   const admin = createAdminClient()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bloom-lane-app.azurewebsites.net'
 
@@ -71,7 +70,11 @@ export async function notifyPORejection(orderId: string, farmerId: string, reaso
     <div style="padding:32px 40px">
       <p style="color:#1a3a2a;font-size:16px;margin:0 0 8px">Hi ${buyer.full_name || 'there'},</p>
       <p style="color:#4a7a5a;font-size:14px;margin:0 0 20px;line-height:1.6">
-        ${farmerName} is unable to fulfil part of your order (${itemsList}, ${fmt(rejectedSubtotal)}). We're sorry for the inconvenience — our team can arrange a refund or replacement, just reach out any time.
+        ${farmerName} is unable to fulfil part of your order (${itemsList}, ${fmt(rejectedSubtotal)}). We're sorry for the inconvenience — ${
+          refundedCents > 0
+            ? `you've already been refunded <strong>${fmt(refundedCents)}</strong> for this.`
+            : `our team will be in touch shortly to arrange a refund or replacement.`
+        }
       </p>
       <div style="background:#f5f9f5;border-radius:10px;padding:16px 20px;margin-bottom:24px">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#4a7a5a;font-weight:700;margin-bottom:4px">Reason given by the grower</div>

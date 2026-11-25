@@ -13,7 +13,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data: farmer } = await admin
     .from('farmers')
-    .select('id, business_name, subscription_type, subscription_tier, subscription_expires_at, hub_id, gst_registered, rcti_agreed, rcti_agreed_at, rcti_full_name, abn, farm_address, farm_region, address, suburb, state, region, hubs(name, region)')
+    .select('id, business_name, subscription_type, subscription_tier, subscription_expires_at, hub_id, gst_registered, gst_registered_from, rcti_agreed, rcti_agreed_at, rcti_full_name, abn, farm_address, farm_region, address, suburb, state, region, hubs(name, region)')
     .eq('user_id', user.id)
     .single()
 
@@ -93,11 +93,23 @@ export async function POST(request: NextRequest) {
   // (or even pay for Hub Membership) before anyone had reviewed them.
   const { data: farmerStatus } = await admin
     .from('farmers')
-    .select('status')
+    .select('status, gst_registered, gst_registered_from')
     .eq('user_id', user.id)
     .single()
   if (farmerStatus?.status !== 'approved') {
     return NextResponse.json({ error: 'Your account is still awaiting admin approval. We\'ll email you once it\'s ready.' }, { status: 403 })
+  }
+
+  // Track WHEN registration started, not just whether it's on right now — an
+  // invoice needs to say "registered from [date]", and a historical order's
+  // tax treatment (order_items.gst_applied, snapshotted at sale time) needs
+  // a date to be checked against. Set it the moment the flag first flips on;
+  // keep it if already registered; clear it if the grower un-registers.
+  let gstRegisteredFrom: string | null = farmerStatus.gst_registered_from
+  if (gst_registered) {
+    if (!farmerStatus.gst_registered) gstRegisteredFrom = new Date().toISOString().slice(0, 10)
+  } else {
+    gstRegisteredFrom = null
   }
 
   // Update farmer profile. hub_id must be a real UUID or null — an empty
@@ -110,6 +122,7 @@ export async function POST(request: NextRequest) {
     hub_id: hub_id || null,
     abn,
     gst_registered: !!gst_registered,
+    gst_registered_from: gstRegisteredFrom,
     rcti_agreed: !!rcti_agreed,
     rcti_agreed_at: rcti_agreed ? new Date().toISOString() : null,
     rcti_full_name: rcti_full_name || null,

@@ -213,6 +213,26 @@ export async function createRefund(
 }
 
 /**
+ * Reverse (part of) a transfer that already paid a farmer or hub, pulling
+ * that amount back from the connected account's own Stripe balance into the
+ * platform's. Used to recover a dispute-refund clawback directly from
+ * whoever was actually paid, rather than only deducting it from a future
+ * payout — the fallback for when there's no live transfer yet to reverse,
+ * or the connected account's balance can't cover it (see
+ * src/app/api/admin/disputes/[id]/refund/route.ts).
+ */
+export async function reverseFarmerTransfer(
+  transferId: string,
+  amountCents: number,
+  metadata?: Record<string, string>
+): Promise<Stripe.TransferReversal> {
+  return stripe.transfers.createReversal(transferId, {
+    amount: amountCents,
+    metadata,
+  })
+}
+
+/**
  * Cancel a still-open PaymentIntent (buyer abandoned checkout before
  * paying). No-op if Stripe has already moved it past a cancellable state
  * (e.g. already succeeded) — that's a normal race, not an error worth

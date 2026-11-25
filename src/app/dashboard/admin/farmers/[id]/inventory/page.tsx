@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { formatPrice } from '@/lib/utils/pricing'
+import { formatPrice, isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import ProductImageUpload from '@/components/ProductImageUpload'
 
 const CATEGORIES = [
@@ -34,7 +34,7 @@ export default function AdminFarmerInventoryPage() {
   const [msg, setMsg]             = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [deleting, setDeleting]   = useState<string | null>(null)
 
-  const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
+  const up = (k: string, v: any) => setForm(f => ({ ...f, [k]: v, ...(k === 'category' && isAlwaysTaxableCategory(v) ? { is_gst_free: false } : {}) }))
 
   useEffect(() => {
     fetch(`/api/admin/farmers/${farmerId}/products`)
@@ -89,7 +89,7 @@ export default function AdminFarmerInventoryPage() {
       wholesale_price: wholesaleCents,
       stock_total: parseInt(form.stock_total) || 0,
       min_order_b2b: parseInt(form.min_order_b2b) || 1,
-      is_gst_free: form.is_gst_free,
+      is_gst_free: isAlwaysTaxableCategory(form.category) ? false : form.is_gst_free,
       is_listed_this_week: form.is_listed_this_week,
       image_url: primaryUrl || null,
       image_urls: imageUrls,
@@ -141,6 +141,8 @@ export default function AdminFarmerInventoryPage() {
   }
 
   const wholesaleCents = Math.round(parseFloat(form.wholesale_price_dollars || '0') * 100)
+  const categoryLocksGst = isAlwaysTaxableCategory(form.category)
+  const effectiveGstFree = categoryLocksGst ? false : form.is_gst_free
 
   return (
     <div className="page-pad" style={{ padding: '2.5rem', maxWidth: '56rem' }}>
@@ -207,7 +209,7 @@ export default function AdminFarmerInventoryPage() {
                 </div>
                 {wholesaleCents > 0 && (
                   <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.25rem' }}>
-                    B2C retail ≈ {formatPrice(Math.round(wholesaleCents * 1.45 * (form.is_gst_free ? 1 : 1.1)))} inc-GST
+                    B2C retail ≈ {formatPrice(Math.round(wholesaleCents * 1.45 * (effectiveGstFree ? 1 : 1.1)))} inc-GST
                   </p>
                 )}
               </div>
@@ -220,8 +222,9 @@ export default function AdminFarmerInventoryPage() {
                 <input className="input" type="number" min="1" value={form.min_order_b2b} onChange={e => up('min_order_b2b', e.target.value)} style={{ width: '100%' }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '1.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--navy)' }}>
-                  <input type="checkbox" checked={form.is_gst_free} onChange={e => up('is_gst_free', e.target.checked)} style={{ width: '1rem', height: '1rem', accentColor: 'var(--green)' }} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: categoryLocksGst ? 'not-allowed' : 'pointer', fontSize: '0.85rem', color: categoryLocksGst ? 'var(--moss)' : 'var(--navy)' }}
+                  title={categoryLocksGst ? 'Flowers and foliage are always taxable' : undefined}>
+                  <input type="checkbox" checked={effectiveGstFree} disabled={categoryLocksGst} onChange={e => up('is_gst_free', e.target.checked)} style={{ width: '1rem', height: '1rem', accentColor: 'var(--green)' }} />
                   GST-free
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--navy)' }}>

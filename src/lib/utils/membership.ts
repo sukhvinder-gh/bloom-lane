@@ -44,3 +44,41 @@ export async function hasActiveMembership(userId: string): Promise<boolean> {
 
   return !!activeSub
 }
+
+/**
+ * Grant the free "Grower Listing" tier directly — same end state a grower
+ * reaches by submitting the free-plan form at /dashboard/farmer/membership
+ * (src/app/api/farmer/subscription/route.ts), just triggered from admin's
+ * side (interest-approval) instead of requiring the grower to visit that
+ * page themselves before they can list anything. Idempotent: upserts on the
+ * same (user_id, subscriber_type, plan) key that route already relies on.
+ */
+export async function grantFreeGrowerMembership(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string
+): Promise<{ error: string | null }> {
+  const { error: subErr } = await admin
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      subscriber_type: 'grower',
+      plan: 'wholesale_collection',
+      billing_period: 'free',
+      status: 'active',
+      starts_at: new Date().toISOString(),
+      expires_at: null,
+      amount_cents: 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,subscriber_type,plan' })
+
+  if (subErr) return { error: subErr.message }
+
+  // Mirrors the subscription onto farmers' own display columns, same as the
+  // self-serve route does — keeps GET /api/farmer/subscription consistent.
+  await admin
+    .from('farmers')
+    .update({ subscription_type: 'wholesale_collection', subscription_tier: null, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
+  return { error: null }
+}

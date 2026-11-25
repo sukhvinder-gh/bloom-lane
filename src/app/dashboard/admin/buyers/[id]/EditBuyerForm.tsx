@@ -15,6 +15,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
     business_name: initial.business_name || '',
     abn:           initial.abn           || '',
     abn_verified:  initial.abn_verified  || false,
+    gst_registered: initial.gst_registered || false,
     role:          initial.role          || 'buyer_b2c',
   })
 
@@ -36,7 +37,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
     } else {
       setMsg({ type: 'ok', text: 'Changes saved.' })
       setBuyer(json.data)
-      setFormState(f => ({ ...f, abn_verified: json.data.abn_verified, role: json.data.role }))
+      setFormState(f => ({ ...f, abn_verified: json.data.abn_verified, gst_registered: json.data.gst_registered, role: json.data.role }))
     }
     setSaving(false)
   }
@@ -117,7 +118,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => { set('role', 'buyer_b2b'); if (form.role !== 'buyer_b2b') set('abn_verified', false) }}
+                onClick={() => { set('role', 'buyer_b2b'); if (form.role !== 'buyer_b2b') { set('abn_verified', false); set('gst_registered', false) } }}
                 className={`btn btn-sm ${isB2B ? 'btn-forest' : 'btn-ghost'}`}
                 style={{ flex: 1 }}
               >
@@ -125,7 +126,7 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
               </button>
               <button
                 type="button"
-                onClick={() => { set('role', 'buyer_b2c'); set('abn_verified', false) }}
+                onClick={() => { set('role', 'buyer_b2c'); set('abn_verified', false); set('gst_registered', false) }}
                 className={`btn btn-sm ${!isB2B ? 'btn-forest' : 'btn-ghost'}`}
                 style={{ flex: 1 }}
               >
@@ -154,6 +155,22 @@ export default function EditBuyerForm({ buyer: initial }: { buyer: any }) {
               {form.abn_verified ? '✓ Verified' : '✕ Not Verified'}
             </button>
             {!isB2B && <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.25rem' }}>N/A for B2C buyers</p>}
+          </div>
+
+          <div>
+            <label className="type-label-sm" style={{ color: 'var(--moss)', display: 'block', marginBottom: '0.375rem' }}>GST Registered</label>
+            <button
+              type="button"
+              onClick={() => set('gst_registered', !form.gst_registered)}
+              disabled={!isB2B}
+              className={`btn btn-sm ${form.gst_registered ? 'btn-forest' : 'btn-ghost'}`}
+              style={{ width: '100%' }}
+            >
+              {form.gst_registered ? '✓ Registered' : '✕ Not Registered'}
+            </button>
+            <p className="type-label-sm" style={{ color: 'var(--moss)', marginTop: '0.25rem' }}>
+              {isB2B ? 'Required (alongside the grower) for a Recipient Created Tax Invoice to be valid.' : 'N/A for B2C buyers'}
+            </p>
           </div>
 
           {isB2B && (

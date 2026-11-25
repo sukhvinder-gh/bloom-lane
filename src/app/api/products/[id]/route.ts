@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isListingWindowOpen } from '@/lib/utils/timezone'
 import { isAdminRole } from '@/lib/utils/permissions'
+import { isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import { z } from 'zod'
 
 const updateProductSchema = z.object({
@@ -83,6 +84,22 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const updates = { ...parsed.data }
+
+  // Flowers/foliage can never end up GST-free, whether this PATCH is
+  // changing the category, the is_gst_free flag, or both — so resolve
+  // against whichever of the two isn't in this partial update too.
+  if ('is_gst_free' in updates || 'category' in updates) {
+    const { data: current } = await adminSupabase
+      .from('products').select('category, is_gst_free').eq('id', id).single()
+    const resultingCategory = updates.category ?? current?.category
+    const resultingGstFree = updates.is_gst_free ?? current?.is_gst_free
+    if (resultingGstFree && resultingCategory && isAlwaysTaxableCategory(resultingCategory)) {
+      return NextResponse.json(
+        { error: 'Cut flowers, dried flowers, natives, and foliage are always taxable and cannot be marked GST-free.' },
+        { status: 400 }
+      )
+    }
+  }
 
   if ('is_listed_this_week' in updates && !isAdmin) {
     if (!isListingWindowOpen()) {

@@ -23,7 +23,7 @@ export async function GET(
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('profiles')
-    .select('id, email, full_name, phone, role, abn, abn_verified, business_name, created_at')
+    .select('id, email, full_name, phone, role, abn, abn_verified, gst_registered, business_name, created_at')
     .eq('id', id)
     .single()
 
@@ -41,20 +41,20 @@ export async function PATCH(
   const { id } = await params
   const body = await request.json()
 
-  const ALLOWED = ['full_name', 'phone', 'business_name', 'abn', 'abn_verified', 'role']
+  const ALLOWED = ['full_name', 'phone', 'business_name', 'abn', 'abn_verified', 'gst_registered', 'role']
   const updates: Record<string, unknown> = {}
   for (const key of ALLOWED) {
     if (key in body) updates[key] = body[key]
   }
 
-  if (updates.role === 'buyer_b2c') updates.abn_verified = false
+  if (updates.role === 'buyer_b2c') { updates.abn_verified = false; updates.gst_registered = false }
 
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('profiles')
     .update(updates)
     .eq('id', id)
-    .select('id, email, full_name, phone, role, abn, abn_verified, business_name, created_at')
+    .select('id, email, full_name, phone, role, abn, abn_verified, gst_registered, business_name, created_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

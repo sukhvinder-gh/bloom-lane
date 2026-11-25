@@ -62,23 +62,49 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Someone who already has a real account (grower, buyer, admin — any
-  // role) can't register interest again; they should sign in instead.
+  // Someone who already has a real account can still register interest for
+  // the OTHER role on the same email — that's how a buyer adds a grower
+  // account (or vice versa). Only reject if they already hold this exact
+  // role; granting the second role itself happens at admin-approval time
+  // (see /api/admin/interest/[id]/approve), since that's where business/ABN
+  // details for the new role get collected and validated anyway.
   const { data: existingProfile } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, role, secondary_role')
     .eq('email', email)
     .maybeSingle()
+
   if (existingProfile) {
-    return NextResponse.json({ error: 'An account with this email already exists. Please sign in instead.' }, { status: 409 })
+    if (role === 'grower') {
+      const { data: existingFarmer } = await admin
+        .from('farmers')
+        .select('id')
+        .eq('user_id', existingProfile.id)
+        .maybeSingle()
+      const alreadyGrower = !!existingFarmer || existingProfile.role === 'farmer' || existingProfile.secondary_role === 'farmer'
+      if (alreadyGrower) {
+        return NextResponse.json({ error: 'An account with this email is already registered as a grower. Please sign in instead.' }, { status: 409 })
+      }
+    } else {
+      const BUYER_ROLES = ['buyer_b2b', 'buyer_b2c']
+      const alreadyBuyer = BUYER_ROLES.includes(existingProfile.role) || BUYER_ROLES.includes(existingProfile.secondary_role || '')
+      if (alreadyBuyer) {
+        return NextResponse.json({ error: 'An account with this email is already registered as a buyer. Please sign in instead.' }, { status: 409 })
+      }
+    }
+    // Existing account doesn't have this role yet — fall through and record
+    // this as a request to add it.
   }
 
-  // Already submitted and not yet actioned — avoid piling up duplicate rows
-  // for the same person (e.g. a double-submit or trying again next week).
+  // Already submitted and not yet actioned for this same role — avoid piling
+  // up duplicate rows for the same person (e.g. a double-submit), but a
+  // pending grower lead and a pending buyer lead for the same email can
+  // coexist, since they're genuinely different requests.
   const { data: existingInterest } = await admin
     .from('interest_registrations')
     .select('id')
     .eq('email', email)
+    .eq('role', role)
     .is('converted_user_id', null)
     .maybeSingle()
   if (existingInterest) {

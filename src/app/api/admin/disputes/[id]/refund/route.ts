@@ -2,15 +2,21 @@
 //
 // Executes the refund side of dispute resolution: one Stripe refund against
 // the order's PaymentIntent, then allocates that refund across every grower
-// whose items are in the order, issuing a credit note per grower and — since
-// we do NOT reverse Stripe transfers that already happened — recording a
-// balance adjustment that gets deducted from that grower's next payout(s).
+// whose items are in the order, issuing a credit note per grower. Since
+// disputes are only raised on delivered orders, and payouts fire
+// automatically the moment an order is marked delivered (see
+// processOrderPayouts.ts), the grower has almost always already been paid —
+// so the clawback is recovered straight from their own Stripe balance via a
+// transfer reversal. Only when there's no live transfer to reverse (payout
+// still pending/failed) or the reversal itself fails (e.g. the grower's
+// balance can't cover it) do we fall back to deducting it from their next
+// payout(s) instead.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
 import { getCommissionRates, effectiveCommissionRate } from '@/lib/utils/commission'
-import { createRefund } from '@/lib/stripe'
+import { createRefund, reverseFarmerTransfer } from '@/lib/stripe'
 
 export async function POST(
   request: NextRequest,
@@ -124,24 +130,71 @@ export async function POST(
     if (cnErr || !creditNote) continue
     creditNotes.push(creditNote)
 
-    // 3. Don't reverse the Stripe transfer — record a clawback against the
-    //    grower's future payout(s) instead. What the grower would have kept
-    //    net of platform commission is what they now owe back.
+    // 3. What the grower would have kept net of platform commission is what
+    //    they now owe back.
     const commissionRate = commissionByFarmer.get(farmerId) ?? 0.10
     const netClawback = Math.round(alloc.grossRefund * (1 - commissionRate))
 
-    if (netClawback > 0) {
+    let remaining = netClawback
+    let reversalFailure: string | undefined
+
+    // Prefer pulling it straight from the grower's (or hub's) Stripe balance:
+    // reverse the transfer that paid them for this order, up to whatever was
+    // actually transferred.
+    if (remaining > 0) {
+      const { data: paidPayouts } = await admin
+        .from('payouts')
+        .select('id, stripe_transfer_id, net_amount_cents')
+        .eq('farmer_id', farmerId)
+        .eq('order_id', order.id)
+        .eq('status', 'paid')
+        .order('created_at', { ascending: false })
+
+      const payout = (paidPayouts || []).find(p => p.stripe_transfer_id)
+
+      if (payout?.stripe_transfer_id) {
+        const reversibleAmount = Math.min(remaining, payout.net_amount_cents)
+        try {
+          const reversal = await reverseFarmerTransfer(payout.stripe_transfer_id, reversibleAmount, {
+            order_id: order.id,
+            credit_note_id: creditNote.id,
+          })
+          await admin.from('farmer_balance_adjustments').insert({
+            farmer_id: farmerId,
+            credit_note_id: creditNote.id,
+            amount_cents: reversibleAmount,
+            reason: `Refund on order ${order.order_number} — recovered from grower's Stripe balance (reversal ${reversal.id})`,
+            status: 'applied',
+            applied_to_payout_id: payout.id,
+            applied_at: new Date().toISOString(),
+          })
+          remaining -= reversibleAmount
+        } catch (err: any) {
+          // Leave `remaining` untouched — falls through to the pending
+          // next-payout clawback below, with the failure reason recorded
+          // there for admin visibility.
+          reversalFailure = err.message as string
+        }
+      }
+    }
+
+    // 4. Whatever couldn't be recovered via a transfer reversal (no live
+    //    transfer yet, or the reversal failed) gets deducted from the
+    //    grower's next payout(s) instead — see generate-payouts/route.ts.
+    if (remaining > 0) {
       await admin.from('farmer_balance_adjustments').insert({
         farmer_id: farmerId,
         credit_note_id: creditNote.id,
-        amount_cents: netClawback,
-        reason: `Refund on order ${order.order_number}`,
+        amount_cents: remaining,
+        reason: reversalFailure
+          ? `Refund on order ${order.order_number} (Stripe reversal failed: ${reversalFailure} — deducting from next payout instead)`
+          : `Refund on order ${order.order_number}`,
         status: 'pending',
       })
     }
   }
 
-  // 4. Update order + dispute state.
+  // 5. Update order + dispute state.
   const newRefundedCents = (order.refunded_cents || 0) + refundAmountCents
   const newOrderStatus = newRefundedCents >= order.total_cents ? 'refunded' : 'resolved'
 

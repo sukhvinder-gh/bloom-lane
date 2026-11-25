@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { COLOR_PALETTE } from '@/lib/data/flowerSpecies'
+import { isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 
 const CATEGORIES: Record<string, string> = {
   flowers_cut: 'Cut Flowers', flowers_dried: 'Dried Flowers', flowers_native: 'Australian Natives', foliage: 'Foliage',
@@ -84,6 +85,9 @@ function validateRows(rows: string[][]): ParsedRow[] {
       const bad = tags.filter(c => !VALID_COLORS.includes(c))
       if (bad.length) errors.push(`Unknown colour "${bad[0]}" — see valid colours`)
       else if (tags.length > MAX_COLORS) errors.push(`Max ${MAX_COLORS} colours`)
+    }
+    if (['yes', 'true', '1'].includes(gst_free.toLowerCase()) && isAlwaysTaxableCategory(category)) {
+      errors.push(`${CATEGORIES[category] || category} is always taxable and cannot be GST-free`)
     }
 
     return { name, category, unit, wholesale_price, markup_pct, stock, min_order, stock_reserve_pct, gst_free, stems_per_unit, colors, description, _errors: errors }

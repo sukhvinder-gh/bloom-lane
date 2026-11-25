@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isAdminRole } from '@/lib/utils/permissions'
+import { isAlwaysTaxableCategory } from '@/lib/utils/pricing'
 import { z } from 'zod'
 
 async function requireAdmin() {
@@ -33,7 +34,7 @@ export async function GET(
   return NextResponse.json({ data })
 }
 
-const productSchema = z.object({
+const productObjectSchema = z.object({
   name:               z.string().min(2).max(100),
   description:        z.string().max(500).optional(),
   category:           z.enum(['flowers_cut', 'flowers_dried', 'flowers_native', 'foliage', 'vegetables', 'herbs', 'fruit', 'eggs', 'honey', 'other']),
@@ -46,6 +47,11 @@ const productSchema = z.object({
   image_url:          z.string().url().optional().nullable(),
   image_urls:         z.array(z.string().url()).optional(),
 })
+
+const productSchema = productObjectSchema.refine(
+  data => !(data.is_gst_free && isAlwaysTaxableCategory(data.category)),
+  { message: 'Cut flowers, dried flowers, natives, and foliage are always taxable and cannot be marked GST-free.', path: ['is_gst_free'] }
+)
 
 export async function POST(
   request: NextRequest,
@@ -73,7 +79,7 @@ export async function POST(
   return NextResponse.json({ data }, { status: 201 })
 }
 
-const updateSchema = productSchema.partial()
+const updateSchema = productObjectSchema.partial()
 
 export async function PATCH(
   request: NextRequest,
@@ -90,6 +96,19 @@ export async function PATCH(
 
   const parsed = updateSchema.safeParse(rest)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  if ('is_gst_free' in parsed.data || 'category' in parsed.data) {
+    const { data: current } = await admin
+      .from('products').select('category, is_gst_free').eq('id', productId).single()
+    const resultingCategory = parsed.data.category ?? current?.category
+    const resultingGstFree = parsed.data.is_gst_free ?? current?.is_gst_free
+    if (resultingGstFree && resultingCategory && isAlwaysTaxableCategory(resultingCategory)) {
+      return NextResponse.json(
+        { error: 'Cut flowers, dried flowers, natives, and foliage are always taxable and cannot be marked GST-free.' },
+        { status: 400 }
+      )
+    }
+  }
 
   const { data, error: dbErr } = await admin
     .from('products')

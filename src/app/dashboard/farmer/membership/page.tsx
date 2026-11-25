@@ -258,7 +258,7 @@ function CurrentSubscriptionRow({ sub, onCancel, onChangePlan }: { sub: any; onC
               onClick={() => { setOpen(false); onChangePlan() }}
               style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
             >
-              ✏️ Change Plan
+              ✏️ Edit Membership
             </button>
             <div style={{ height: '1px', background: 'var(--olive)' }} />
             <button
@@ -288,12 +288,12 @@ function PriceTag({ cents, selected }: { cents: number; selected?: boolean }) {
 }
 
 // ── Membership details (read-only summary shown once a plan is active) ────────
-function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, farmAddress, farmRegion, gstRegistered, hubName, onChangePlan }: {
+function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, farmAddress, farmRegion, gstRegistered, gstRegisteredFrom, hubName, onChangePlan }: {
   plan: 'hub_membership' | 'wholesale_collection'
   billing: string
   priceMap: Record<string, number>
   businessName: string; abn: string; farmAddress: string; farmRegion: string
-  gstRegistered: boolean; hubName: string
+  gstRegistered: boolean; gstRegisteredFrom?: string | null; hubName: string
   onChangePlan: () => void
 }) {
   const planLabel = plan === 'hub_membership' ? 'Hub Membership' : FREE_TIER_LABEL
@@ -308,7 +308,12 @@ function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, far
     { label: 'Farm Address', value: farmAddress },
     { label: 'Region', value: farmRegion },
     ...(plan === 'hub_membership' ? [{ label: 'Hub / Collective', value: hubName }] : []),
-    { label: 'GST Registered', value: gstRegistered ? 'Yes' : 'No' },
+    {
+      label: 'GST Registered',
+      value: gstRegistered
+        ? `Yes${gstRegisteredFrom ? ` (from ${new Date(gstRegisteredFrom).toLocaleDateString('en-AU')})` : ''}`
+        : 'No',
+    },
   ]
 
   return (
@@ -321,7 +326,7 @@ function MembershipDetailsCard({ plan, billing, priceMap, businessName, abn, far
           </p>
           <p style={{ fontSize: '0.9rem', color: plan === 'hub_membership' ? '#92400E' : '#065F46', fontWeight: 700, marginTop: '0.25rem' }}>{price}</p>
         </div>
-        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Change Plan</button>
+        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Edit Membership</button>
       </div>
       <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', paddingTop: '1.5rem', borderTop: '1px solid var(--olive)' }}>
         {fields.map(f => (
@@ -364,6 +369,7 @@ export default function GrowerSubscriptionPage() {
   const [abn, setAbn]                 = useState('')
   const [businessName, setBusinessName] = useState('')
   const [gstRegistered, setGstRegistered] = useState(false)
+  const [gstRegisteredFrom, setGstRegisteredFrom] = useState<string | null>(null)
   const [rctiAgreed, setRctiAgreed]   = useState(false)
   const [rctiFullName, setRctiFullName] = useState('')
   const [farmAddress, setFarmAddress] = useState('')
@@ -391,6 +397,7 @@ export default function GrowerSubscriptionPage() {
         setAbn(f.abn || '')
         setBusinessName(f.business_name || '')
         setGstRegistered(!!f.gst_registered)
+        setGstRegisteredFrom(f.gst_registered_from || null)
         setRctiAgreed(!!f.rcti_agreed)
         setRctiFullName(f.rcti_full_name || '')
         setFarmAddress(f.farm_address || '')
@@ -573,7 +580,7 @@ export default function GrowerSubscriptionPage() {
         <MembershipDetailsCard
           plan={plan} billing={billing} priceMap={priceMap}
           businessName={businessName} abn={abn} farmAddress={farmAddress} farmRegion={farmRegion}
-          gstRegistered={gstRegistered} hubName={hubs.find((h: any) => h.id === hubId)?.name || ''}
+          gstRegistered={gstRegistered} gstRegisteredFrom={gstRegisteredFrom} hubName={hubs.find((h: any) => h.id === hubId)?.name || ''}
           onChangePlan={() => setViewMode('edit')}
         />
       ) : (

@@ -11,6 +11,7 @@ type Props = {
   businessName: string
   farmerId: string | null
   farmerStatus: string | null
+  hasBuyerAccount?: boolean
 }
 
 const NAV = [
@@ -26,7 +27,7 @@ const NAV = [
   { href: '/dashboard/farmer/reports',        label: 'Reports',       icon: '📊' },
 ]
 
-export default function FarmerSidebar({ role, userName, userEmail, businessName, farmerId, farmerStatus }: Props) {
+export default function FarmerSidebar({ role, userName, userEmail, businessName, farmerId, farmerStatus, hasBuyerAccount }: Props) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const isAdmin = isAdminRole(role)
@@ -101,6 +102,21 @@ export default function FarmerSidebar({ role, userName, userEmail, businessName,
             >
               <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>👁</span>
               Public Profile ↗
+            </Link>
+          </>
+        )}
+
+        {/* Buyer account link for dual-role (grower + buyer) users */}
+        {hasBuyerAccount && (
+          <>
+            <div style={{ height: '1px', background: 'var(--border-light)', margin: '0.5rem 1.25rem' }} />
+            <Link
+              href="/dashboard/buyer"
+              onClick={() => setOpen(false)}
+              className="rf-nav-item"
+            >
+              <span style={{ fontSize: '1rem', flexShrink: 0, opacity: 0.65 }}>🛒</span>
+              My Buyer Account
             </Link>
           </>
         )}
