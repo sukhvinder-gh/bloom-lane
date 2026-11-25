@@ -45,14 +45,16 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
   const [updating, setUpdating] = useState<string | null>(null)
   const [approveTarget, setApproveTarget] = useState<Row | null>(null)
   const [approveForm, setApproveForm] = useState({ business_name: '', abn: '', address: '', suburb: '', state: 'VIC', postcode: '' })
+  const [grantMembership, setGrantMembership] = useState(true)
   const [approving, setApproving] = useState(false)
   const [approveError, setApproveError] = useState('')
-  const [lastApproved, setLastApproved] = useState<{ email: string; tempPassword: string | null; emailSent: boolean; addedSecondRole?: boolean } | null>(null)
+  const [lastApproved, setLastApproved] = useState<{ email: string; tempPassword: string | null; emailSent: boolean; addedSecondRole?: boolean; membershipGranted?: boolean } | null>(null)
 
   function openApprove(row: Row) {
     setApproveError('')
     setLastApproved(null)
     setApproveForm({ business_name: row.business_name || '', abn: row.abn || '', address: row.address || '', suburb: row.region || '', state: row.state || 'VIC', postcode: row.postcode || '' })
+    setGrantMembership(true)
     setApproveTarget(row)
   }
 
@@ -63,7 +65,9 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
     const res = await fetch(`/api/admin/interest/${approveTarget.id}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(approveTarget.role === 'grower' ? approveForm : { abn: approveForm.abn }),
+      body: JSON.stringify(approveTarget.role === 'grower'
+        ? { ...approveForm, grant_free_membership: grantMembership }
+        : { abn: approveForm.abn }),
     })
     const json = await res.json()
     setApproving(false)
@@ -74,7 +78,7 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
     setRows(rs => rs.map(r => r.id === approveTarget.id
       ? { ...r, converted_user_id: json.data.userId, converted_at: new Date().toISOString(), contacted: true }
       : r))
-    setLastApproved({ email: approveTarget.email, tempPassword: json.data.tempPassword, emailSent: json.data.emailSent, addedSecondRole: json.data.addedSecondRole })
+    setLastApproved({ email: approveTarget.email, tempPassword: json.data.tempPassword, emailSent: json.data.emailSent, addedSecondRole: json.data.addedSecondRole, membershipGranted: json.data.membershipGranted })
   }
 
   const growerCount = rows.filter(r => r.role === 'grower').length
@@ -237,6 +241,11 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                     ? `A welcome email with sign-in details was sent to ${lastApproved.email}.`
                     : `The account was created, but the welcome email failed to send. Share these details with ${lastApproved.email} directly:`}
                 </p>
+                {lastApproved.membershipGranted && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--green)', marginBottom: '1rem' }}>
+                    ✓ Free Grower Listing membership granted — they can start adding inventory straight away.
+                  </p>
+                )}
                 {!lastApproved.emailSent && !lastApproved.addedSecondRole && (
                   <div style={{ background: 'var(--offwhite)', borderRadius: '8px', padding: '1rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
                     <p><strong>Email:</strong> {lastApproved.email}</p>
@@ -274,6 +283,10 @@ export default function InterestContent({ initialInterest }: { initialInterest: 
                       <input className="input" placeholder="Postcode" value={approveForm.postcode}
                         onChange={e => setApproveForm(f => ({ ...f, postcode: e.target.value.replace(/\D/g, '').slice(0, 4) }))} />
                     </div>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--moss)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={grantMembership} onChange={e => setGrantMembership(e.target.checked)} style={{ marginTop: '0.15rem' }} />
+                      Also grant the free Grower Listing membership, so they can start adding inventory straight away instead of setting it up themselves first.
+                    </label>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>

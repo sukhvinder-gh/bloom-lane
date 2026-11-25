@@ -3,6 +3,7 @@ import { createSupabaseServerClient, createAdminClient } from '@/lib/supabase/se
 import { isAdminRole } from '@/lib/utils/permissions'
 import { validateABNFormat } from '@/lib/utils/abn'
 import { sendApprovalWelcomeEmail } from '@/lib/email/sendApprovalWelcomeEmail'
+import { grantFreeGrowerMembership } from '@/lib/utils/membership'
 import crypto from 'crypto'
 
 async function requireAdmin() {
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params
   const body = await request.json().catch(() => ({}))
+  // Admin's approve dialog shows this as a ticked-by-default checkbox for
+  // grower approvals — opt-in rather than forced, so admin can still hold
+  // it back for a specific case, but defaults true if the field is omitted
+  // entirely (e.g. a direct API call).
+  const grantMembership = body.grant_free_membership !== false
 
   const { data: interest, error: fetchError } = await admin
     .from('interest_registrations')
@@ -95,6 +101,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
       if (farmerError) return NextResponse.json({ error: `Could not add grower role: ${farmerError.message}` }, { status: 500 })
 
+      if (grantMembership) {
+        const { error: membershipError } = await grantFreeGrowerMembership(admin, existingProfile.id)
+        if (membershipError) console.error('[approve interest] free membership grant failed:', membershipError)
+      }
+
       const promoteToPrimary = currentRole === 'buyer_b2b' || currentRole === 'buyer_b2c'
       await admin.from('profiles').update({
         ...(promoteToPrimary ? { role: 'farmer', secondary_role: currentRole } : {}),
@@ -123,7 +134,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .eq('id', id)
 
     return NextResponse.json({
-      data: { userId: existingProfile.id, tempPassword: null, emailSent: false, addedSecondRole: true },
+      data: {
+        userId: existingProfile.id, tempPassword: null, emailSent: false, addedSecondRole: true,
+        membershipGranted: interest.role === 'grower' && grantMembership,
+      },
       warning: 'This email already had an account — no new account or welcome email was created. The requested role was added to their existing account instead.',
     })
   }
@@ -197,6 +211,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await admin.auth.admin.deleteUser(newUserId)
       return NextResponse.json({ error: `Account rolled back: ${farmerError.message}` }, { status: 500 })
     }
+
+    if (grantMembership) {
+      const { error: membershipError } = await grantFreeGrowerMembership(admin, newUserId)
+      if (membershipError) console.error('[approve interest] free membership grant failed:', membershipError)
+    }
   }
 
   await admin
@@ -216,10 +235,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Account is already created — surface the temp password in the response
     // so the admin can hand it over manually instead of the approval failing.
     return NextResponse.json({
-      data: { userId: newUserId, tempPassword, emailSent: false },
+      data: { userId: newUserId, tempPassword, emailSent: false, membershipGranted: targetRole === 'farmer' && grantMembership },
       warning: 'Account created, but the welcome email failed to send. Share this temporary password with them directly.',
     })
   }
 
-  return NextResponse.json({ data: { userId: newUserId, tempPassword, emailSent: true } })
+  return NextResponse.json({ data: { userId: newUserId, tempPassword, emailSent: true, membershipGranted: targetRole === 'farmer' && grantMembership } })
 }
