@@ -324,6 +324,12 @@ export default function FloristSubscriptionPage() {
       setMsg({ type: 'err', text: data.error || 'Failed to cancel membership' })
     } else {
       setCurrent(null)
+      // Personal Shopper is paused for new sign-ups — without this, a
+      // cancelled subscriber's in-progress `plan` state would stay stuck on
+      // 'personal_shopper' and keep showing its billing period/payment UI
+      // even though the plan card itself is now greyed out and unselectable.
+      setPlan('mailing_list')
+      setBilling('monthly')
       setMsg({ type: 'ok', text: 'Your membership has been cancelled.' })
     }
     setCancelling(false)
