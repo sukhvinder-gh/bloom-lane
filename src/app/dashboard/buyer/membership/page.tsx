@@ -354,6 +354,9 @@ export default function FloristSubscriptionPage() {
       ) : (
       <>
       {/* Plan cards */}
+      {(() => {
+        const personalShopperOpen = hasExistingSub && current?.plan === 'personal_shopper'
+        return (
       <div className="mg-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
         {[
           {
@@ -364,15 +367,22 @@ export default function FloristSubscriptionPage() {
             priceColor: '#065F46',
             features: ['Weekly availability email', 'Collect at Hub', 'No minimum order, no commitment'],
             best: 'Florists who enjoy building direct relationships',
+            disabled: false,
           },
           {
             value: 'personal_shopper' as const,
             label: 'Personal Shopper & Delivery',
-            badge: 'Option 2',
-            price: priceMap[billing] ? `$${(priceMap[billing] / 100).toFixed(0)}/${billing === 'weekly' ? 'wk' : billing === 'monthly' ? 'mo' : 'yr'}` : 'Price TBC',
+            badge: personalShopperOpen ? 'Active' : 'Option 2 · Coming soon',
+            price: personalShopperOpen
+              ? (priceMap[billing] ? `$${(priceMap[billing] / 100).toFixed(0)}/${billing === 'weekly' ? 'wk' : billing === 'monthly' ? 'mo' : 'yr'}` : 'Price TBC')
+              : '',
             priceColor: '#1E40AF',
-            features: ['Weekly brief & wishlist service', 'Refrigerated delivery', 'Same-day collection and delivery', 'One consolidated invoice per delivery'],
+            // Hidden until Personal Shopper actually opens for new sign-ups —
+            // showing feature bullets for a plan no one can join yet reads
+            // as a live offer rather than a preview.
+            features: personalShopperOpen ? ['Weekly brief & wishlist service', 'Refrigerated delivery', 'Same-day collection and delivery', 'One consolidated invoice per delivery'] : [],
             best: 'Busy florists and wedding specialists',
+            disabled: !personalShopperOpen,
           },
         ].map(opt => {
           const active = plan === opt.value
@@ -380,26 +390,35 @@ export default function FloristSubscriptionPage() {
             <button
               key={opt.value}
               type="button"
-              onClick={() => setPlan(opt.value)}
+              disabled={opt.disabled}
+              title={opt.disabled ? 'Personal Shopper & Delivery isn\'t open for new sign-ups yet' : undefined}
+              onClick={() => !opt.disabled && setPlan(opt.value)}
               style={{
                 background: active ? 'var(--olive)' : 'white',
                 border: `2px solid ${active ? 'var(--forest)' : 'var(--olive)'}`,
                 borderRadius: '1rem', padding: '1.5rem', textAlign: 'left',
-                cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'all 0.15s',
+                cursor: opt.disabled ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)', transition: 'all 0.15s',
+                opacity: opt.disabled ? 0.45 : 1,
               }}
             >
               <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700, background: active ? 'var(--forest)' : 'var(--cream)', color: active ? 'var(--cream)' : 'var(--moss)', marginBottom: '0.625rem' }}>
                 {opt.badge}
               </span>
               <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--forest)', marginBottom: '0.25rem' }}>{opt.label}</p>
-              <p style={{ fontSize: '0.8rem', color: opt.priceColor, fontWeight: 700, marginBottom: '0.875rem' }}>{opt.price}</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                {opt.features.map(f => (
-                  <li key={f} style={{ fontSize: '0.775rem', color: 'var(--forest)', display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                    <span style={{ color: opt.priceColor, flexShrink: 0 }}>✓</span>{f}
-                  </li>
-                ))}
-              </ul>
+              {opt.price && (
+                <p style={{ fontSize: '0.8rem', color: opt.priceColor, fontWeight: 700, marginBottom: '0.875rem' }}>{opt.price}</p>
+              )}
+              {opt.features.length > 0 ? (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {opt.features.map(f => (
+                    <li key={f} style={{ fontSize: '0.775rem', color: 'var(--forest)', display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                      <span style={{ color: opt.priceColor, flexShrink: 0 }}>✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ fontSize: '0.775rem', color: 'var(--moss)', margin: '0 0 0.875rem' }}>Details coming soon.</p>
+              )}
               <p style={{ fontSize: '0.7rem', color: 'var(--moss)', borderTop: '1px solid var(--sage)', paddingTop: '0.625rem' }}>
                 <strong>Best for</strong> {opt.best}
               </p>
@@ -407,6 +426,8 @@ export default function FloristSubscriptionPage() {
           )
         })}
       </div>
+        )
+      })()}
 
       <form id="florist-membership-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Billing period (personal_shopper only) */}
