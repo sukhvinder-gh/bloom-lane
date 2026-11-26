@@ -308,9 +308,15 @@ export default function FloristSubscriptionPage() {
       const price = priceMap[billing]
       setMsg({ type: 'ok', text: `Subscription saved. Payment of $${(price / 100).toFixed(2)} required to activate. Stripe checkout coming soon.` })
       if (data.subscription) setCurrent(data.subscription)
+      setViewMode('details')
     } else {
       setMsg({ type: 'ok', text: "You're on the Mailing List! Expect your first availability email next Tuesday." })
       setCurrent(data.subscription)
+      // Without this the page stays on the plan-picker form after a
+      // successful sign-up — current becomes truthy (hasExistingSub flips
+      // true) but viewMode never leaves 'edit', so the submit button stays
+      // live and lets the same confirm flow be run again and again.
+      setViewMode('details')
     }
     setSaving(false)
   }
