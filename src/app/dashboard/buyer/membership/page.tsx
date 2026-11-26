@@ -194,7 +194,7 @@ function CurrentSubscriptionRow({ sub, onCancel, onChangePlan }: { sub: any; onC
               onClick={() => { setOpen(false); onChangePlan() }}
               style={{ width: '100%', padding: '0.7rem 1rem', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--forest)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-body)' }}
             >
-              ✏️ Change Plan
+              ✏️ Edit Membership
             </button>
             <div style={{ height: '1px', background: 'var(--olive)' }} />
             <button
@@ -243,7 +243,7 @@ function MembershipDetailsCard({ plan, billing, priceMap, expiresAt, onChangePla
             <p style={{ fontSize: '0.78rem', color: 'var(--moss)', marginTop: '0.4rem' }}>Renews {new Date(expiresAt).toLocaleDateString('en-AU')}</p>
           )}
         </div>
-        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Change Plan</button>
+        <button onClick={onChangePlan} className="btn btn-forest btn-sm" style={{ flexShrink: 0 }}>✏️ Edit Membership</button>
       </div>
     </div>
   )
